@@ -23,17 +23,21 @@
     background: #0e1419; color: var(--text);
     overflow: hidden;
   }
-  #app { display: flex; height: 100vh; }
+  #app { position: relative; height: 100vh; width: 100vw; overflow: hidden; }
 
-  /* Sidebar */
+  /* Sidebar — slides in/out as a drawer */
   #sidebar {
-    width: 250px; flex: 0 0 250px;
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 250px; z-index: 30;
     background: var(--panel);
     border-right: 2px solid #000;
     display: flex; flex-direction: column;
     padding: 12px; gap: 10px;
     overflow-y: auto;
+    transform: translateX(0);
+    transition: transform .25s ease;
   }
+  #app.nav-closed #sidebar { transform: translateX(-100%); }
   #sidebar h1 {
     font-size: 20px; margin: 0;
     letter-spacing: 1px;
@@ -83,11 +87,45 @@
 
   /* Tower view */
   #stage {
-    flex: 1; position: relative; overflow: hidden;
+    position: absolute; top: 0; right: 0; bottom: 0; left: 250px;
+    overflow: hidden;
     background: linear-gradient(var(--sky-top), var(--sky-bot));
+    transition: left .25s ease;
   }
-  #scroller { position: absolute; inset: 0; overflow: auto; }
+  #app.nav-closed #stage { left: 0; }
+  #scroller {
+    position: absolute; top: 42px; left: 0; right: 0; bottom: 0;
+    overflow: auto; -webkit-overflow-scrolling: touch;
+  }
   #world { position: relative; }
+
+  /* Top HUD — always visible, holds the drawer toggle + key stats */
+  #hud {
+    position: absolute; top: 0; left: 0; right: 0; height: 42px; z-index: 15;
+    display: flex; align-items: center; gap: 10px; padding: 0 10px;
+    background: rgba(20,28,36,.92); border-bottom: 2px solid #000;
+    color: var(--text); font-size: 13px;
+    -webkit-user-select: none; user-select: none;
+  }
+  #hud .hud-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #hud .hud-item b { color: var(--accent); }
+  #hud .spacer { flex: 1; }
+  #menuToggle {
+    background: var(--panel-2); border: 2px solid #000; border-radius: 6px;
+    color: var(--text); font-size: 16px; line-height: 1; cursor: pointer;
+    width: 34px; height: 30px; flex: 0 0 auto;
+  }
+  #menuToggle:active { transform: translateY(1px); }
+
+  /* Mobile: drawer overlays the tower instead of shrinking it */
+  @media (max-width: 700px) {
+    #stage { left: 0 !important; }
+    #sidebar { width: 84%; max-width: 300px; box-shadow: 6px 0 20px rgba(0,0,0,.55); }
+    #hud .hud-item.time { display: none; }
+  }
+  @media (max-width: 420px) {
+    #hud .hud-item.stars { display: none; }
+  }
 
   .floor-row { position: absolute; left: 0; display: flex; }
   .cell {
@@ -162,6 +200,14 @@
   </aside>
 
   <div id="stage">
+    <div id="hud">
+      <button id="menuToggle" title="Show/hide build menu">☰</button>
+      <span class="hud-item">💰 <b id="h-cash">$0</b></span>
+      <span class="hud-item">👤 <b id="h-pop">0</b></span>
+      <span class="hud-item stars" id="h-stars">☆☆☆☆☆</span>
+      <span class="spacer"></span>
+      <span class="hud-item time" id="h-time">1 · 6:00</span>
+    </div>
     <div id="scroller">
       <div id="world">
         <div id="ghost"></div>
@@ -283,6 +329,10 @@ function selectTool(key) {
   document.querySelectorAll(".tool").forEach(el =>
     el.classList.toggle("selected", el.dataset.tool === key));
   ghost.style.display = "none";
+  // On phones, get the drawer out of the way so the tower is tappable.
+  if (key !== "pointer" && typeof isMobile === "function" && isMobile()) {
+    document.getElementById("app").classList.add("nav-closed");
+  }
 }
 
 // ---------- Helpers ----------
@@ -562,8 +612,9 @@ function advanceMinute() {
 function updateClock() {
   const h = Math.floor(state.minutes / 60);
   const m = state.minutes % 60;
-  document.getElementById("s-time").textContent =
-    `${state.day} · ${h}:${m.toString().padStart(2, "0")}`;
+  const txt = `${state.day} · ${h}:${m.toString().padStart(2, "0")}`;
+  document.getElementById("s-time").textContent = txt;
+  document.getElementById("h-time").textContent = txt;
 }
 
 // animation for people on a steadier cadence
@@ -571,12 +622,16 @@ setInterval(() => { if (state.speed > 0) movepeople(); }, 250);
 
 // ---------- Stats / UI ----------
 function refreshStats() {
-  document.getElementById("s-cash").textContent = "$" + state.cash.toLocaleString();
-  document.getElementById("s-pop").textContent = state.pop;
+  const cash = "$" + state.cash.toLocaleString();
+  const stars = "★".repeat(state.stars) + "☆".repeat(5 - state.stars);
   const floorsUsed = new Set(state.units.map(u => u.row)).size;
+  document.getElementById("s-cash").textContent = cash;
+  document.getElementById("s-pop").textContent = state.pop;
   document.getElementById("s-floors").textContent = floorsUsed;
-  document.getElementById("s-stars").textContent =
-    "★".repeat(state.stars) + "☆".repeat(5 - state.stars);
+  document.getElementById("s-stars").textContent = stars;
+  document.getElementById("h-cash").textContent = cash;
+  document.getElementById("h-pop").textContent = state.pop;
+  document.getElementById("h-stars").textContent = stars;
 }
 
 function toast(msg) {
@@ -605,6 +660,13 @@ document.querySelectorAll("[data-speed]").forEach(btn => {
   });
 });
 
+// ---------- Drawer toggle ----------
+const app = document.getElementById("app");
+function isMobile() { return window.matchMedia("(max-width: 700px)").matches; }
+document.getElementById("menuToggle").addEventListener("click", () => {
+  app.classList.toggle("nav-closed");
+});
+
 // ---------- Init ----------
 function init() {
   buildBackground();
@@ -622,6 +684,7 @@ function init() {
   scroller.scrollTop = world.clientHeight - scroller.clientHeight;
   scroller.scrollLeft = (worldWidth - scroller.clientWidth) / 2;
   selectTool("pointer");
+  if (isMobile()) app.classList.add("nav-closed");
   requestAnimationFrame((t) => { lastTs = t; requestAnimationFrame(tick); });
 }
 
