@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MicroTower — a tiny Sim Tower riff</title>
+<style>
+  :root {
+    --sky-top: #6db3e8;
+    --sky-bot: #cfe9fb;
+    --panel: #1f2933;
+    --panel-2: #2b3947;
+    --accent: #ffcf4d;
+    --good: #4ade80;
+    --bad: #f87171;
+    --text: #e7eef5;
+    --muted: #9fb1c1;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: #0e1419; color: var(--text);
+    overflow: hidden;
+  }
+  #app { display: flex; height: 100vh; }
+
+  /* Sidebar */
+  #sidebar {
+    width: 250px; flex: 0 0 250px;
+    background: var(--panel);
+    border-right: 2px solid #000;
+    display: flex; flex-direction: column;
+    padding: 12px; gap: 10px;
+    overflow-y: auto;
+  }
+  #sidebar h1 {
+    font-size: 20px; margin: 0;
+    letter-spacing: 1px;
+    color: var(--accent);
+    text-shadow: 1px 1px 0 #000;
+  }
+  #sidebar h1 small { display:block; font-size: 11px; color: var(--muted); letter-spacing:0; }
+
+  .stats { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; font-size: 13px; }
+  .stats .k { color: var(--muted); }
+  .stats .v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 6px 0 2px; }
+
+  .tools { display: flex; flex-direction: column; gap: 6px; }
+  .tool {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel-2); border: 2px solid #000; border-radius: 6px;
+    padding: 7px 9px; cursor: pointer; user-select: none;
+    transition: transform .05s, background .1s;
+  }
+  .tool:hover { background: #36495b; }
+  .tool:active { transform: translateY(1px); }
+  .tool.selected { outline: 2px solid var(--accent); background: #36495b; }
+  .tool .swatch { width: 18px; height: 18px; border-radius: 3px; border: 1px solid #000; flex: 0 0 18px; }
+  .tool .label { flex: 1; font-size: 13px; font-weight: 600; }
+  .tool .cost { font-size: 11px; color: var(--muted); }
+
+  .controls { display:flex; gap:6px; flex-wrap: wrap; }
+  .btn {
+    flex: 1; min-width: 60px;
+    background: var(--panel-2); border: 2px solid #000; border-radius: 6px;
+    color: var(--text); padding: 7px; font-size: 12px; font-weight: 600;
+    cursor: pointer;
+  }
+  .btn:hover { background: #36495b; }
+  .btn.active { background: var(--accent); color: #1a1a1a; }
+
+  #log {
+    margin-top: auto; font-size: 11px; color: var(--muted);
+    background: #161d24; border: 1px solid #000; border-radius: 6px;
+    padding: 6px; height: 110px; overflow-y: auto; line-height: 1.5;
+  }
+  #log .entry { margin-bottom: 2px; }
+  #log .entry.good { color: var(--good); }
+  #log .entry.bad { color: var(--bad); }
+
+  /* Tower view */
+  #stage {
+    flex: 1; position: relative; overflow: hidden;
+    background: linear-gradient(var(--sky-top), var(--sky-bot));
+  }
+  #scroller { position: absolute; inset: 0; overflow: auto; }
+  #world { position: relative; }
+
+  .floor-row { position: absolute; left: 0; display: flex; }
+  .cell {
+    position: absolute; box-sizing: border-box;
+    border-right: 1px solid rgba(0,0,0,.08);
+    border-bottom: 1px solid rgba(0,0,0,.08);
+  }
+  .ground { background: #5a8a3c; }
+  .empty-buildable { background: rgba(255,255,255,.03); }
+  .empty-buildable:hover { background: rgba(255,207,77,.25); cursor: pointer; }
+
+  .unit {
+    position: absolute; box-sizing: border-box;
+    border: 1px solid rgba(0,0,0,.35);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: rgba(0,0,0,.55);
+    overflow: hidden; cursor: pointer;
+  }
+  .unit .occ { position:absolute; bottom:2px; left:0; right:0; height:4px; }
+  .unit small { font-size: 9px; opacity:.8; }
+
+  .person {
+    position: absolute; width: 6px; height: 10px; border-radius: 2px;
+    bottom: 2px; transition: left .25s linear;
+    box-shadow: 0 1px 0 rgba(0,0,0,.3);
+  }
+
+  #ghost {
+    position: absolute; pointer-events: none; border: 2px dashed #fff;
+    background: rgba(255,207,77,.3); display: none; z-index: 5;
+  }
+  #ghost.invalid { background: rgba(248,113,113,.35); border-color: #f87171; }
+
+  #toast {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,.8); color: #fff; padding: 8px 16px; border-radius: 20px;
+    font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 20;
+  }
+  #toast.show { opacity: 1; }
+
+  .hint { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  kbd { background:#000; border-radius:3px; padding:0 4px; font-size:10px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <h1>MicroTower <small>a tiny Sim Tower riff</small></h1>
+
+    <div class="stats">
+      <span class="k">Cash</span><span class="v" id="s-cash">$0</span>
+      <span class="k">Population</span><span class="v" id="s-pop">0</span>
+      <span class="k">Floors</span><span class="v" id="s-floors">0</span>
+      <span class="k">Day / Time</span><span class="v" id="s-time">1 · 6:00</span>
+      <span class="k">Star Rating</span><span class="v" id="s-stars">☆☆☆☆☆</span>
+    </div>
+
+    <div class="section-title">Build</div>
+    <div class="tools" id="tools"></div>
+
+    <div class="section-title">Speed</div>
+    <div class="controls">
+      <button class="btn" data-speed="0">❚❚</button>
+      <button class="btn active" data-speed="1">▶</button>
+      <button class="btn" data-speed="3">▶▶</button>
+      <button class="btn" data-speed="8">▶▶▶</button>
+    </div>
+
+    <div class="hint">Click a tool, then click an empty plot in the tower to build. <kbd>Esc</kbd> or the Pointer tool to inspect/sell. Lobby is free and pre-built on the ground floor.</div>
+
+    <div id="log"></div>
+  </aside>
+
+  <div id="stage">
+    <div id="scroller">
+      <div id="world">
+        <div id="ghost"></div>
+      </div>
+    </div>
+    <div id="toast"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+// ---------- Configuration ----------
+const CELL_W = 32;          // px per grid column
+const CELL_H = 36;          // px per floor
+const COLS = 40;            // tower width in cells
+const GROUND_ROW = 0;       // logical floor index 0 == ground/lobby level
+const MAX_FLOORS = 30;      // floors above ground you may build
+const BASEMENT_FLOORS = 4;  // below ground (for parking-ish / future)
+const START_CASH = 120000;
+
+// Unit definitions. width in cells, height in floors.
+const TYPES = {
+  pointer:   { name: "Pointer",     cost: 0,     w: 0, h: 0, color: "transparent", tool: true },
+  lobby:     { name: "Lobby",       cost: 0,     w: 1, h: 1, color: "#d9c79a", income: 0,    cap: 0,  kind: "transit" },
+  office:    { name: "Office",      cost: 40000, w: 3, h: 1, color: "#9ec9e8", income: 0,    cap: 6,  kind: "work",  rent: 9000 },
+  apartment: { name: "Apartment",   cost: 30000, w: 2, h: 1, color: "#f6c177", income: 0,    cap: 3,  kind: "home",  rent: 5000 },
+  shop:      { name: "Retail Shop", cost: 25000, w: 2, h: 1, color: "#c3a6e0", income: 0,    cap: 0,  kind: "shop" },
+  restaurant:{ name: "Restaurant",  cost: 35000, w: 3, h: 1, color: "#f08c8c", income: 0,    cap: 0,  kind: "shop" },
+  stair:     { name: "Stairs",      cost: 5000,  w: 1, h: 1, color: "#8d99ae", kind: "transit" },
+  elevator:  { name: "Elevator",    cost: 18000, w: 1, h: 1, color: "#5c6b7a", kind: "transit" },
+  floor:     { name: "Floor Slab",  cost: 8000,  w: 1, h: 1, color: "#b8bfc7", kind: "structure" },
+};
+
+const BUILD_ORDER = ["pointer","floor","office","apartment","shop","restaurant","stair","elevator"];
+
+// ---------- State ----------
+const state = {
+  cash: START_CASH,
+  pop: 0,
+  day: 1,
+  minutes: 6 * 60,   // start at 6:00am
+  speed: 1,
+  tool: "pointer",
+  units: [],         // {id,type,col,row,w,h,el,occupants,satisfaction}
+  grid: {},          // "col,row" -> unit id  (occupancy map)
+  nextId: 1,
+  people: [],
+  stars: 0,
+};
+
+// ---------- DOM ----------
+const world = document.getElementById("world");
+const scroller = document.getElementById("scroller");
+const ghost = document.getElementById("ghost");
+const toastEl = document.getElementById("toast");
+const logEl = document.getElementById("log");
+
+const worldWidth = COLS * CELL_W;
+const totalRows = MAX_FLOORS + 1; // ground + above
+const worldHeight = totalRows * CELL_H + 40; // +ground strip
+world.style.width = worldWidth + "px";
+world.style.height = worldHeight + "px";
+
+// Convert logical row (0=ground, positive=up) to a pixel top.
+// Higher floors are visually higher => smaller top value.
+function rowTop(row) {
+  return (MAX_FLOORS - row) * CELL_H;
+}
+function colLeft(col) { return col * CELL_W; }
+
+// ---------- Build the static background grid ----------
+function buildBackground() {
+  // ground strip
+  const ground = document.createElement("div");
+  ground.className = "cell ground";
+  ground.style.left = "0px";
+  ground.style.top = rowTop(0) + CELL_H + "px";
+  ground.style.width = worldWidth + "px";
+  ground.style.height = "40px";
+  world.appendChild(ground);
+
+  // buildable empty cells, one element per (col,row)
+  for (let row = 0; row <= MAX_FLOORS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      const c = document.createElement("div");
+      c.className = "cell empty-buildable";
+      c.style.left = colLeft(col) + "px";
+      c.style.top = rowTop(row) + "px";
+      c.style.width = CELL_W + "px";
+      c.style.height = CELL_H + "px";
+      c.dataset.col = col;
+      c.dataset.row = row;
+      world.appendChild(c);
+    }
+  }
+}
+
+// ---------- Tools UI ----------
+function buildToolbar() {
+  const tools = document.getElementById("tools");
+  BUILD_ORDER.forEach(key => {
+    const t = TYPES[key];
+    const div = document.createElement("div");
+    div.className = "tool" + (key === state.tool ? " selected" : "");
+    div.dataset.tool = key;
+    div.innerHTML = `
+      <span class="swatch" style="background:${t.color === 'transparent' ? '#444' : t.color}"></span>
+      <span class="label">${t.name}</span>
+      <span class="cost">${t.cost ? "$" + t.cost.toLocaleString() : (key==='pointer'?'inspect':'free')}</span>`;
+    div.addEventListener("click", () => selectTool(key));
+    tools.appendChild(div);
+  });
+}
+
+function selectTool(key) {
+  state.tool = key;
+  document.querySelectorAll(".tool").forEach(el =>
+    el.classList.toggle("selected", el.dataset.tool === key));
+  ghost.style.display = "none";
+}
+
+// ---------- Helpers ----------
+function key(col, row) { return col + "," + row; }
+
+function cellsFree(col, row, w, h) {
+  if (col < 0 || col + w > COLS) return false;
+  if (row < 0 || row + h - 1 > MAX_FLOORS) return false;
+  for (let dr = 0; dr < h; dr++)
+    for (let dc = 0; dc < w; dc++)
+      if (state.grid[key(col + dc, row + dr)]) return false;
+  return true;
+}
+
+// A habitable unit needs a stair or elevator on the same floor within 8 cells.
+function hasTransitAccess(col, row, w) {
+  if (row === 0) return true;
+  for (const u of state.units) {
+    if ((u.type === "stair" || u.type === "elevator") &&
+        u.row <= row && u.row + u.h - 1 >= row) {
+      const gap = Math.max(u.col - (col + w), col - (u.col + u.w), 0);
+      if (gap <= 8) return true;
+    }
+  }
+  return false;
+}
+
+// ---------- Placement ----------
+function tryBuild(col, row, key_) {
+  const t = TYPES[key_];
+  if (!t || t.tool) return;
+  if (!cellsFree(col, row, t.w, t.h)) { toast("Space is occupied or out of bounds."); return; }
+  if (state.cash < t.cost) { toast("Not enough cash."); flash(false); return; }
+  if ((t.kind === "work" || t.kind === "home" || t.kind === "shop") && !hasTransitAccess(col, row, t.w)) {
+    toast("Needs stairs or an elevator within 8 cells on this floor.");
+    return;
+  }
+
+  const unit = {
+    id: state.nextId++,
+    type: key_, col, row, w: t.w, h: t.h,
+    occupants: 0, satisfaction: 100,
+    revenueTimer: Math.random() * 60,
+  };
+  placeUnit(unit);
+  state.cash -= t.cost;
+  log(`Built ${t.name} on floor ${row} for $${t.cost.toLocaleString()}`, "good");
+  refreshStats();
+}
+
+function placeUnit(unit) {
+  const t = TYPES[unit.type];
+  for (let dr = 0; dr < unit.h; dr++)
+    for (let dc = 0; dc < unit.w; dc++)
+      state.grid[key(unit.col + dc, unit.row + dr)] = unit.id;
+
+  const el = document.createElement("div");
+  el.className = "unit";
+  el.style.left = colLeft(unit.col) + "px";
+  el.style.top = rowTop(unit.row + unit.h - 1) + "px";
+  el.style.width = (unit.w * CELL_W) + "px";
+  el.style.height = (unit.h * CELL_H) + "px";
+  el.style.background = t.color;
+  el.dataset.id = unit.id;
+  el.innerHTML = `<span>${shortLabel(unit.type)}</span><div class="occ"></div>`;
+  el.addEventListener("click", (e) => { e.stopPropagation(); onUnitClick(unit); });
+  world.appendChild(el);
+  unit.el = el;
+  state.units.push(unit);
+  updateUnitVisual(unit);
+}
+
+function shortLabel(type) {
+  return ({office:"OFF", apartment:"APT", shop:"SHOP", restaurant:"REST",
+           stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
+}
+
+function onUnitClick(unit) {
+  if (state.tool === "pointer") {
+    const t = TYPES[unit.type];
+    const refund = Math.floor(t.cost * 0.5);
+    if (unit.type === "lobby") { toast("The lobby can't be sold."); return; }
+    if (confirm(`${t.name} on floor ${unit.row}\nOccupants: ${unit.occupants}/${t.cap||0}\nSatisfaction: ${Math.round(unit.satisfaction)}%\n\nSell for $${refund.toLocaleString()}?`)) {
+      sellUnit(unit, refund);
+    }
+  }
+}
+
+function sellUnit(unit, refund) {
+  for (let dr = 0; dr < unit.h; dr++)
+    for (let dc = 0; dc < unit.w; dc++)
+      delete state.grid[key(unit.col + dc, unit.row + dr)];
+  unit.el.remove();
+  state.units = state.units.filter(u => u.id !== unit.id);
+  state.cash += refund;
+  log(`Sold ${TYPES[unit.type].name} for $${refund.toLocaleString()}`, "bad");
+  refreshStats();
+}
+
+function updateUnitVisual(unit) {
+  const t = TYPES[unit.type];
+  const occBar = unit.el.querySelector(".occ");
+  if (t.cap > 0) {
+    const ratio = unit.occupants / t.cap;
+    occBar.style.background = ratio > 0.66 ? "var(--good)" : ratio > 0 ? "var(--accent)" : "var(--bad)";
+    occBar.style.width = (ratio * 100) + "%";
+  } else {
+    occBar.style.width = "0";
+  }
+}
+
+// ---------- Mouse: ghost preview & building ----------
+function pointFromEvent(e) {
+  const rect = world.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const col = Math.floor(x / CELL_W);
+  const row = MAX_FLOORS - Math.floor(y / CELL_H);
+  return { col, row };
+}
+
+scroller.addEventListener("mousemove", (e) => {
+  const t = TYPES[state.tool];
+  if (!t || t.tool || state.tool === "pointer") { ghost.style.display = "none"; return; }
+  const { col, row } = pointFromEvent(e);
+  if (row < 0 || row > MAX_FLOORS) { ghost.style.display = "none"; return; }
+  ghost.style.display = "block";
+  ghost.style.width = (t.w * CELL_W) + "px";
+  ghost.style.height = (t.h * CELL_H) + "px";
+  ghost.style.left = colLeft(col) + "px";
+  ghost.style.top = rowTop(row + t.h - 1) + "px";
+  const ok = cellsFree(col, row, t.w, t.h) && state.cash >= t.cost;
+  ghost.classList.toggle("invalid", !ok);
+});
+
+world.addEventListener("click", (e) => {
+  if (state.tool === "pointer" || TYPES[state.tool].tool) return;
+  const { col, row } = pointFromEvent(e);
+  if (row < 0 || row > MAX_FLOORS) return;
+  tryBuild(col, row, state.tool);
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") selectTool("pointer");
+});
+
+// ---------- Economy & simulation ----------
+function rentableUnits() {
+  return state.units.filter(u => {
+    const k = TYPES[u.type].kind;
+    return k === "work" || k === "home";
+  });
+}
+function shopUnits() {
+  return state.units.filter(u => TYPES[u.type].kind === "shop");
+}
+
+// Tenants move in over time if there is transit access and demand
+function simTenants() {
+  rentableUnits().forEach(u => {
+    const t = TYPES[u.type];
+    if (u.occupants < t.cap) {
+      // chance to gain a tenant scales with overall tower appeal
+      const appeal = 0.02 + state.stars * 0.01;
+      if (Math.random() < appeal) {
+        u.occupants++;
+        state.pop++;
+        updateUnitVisual(u);
+        if (u.occupants === t.cap) log(`${t.name} on floor ${u.row} fully leased!`, "good");
+      }
+    }
+    // satisfaction drifts based on transit proximity
+    const access = hasTransitAccess(u.col, u.row, u.w);
+    const target = access ? 100 : 40;
+    u.satisfaction += (target - u.satisfaction) * 0.05;
+    if (u.satisfaction < 30 && u.occupants > 0 && Math.random() < 0.1) {
+      u.occupants--; state.pop--; updateUnitVisual(u);
+      log(`A tenant left ${t.name} on floor ${u.row} (poor access).`, "bad");
+    }
+  });
+}
+
+// Daily rent payout
+function collectRent() {
+  let total = 0;
+  rentableUnits().forEach(u => {
+    const t = TYPES[u.type];
+    total += Math.round((t.rent || 0) * (u.occupants / Math.max(1, t.cap)));
+  });
+  // shops earn based on nearby population
+  shopUnits().forEach(u => {
+    const nearbyPop = state.pop; // simplified: whole tower foot traffic
+    const earn = Math.min(8000, Math.round(nearbyPop * 120 + Math.random() * 1000));
+    total += earn;
+    u.occupants = Math.min(99, Math.round(earn / 100));
+  });
+  if (total !== 0) {
+    state.cash += total;
+    log(`Daily income: +$${total.toLocaleString()}`, "good");
+  }
+  refreshStats();
+}
+
+function recomputeStars() {
+  // star rating by population thresholds (à la SimTower)
+  const p = state.pop;
+  let s = 0;
+  if (p >= 10) s = 1;
+  if (p >= 40) s = 2;
+  if (p >= 100) s = 3;
+  if (p >= 200) s = 4;
+  if (p >= 350) s = 5;
+  if (s !== state.stars) {
+    if (s > state.stars) log(`★ Promoted to ${s}-star tower!`, "good");
+    state.stars = s;
+  }
+}
+
+// ---------- People dots (visual flavor) ----------
+function spawnPerson() {
+  if (state.people.length > 60) return;
+  const homes = rentableUnits().filter(u => u.occupants > 0);
+  if (homes.length === 0) return;
+  const u = homes[Math.floor(Math.random() * homes.length)];
+  const el = document.createElement("div");
+  el.className = "person";
+  el.style.background = `hsl(${Math.floor(Math.random()*360)},60%,55%)`;
+  el.style.left = colLeft(u.col + Math.random() * u.w) + "px";
+  el.style.top = (rowTop(u.row) + CELL_H - 12) + "px";
+  world.appendChild(el);
+  const person = { el, col: u.col, row: u.row, life: 200 + Math.random()*200 };
+  state.people.push(person);
+}
+
+function movepeople() {
+  for (let i = state.people.length - 1; i >= 0; i--) {
+    const p = state.people[i];
+    p.life--;
+    p.col += (Math.random() - 0.5) * 1.5;
+    p.col = Math.max(0, Math.min(COLS - 1, p.col));
+    p.el.style.left = colLeft(p.col) + "px";
+    if (p.life <= 0) { p.el.remove(); state.people.splice(i, 1); }
+  }
+}
+
+// ---------- Time loop ----------
+let lastTs = 0;
+let minuteAccumulator = 0;
+
+function tick(ts) {
+  const dt = Math.min(100, ts - lastTs);
+  lastTs = ts;
+  if (state.speed > 0) {
+    // advance sim minutes
+    minuteAccumulator += dt * state.speed * 0.06; // tune: ~ minutes per ms
+    while (minuteAccumulator >= 1) {
+      advanceMinute();
+      minuteAccumulator -= 1;
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+function advanceMinute() {
+  state.minutes++;
+  if (state.minutes % 5 === 0) { simTenants(); movepeople(); }
+  if (state.minutes % 20 === 0) spawnPerson();
+  if (state.minutes >= 24 * 60) {
+    state.minutes = 0;
+    state.day++;
+    collectRent();
+    recomputeStars();
+  }
+  updateClock();
+}
+
+function updateClock() {
+  const h = Math.floor(state.minutes / 60);
+  const m = state.minutes % 60;
+  document.getElementById("s-time").textContent =
+    `${state.day} · ${h}:${m.toString().padStart(2, "0")}`;
+}
+
+// animation for people on a steadier cadence
+setInterval(() => { if (state.speed > 0) movepeople(); }, 250);
+
+// ---------- Stats / UI ----------
+function refreshStats() {
+  document.getElementById("s-cash").textContent = "$" + state.cash.toLocaleString();
+  document.getElementById("s-pop").textContent = state.pop;
+  const floorsUsed = new Set(state.units.map(u => u.row)).size;
+  document.getElementById("s-floors").textContent = floorsUsed;
+  document.getElementById("s-stars").textContent =
+    "★".repeat(state.stars) + "☆".repeat(5 - state.stars);
+}
+
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
+}
+function flash(good) { /* hook for future fx */ }
+
+function log(msg, cls) {
+  const e = document.createElement("div");
+  e.className = "entry" + (cls ? " " + cls : "");
+  const h = Math.floor(state.minutes / 60), m = state.minutes % 60;
+  e.textContent = `[${h}:${m.toString().padStart(2,"0")}] ${msg}`;
+  logEl.prepend(e);
+  while (logEl.children.length > 40) logEl.lastChild.remove();
+}
+
+// ---------- Speed buttons ----------
+document.querySelectorAll("[data-speed]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    state.speed = Number(btn.dataset.speed);
+    document.querySelectorAll("[data-speed]").forEach(b =>
+      b.classList.toggle("active", b === btn));
+  });
+});
+
+// ---------- Init ----------
+function init() {
+  buildBackground();
+  buildToolbar();
+  // pre-build a free lobby across the ground floor center
+  const lobbyStart = Math.floor(COLS/2) - 3;
+  for (let c = lobbyStart; c < lobbyStart + 6; c++) {
+    const unit = { id: state.nextId++, type: "lobby", col: c, row: 0, w: 1, h: 1, occupants: 0, satisfaction: 100 };
+    placeUnit(unit);
+  }
+  refreshStats();
+  updateClock();
+  log("Welcome to MicroTower. Build stairs/elevators, then offices & apartments above the lobby.", "good");
+  // scroll to ground
+  scroller.scrollTop = world.clientHeight - scroller.clientHeight;
+  scroller.scrollLeft = (worldWidth - scroller.clientWidth) / 2;
+  selectTool("pointer");
+  requestAnimationFrame((t) => { lastTs = t; requestAnimationFrame(tick); });
+}
+
+init();
+})();
+</script>
+</body>
+</html>
