@@ -55,8 +55,11 @@ push.
 | `test-sim.js` | Headless smoke test (runtime errors, decisive endings) |
 | `test-balance.js` | Headless balance check (win rate, game length) |
 
-The map is drawn from real state outlines (projected to SVG), with surrounding
-states shown as neutral terrain and a hand-built Quebec to the north.
+The map is drawn from real state outlines (projected to SVG), with a hand-built
+Quebec to the north and distant states shown as neutral backdrop terrain.
+Beyond the thirteen colonies lie three **neutral frontier regions** — Ohio
+Country, Appalachia, and East Florida — held by local militia. Either side can
+march in and claim them for extra income and position.
 
 ## Tests
 

@@ -7,11 +7,16 @@ const PLAYABLE = {
   mass: "Massachusetts", conn: "Connecticut", ny: "New York", nj: "New Jersey",
   penn: "Pennsylvania", del: "Delaware", md: "Maryland", va: "Virginia",
   nc: "North Carolina", sc: "South Carolina", ga: "Georgia",
+  // Neutral frontier regions
+  ohio: "Ohio", appalachia: "West Virginia", florida: "Florida",
 };
+// Regions excluded from projection bounds (Florida's peninsula would stretch
+// the map far south; we crop it to its northern frontier instead).
+const NO_BOUNDS = new Set(["florida"]);
 const TERRAIN = [
-  "Maine", "New Hampshire", "Vermont", "Rhode Island", "West Virginia", "Ohio",
+  "Maine", "New Hampshire", "Vermont", "Rhode Island",
   "Kentucky", "Tennessee", "Indiana", "Michigan", "Alabama", "Mississippi",
-  "Florida", "Illinois", "District of Columbia",
+  "Illinois", "District of Columbia",
 ];
 
 // Hand-built Province of Quebec (lon, lat), sitting north of NY / New England.
@@ -36,13 +41,15 @@ function extend(lon, lat) {
   if (lon < minLon) minLon = lon; if (lon > maxLon) maxLon = lon;
   if (lat < minLat) minLat = lat; if (lat > maxLat) maxLat = lat;
 }
-for (const name of Object.values(PLAYABLE)) {
-  for (const ring of ringsOf(featByName(name).geometry)) for (const [lon, lat] of ring) extend(lon, lat);
+for (const id in PLAYABLE) {
+  if (NO_BOUNDS.has(id)) continue;
+  for (const ring of ringsOf(featByName(PLAYABLE[id]).geometry)) for (const [lon, lat] of ring) extend(lon, lat);
 }
 for (const [lon, lat] of QUEBEC_RING) extend(lon, lat);
 
 const PAD = 0.4; // degrees of margin
 minLon -= PAD; maxLon += PAD; minLat -= PAD; maxLat += PAD;
+minLat = Math.min(minLat, 29.4); // extend south to reveal north Florida
 const midLat = (minLat + maxLat) / 2;
 const lonScale = Math.cos((midLat * Math.PI) / 180); // horizontal compression
 
@@ -97,6 +104,7 @@ function ringCentroid(ring) {
 const ANCHOR = {
   mass: [-71.0, 42.45], conn: [-72.85, 41.5], ny: [-75.3, 42.95], nj: [-74.5, 40.1],
   va: [-78.3, 37.7], md: [-77.2, 39.45], del: [-75.45, 39.05], quebec: [-73.0, 46.7],
+  ohio: [-82.7, 40.3], appalachia: [-80.5, 38.7], florida: [-82.0, 30.45],
 };
 
 const regions = {};
