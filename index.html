@@ -34,6 +34,7 @@
           <li><strong>Recruit</strong> — select one of your regions, then press <em>Muster</em> to raise soldiers there (costs gold).</li>
           <li><strong>Manpower</strong> — each region has only so many young men, set by its population. Mustering draws them down, and the fallen never return to the pool. Populous Pennsylvania, Massachusetts, and Virginia can field armies; thinly-settled regions and the frontier soon run dry. Gold cannot buy soldiers who do not exist.</li>
           <li><strong>March &amp; Attack</strong> — select a region with troops, then click an adjacent region. Move into your own land to reinforce, or into enemy land to give battle. Each army may act once per turn.</li>
+          <li><strong>Generals</strong> (marked with a ✦) lead an army and boost its strength in attack and defense — Washington, Greene, Gates for you; Howe, Cornwallis, Burgoyne for the Crown. A general rides with his troops when they march or assault (you choose), riding into a conquered region on victory. But a commander whose region is overrun — or whose broken assault is run down — is captured, a grave blow to morale. There are no replacements, so guard them.</li>
           <li><strong>Cities &amp; forts</strong> defend better and produce more gold. Capitals are vital — losing yours is a catastrophe.</li>
           <li><strong>The British are relentless.</strong> Their colonies are few, but fresh regulars arrive by sea throughout the war — manpower no colony can match — and concentrate to drive on Philadelphia. Spend your men wisely; you cannot replace them as fast as the Crown ships its own.</li>
           <li><strong>France</strong> may join your cause if your Resolve stays strong past 1777 — bringing gold, regulars, and a fleet.</li>
@@ -81,6 +82,7 @@
           <div id="region-info" class="panel">
             <h3 id="ri-name">Select a region</h3>
             <p id="ri-owner" class="ri-owner"></p>
+            <p id="ri-general" class="ri-general"></p>
             <div class="ri-stats">
               <div><span class="ri-k">Troops</span><span id="ri-troops" class="ri-v">—</span></div>
               <div><span class="ri-k">Manpower</span><span id="ri-manpower" class="ri-v">—</span></div>
@@ -110,6 +112,10 @@
           <input type="range" id="troop-slider" min="1" max="1" value="1" />
           <span id="troop-count" class="troop-count">1</span>
         </div>
+        <label id="lead-row" class="lead-row hidden">
+          <input type="checkbox" id="lead-general" checked />
+          <span id="lead-label">Lead with the general</span>
+        </label>
         <div class="modal-buttons">
           <button id="modal-cancel" class="btn">Cancel</button>
           <button id="modal-confirm" class="btn btn-primary">Confirm</button>
