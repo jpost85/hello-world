@@ -9,9 +9,9 @@
   const CONFIG = {
     startGold: 120,
     crownStartGold: 95,
-    crownRecruitCap: 5,    // max soldiers the AI musters per turn
+    crownRecruitCap: 3,    // local Loyalist mustering is only a minor trickle
     crownReinforceEvery: 3, // British regulars arrive by sea every N turns
-    crownReinforceBase: 6, // troops per wave (grows over the war)
+    crownReinforceBase: 6,  // troops per wave (grows over the war) — Britain's main force
     crownReinforceGrowth: 7,// +1 trooper per this many turns
     recruitCost: 14,        // gold per soldier
     recruitBatch: 3,        // soldiers mustered per Recruit press
