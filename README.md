@@ -55,11 +55,18 @@ push.
 | `test-sim.js` | Headless smoke test (runtime errors, decisive endings) |
 | `test-balance.js` | Headless balance check (win rate, game length) |
 
-The map is drawn from real state outlines (projected to SVG), with a hand-built
-Quebec to the north and distant states shown as neutral backdrop terrain.
-Beyond the thirteen colonies lie three **neutral frontier regions** — Ohio
-Country, Appalachia, and East Florida — held by local militia. Either side can
-march in and claim them for extra income and position.
+The map is drawn from real state outlines (projected to SVG), arranged in their
+colonial configurations: the District of Maine and present-day West Virginia
+are part of Massachusetts and Virginia respectively, and all thirteen colonies
+(including New Hampshire and Rhode Island) are represented. A hand-built Quebec
+sits to the north, and distant states form neutral backdrop terrain.
+
+Beyond the colonies lie four **neutral / disputed frontier regions** held by
+local militia — Vermont (the New Hampshire Grants), the Ohio Country, Appalachia
+(the Kentucky/Tennessee backcountry), and East Florida. Either side can march in
+and claim them for extra income and position. The British, despite their small
+holdings, receive periodic shiploads of regulars to offset the colonies'
+economic advantage.
 
 ## Tests
 

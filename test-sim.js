@@ -59,12 +59,7 @@ for (let g = 0; g < GAMES; g++) {
     while (!game.getState().over && guard++ < 500) {
       const S = game.getState();
       // Player: every army attacks the weakest enemy neighbour it can reach.
-      const adj = {
-        quebec:["mass","ny"], mass:["quebec","conn"], conn:["mass","ny"],
-        ny:["quebec","conn","nj","penn"], nj:["ny","penn","del"],
-        penn:["ny","nj","md","del"], del:["nj","penn","md"], md:["penn","del","va"],
-        va:["md","nc"], nc:["va","sc"], sc:["nc","ga"], ga:["sc"],
-      };
+      const adj = game.ADJACENCY;
       for (const id of Object.keys(S.regions)) {
         const r = S.regions[id];
         if (r.owner !== "patriot" || r.acted || r.troops <= 1) continue;
