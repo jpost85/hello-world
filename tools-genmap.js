@@ -1,11 +1,21 @@
-/* Build map path data for Liberty's Call from a US-states GeoJSON.
-   Outputs /tmp/mapdata.js with a MAPDATA object:
+/* Build map path data for Liberty's Call from US-state and Canadian-province
+   GeoJSON. Outputs /tmp/mapdata.js with a MAPDATA object:
    { viewBox, terrain[], regions{}, annotations[] }
-   A region may be backed by one state name or several (combined geometry),
-   reflecting colonial configurations (e.g. Massachusetts incl. the District
-   of Maine; Virginia incl. present-day West Virginia). */
+
+   Inputs (fetch into /tmp before running):
+     /tmp/us-states.json   https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json
+     /tmp/canada.geojson   https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson
+
+   - Playable regions use real outlines in their colonial configurations
+     (e.g. Massachusetts incl. the District of Maine; Virginia incl. WV).
+   - Every other state/province whose bounding box overlaps the visible window
+     is emitted as non-interactive terrain, so the whole landmass is filled and
+     only real water (Atlantic, Gulf, Great Lakes, St. Lawrence) shows as water.
+   - Dense Canadian coastlines are simplified, since they're only backdrop. */
 const fs = require("fs");
-const gj = JSON.parse(fs.readFileSync("/tmp/us-states.json", "utf8"));
+const us = JSON.parse(fs.readFileSync("/tmp/us-states.json", "utf8"));
+const ca = JSON.parse(fs.readFileSync("/tmp/canada.geojson", "utf8"));
+const FEATURES = us.features.concat(ca.features); // names are unique across both
 
 const PLAYABLE = {
   // Original thirteen colonies (Maine was part of Massachusetts; West
@@ -29,27 +39,14 @@ const PLAYABLE = {
   ohio:       "Ohio",                    // the Ohio Country / Northwest frontier
   appalachia: ["Kentucky", "Tennessee"], // trans-Appalachian backcountry
   florida:    "Florida",                 // East Florida (cropped to its north)
+  quebec:     "Quebec",                  // Province of Quebec (cropped to its south)
 };
-// Regions kept out of the projection bounds so a long western/southern tail
-// (Florida's peninsula, Kentucky/Tennessee reaching the Mississippi) doesn't
-// stretch the map; they crop at the frame edge instead.
-const NO_BOUNDS = new Set(["florida", "appalachia"]);
+// Regions kept out of the projection bounds so a long tail (Florida's
+// peninsula, Kentucky/Tennessee to the Mississippi, Quebec to the Arctic)
+// doesn't stretch the map; they crop at the frame edge instead.
+const NO_BOUNDS = new Set(["florida", "appalachia", "quebec"]);
 
-const TERRAIN = [
-  "Indiana", "Michigan", "Alabama", "Mississippi", "Illinois", "District of Columbia",
-];
-
-// Hand-built Province of Quebec (lon, lat). Its southern edge follows the
-// real border: the 45th parallel west of New Hampshire, then NE along the
-// height of land between Maine and Quebec — so it does not overlap Maine.
-const QUEBEC_RING = [
-  [-79.5, 47.6], [-76.5, 48.4], [-72.0, 48.6], [-69.8, 48.05],
-  [-69.2, 47.45], [-70.3, 46.3], [-70.9, 45.6], [-71.45, 45.05],
-  [-73.3, 45.0], [-74.7, 45.0], [-76.9, 44.2], [-79.0, 43.9],
-  [-79.6, 45.2], [-79.5, 47.6],
-];
-
-function featByName(name) { return gj.features.find((f) => f.properties.name === name); }
+function featByName(name) { return FEATURES.find((f) => f.properties.name === name); }
 function statesOf(v) { return Array.isArray(v) ? v : [v]; }
 function ringsOf(geom) {
   if (geom.type === "Polygon") return geom.coordinates;
@@ -58,8 +55,28 @@ function ringsOf(geom) {
 function polygonsOf(geom) {
   return geom.type === "Polygon" ? [geom.coordinates] : geom.coordinates;
 }
+function bboxOf(geom) {
+  let mnx = 9e9, mny = 9e9, mxx = -9e9, mxy = -9e9;
+  for (const r of ringsOf(geom)) for (const [x, y] of r) {
+    if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y;
+  }
+  return { mnx, mny, mxx, mxy };
+}
+// Radial-distance simplification: drop points within `tol` degrees of the last
+// kept one. Only worth it for dense rings (Canadian coastlines).
+function simplifyRing(ring, tol) {
+  if (ring.length <= 120) return ring;
+  const out = [ring[0]];
+  let [lx, ly] = ring[0];
+  for (let i = 1; i < ring.length - 1; i++) {
+    const [x, y] = ring[i];
+    if (Math.hypot(x - lx, y - ly) >= tol) { out.push(ring[i]); lx = x; ly = y; }
+  }
+  out.push(ring[ring.length - 1]);
+  return out;
+}
 
-// --- Projection bounds ---
+// --- Projection bounds (from playable regions not flagged NO_BOUNDS) ---
 let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
 function extend(lon, lat) {
   if (lon < minLon) minLon = lon; if (lon > maxLon) maxLon = lon;
@@ -71,11 +88,11 @@ for (const id in PLAYABLE) {
     for (const ring of ringsOf(featByName(name).geometry)) for (const [lon, lat] of ring) extend(lon, lat);
   }
 }
-for (const [lon, lat] of QUEBEC_RING) extend(lon, lat);
 
 const PAD = 0.4; // degrees of margin
 minLon -= PAD; maxLon += PAD; minLat -= PAD; maxLat += PAD;
 minLat = Math.min(minLat, 29.4); // extend south to reveal north Florida
+maxLat = Math.max(maxLat, 48.8); // extend north to frame Quebec / Canada
 const midLat = (minLat + maxLat) / 2;
 const lonScale = Math.cos((midLat * Math.PI) / 180); // horizontal compression
 
@@ -94,9 +111,8 @@ function ringPath(ring) {
   }
   return d + "Z";
 }
-function geomPath(geom) { return ringsOf(geom).map(ringPath).join(" "); }
+function geomPath(geom) { return ringsOf(geom).map((r) => ringPath(simplifyRing(r, 0.12))).join(" "); }
 function regionPath(v) { return statesOf(v).map((n) => geomPath(featByName(n).geometry)).join(" "); }
-function customPath(ring) { return ringPath(ring); }
 
 // Area-weighted centroid of the largest ring across all states of a region.
 function centroidOf(v) {
@@ -122,7 +138,7 @@ function centroidOf(v) {
 const ANCHOR = {
   maine: [-69.2, 45.25], nh: [-71.45, 43.6], mass: [-71.8, 42.4], rhode: [-71.45, 41.55], conn: [-73.0, 41.4],
   vermont: [-72.9, 44.35], ny: [-75.3, 42.95], nj: [-74.5, 40.1], del: [-75.45, 39.05],
-  md: [-77.2, 39.45], va: [-79.5, 38.3], quebec: [-73.5, 46.9],
+  md: [-77.2, 39.45], va: [-79.5, 38.3], quebec: [-71.5, 47.2],
   ohio: [-82.7, 40.3], appalachia: [-82.3, 36.3], florida: [-82.0, 30.45],
 };
 
@@ -131,30 +147,28 @@ for (const id in PLAYABLE) {
   const c = ANCHOR[id] ? px(...ANCHOR[id]) : px(...centroidOf(PLAYABLE[id]));
   regions[id] = { path: regionPath(PLAYABLE[id]), cx: +c[0].toFixed(1), cy: +c[1].toFixed(1) };
 }
-{
-  const c = px(...ANCHOR.quebec);
-  regions.quebec = { path: customPath(QUEBEC_RING), cx: +c[0].toFixed(1), cy: +c[1].toFixed(1) };
+
+// Terrain = every other state/province overlapping the visible window.
+const playableNames = new Set();
+for (const id in PLAYABLE) for (const n of statesOf(PLAYABLE[id])) playableNames.add(n);
+const M = 1.0; // window margin (degrees)
+const terrain = [];
+for (const f of FEATURES) {
+  if (playableNames.has(f.properties.name)) continue;
+  const b = bboxOf(f.geometry);
+  if (b.mxx < minLon - M || b.mnx > maxLon + M || b.mxy < minLat - M || b.mny > maxLat + M) continue;
+  terrain.push(geomPath(f.geometry));
 }
-
-const terrain = TERRAIN.map((n) => { const f = featByName(n); return f ? geomPath(f.geometry) : null; }).filter(Boolean);
-
-// Decorative, non-interactive sub-labels (lon, lat).
-const ANNOTATIONS = [];
-const annotations = ANNOTATIONS.map((a) => {
-  const [x, y] = px(...a.lonlat);
-  return { text: a.text, x: +x.toFixed(1), y: +y.toFixed(1) };
-});
 
 const MAPDATA = {
   viewBox: `0 0 ${WIDTH.toFixed(0)} ${HEIGHT.toFixed(0)}`,
   terrain,
   regions,
-  annotations,
+  annotations: [],
 };
 
 fs.writeFileSync("/tmp/mapdata.js", "var MAPDATA = " + JSON.stringify(MAPDATA) + ";\n");
 console.log("viewBox:", MAPDATA.viewBox);
-console.log("region anchors:");
 for (const id in regions) console.log(" ", id.padEnd(11), regions[id].cx, regions[id].cy, "pathlen", regions[id].path.length);
-console.log("terrain shapes:", terrain.length, "| annotations:", annotations.length);
+console.log("terrain shapes:", terrain.length);
 console.log("file bytes:", fs.statSync("/tmp/mapdata.js").size);
