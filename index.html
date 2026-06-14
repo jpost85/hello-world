@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liberty's Call — A Revolutionary War Strategy Game</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Title screen -->
+    <section id="title-screen" class="screen">
+      <div class="title-card">
+        <h1>Liberty's Call</h1>
+        <p class="subtitle">A turn-based strategy of the American Revolution<br />
+          inspired by <em>Liberty or Death</em></p>
+        <div class="title-buttons">
+          <button id="btn-new-game" class="btn btn-primary">New Campaign</button>
+          <button id="btn-continue" class="btn">Continue</button>
+          <button id="btn-how-to" class="btn">How to Play</button>
+        </div>
+        <p class="flavor">"We must all hang together, or assuredly we shall all hang separately."</p>
+      </div>
+    </section>
+
+    <!-- How to play -->
+    <section id="howto-screen" class="screen hidden">
+      <div class="panel howto">
+        <h2>How to Play</h2>
+        <p>You command the <strong>Continental Army (Patriots)</strong> against the <strong>British Crown</strong> across the thirteen colonies. Win the war for independence.</p>
+        <ul>
+          <li><strong>Treasury (gold)</strong> — earned each turn from the regions you hold. Spend it to recruit troops.</li>
+          <li><strong>Resolve (morale)</strong> — the national will to fight. Win battles to raise it, lose ground to drain it. If your Resolve hits zero, the cause collapses.</li>
+          <li><strong>Recruit</strong> — select one of your regions, then press <em>Recruit</em> to muster soldiers there (costs gold).</li>
+          <li><strong>March &amp; Attack</strong> — select a region with troops, then click an adjacent region. Move into your own land to reinforce, or into enemy land to give battle. Each army may act once per turn.</li>
+          <li><strong>Cities &amp; forts</strong> defend better and produce more gold. Capitals are vital — losing yours is a catastrophe.</li>
+          <li><strong>France</strong> may join your cause if your Resolve stays strong — bringing gold, regulars, and a fleet.</li>
+        </ul>
+        <p><strong>Victory:</strong> Seize the British capital or break the Crown's Resolve. Or simply endure to 1783 still holding your capital — the war of attrition is yours to win.</p>
+        <button id="btn-howto-back" class="btn btn-primary">Back</button>
+      </div>
+    </section>
+
+    <!-- Game screen -->
+    <section id="game-screen" class="screen hidden">
+      <header id="topbar">
+        <div class="brand">Liberty's Call</div>
+        <div class="stat-group">
+          <div class="stat" title="Date">
+            <span class="stat-label">Date</span>
+            <span id="stat-date" class="stat-value">Spring 1775</span>
+          </div>
+          <div class="stat patriot" title="Your treasury">
+            <span class="stat-label">Treasury</span>
+            <span id="stat-gold" class="stat-value">0</span>
+          </div>
+          <div class="stat patriot" title="Income next turn">
+            <span class="stat-label">Income</span>
+            <span id="stat-income" class="stat-value">+0</span>
+          </div>
+          <div class="morale">
+            <span class="stat-label">Patriot Resolve</span>
+            <div class="bar"><div id="bar-patriot" class="bar-fill patriot-fill"></div></div>
+          </div>
+          <div class="morale">
+            <span class="stat-label">Crown Resolve</span>
+            <div class="bar"><div id="bar-crown" class="bar-fill crown-fill"></div></div>
+          </div>
+        </div>
+        <button id="btn-menu" class="btn btn-small">Menu</button>
+      </header>
+
+      <main id="board">
+        <div id="map-wrap">
+          <svg id="map" viewBox="0 0 640 920" preserveAspectRatio="xMidYMid meet" aria-label="Map of the colonies"></svg>
+        </div>
+
+        <aside id="sidebar">
+          <div id="region-info" class="panel">
+            <h3 id="ri-name">Select a region</h3>
+            <p id="ri-owner" class="ri-owner"></p>
+            <div class="ri-stats">
+              <div><span class="ri-k">Troops</span><span id="ri-troops" class="ri-v">—</span></div>
+              <div><span class="ri-k">Income</span><span id="ri-income" class="ri-v">—</span></div>
+              <div><span class="ri-k">Defense</span><span id="ri-def" class="ri-v">—</span></div>
+            </div>
+            <p id="ri-hint" class="ri-hint"></p>
+            <div id="ri-actions" class="ri-actions"></div>
+          </div>
+
+          <div class="panel log-panel">
+            <h3>Dispatches</h3>
+            <ul id="log"></ul>
+          </div>
+
+          <button id="btn-end-turn" class="btn btn-primary btn-end">End Turn</button>
+        </aside>
+      </main>
+    </section>
+
+    <!-- Troop dialog -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+      <div class="modal">
+        <h3 id="modal-title">March</h3>
+        <p id="modal-text"></p>
+        <div class="slider-row">
+          <input type="range" id="troop-slider" min="1" max="1" value="1" />
+          <span id="troop-count" class="troop-count">1</span>
+        </div>
+        <div class="modal-buttons">
+          <button id="modal-cancel" class="btn">Cancel</button>
+          <button id="modal-confirm" class="btn btn-primary">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Banner / event toast -->
+    <div id="banner" class="banner hidden"><div id="banner-text"></div></div>
+
+    <!-- Game over -->
+    <div id="gameover" class="modal-overlay hidden">
+      <div class="modal gameover-modal">
+        <h2 id="go-title">Victory</h2>
+        <p id="go-text"></p>
+        <button id="go-restart" class="btn btn-primary">New Campaign</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
