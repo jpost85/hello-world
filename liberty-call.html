@@ -816,6 +816,12 @@ html, body {
   function onRegionClick(id) {
     if (S.over) return;
 
+    // Clicking the already-selected region again clears the selection.
+    if (selected === id) {
+      deselect();
+      return;
+    }
+
     // If we have a selected patriot army and clicked a legal target, act.
     if (selected && selected !== id) {
       const moves = legalMoves(selected);
@@ -831,6 +837,13 @@ html, body {
 
     // Otherwise just select/inspect.
     selected = id;
+    renderAll();
+  }
+
+  // Clear the current selection (e.g. clicked off, or pressed Escape).
+  function deselect() {
+    if (selected === null) return;
+    selected = null;
     renderAll();
   }
 
@@ -1265,6 +1278,19 @@ html, body {
       $("#troop-count").textContent = e.target.value;
     });
     $("#go-restart").addEventListener("click", () => startGame(null));
+
+    // Clicking empty ocean/land (anything that isn't a region) clears selection.
+    $("#map").addEventListener("click", (e) => {
+      const t = e.target;
+      if (!t.classList || !t.classList.contains("region-shape")) deselect();
+    });
+
+    // Escape closes the troop dialog if open, otherwise clears selection.
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      if (!$("#modal-overlay").classList.contains("hidden")) closeTroopDialog();
+      else deselect();
+    });
 
     refreshContinue();
   }
