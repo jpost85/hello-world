@@ -32,14 +32,19 @@ function playTurn() {
   const isPatriot = (id) => S.regions[id].owner === "patriot";
   const threatened = Object.keys(S.regions).filter((id) => isPatriot(id) && crownAdjStack(S, id) > 0);
 
-  // 1) Recruit: weight the capital, then the most-threatened fronts.
+  // 1) Recruit: weight the capital, then the most-threatened fronts. Stops when
+  //    no targeted region can muster (gold or manpower exhausted).
   const order = ["penn", "penn"];
   threatened.slice().sort((a, b) => crownAdjStack(S, b) - crownAdjStack(S, a)).forEach((id) => order.push(id));
-  let i = 0, guard = 0;
-  while (S.gold >= BATCH && guard++ < 60) {
-    const tgt = order[i++ % order.length];
-    if (S.regions[tgt] && S.regions[tgt].owner === "patriot") game.recruit(tgt);
-    S = game.getState();
+  let progressed = true, guard = 0;
+  while (progressed && S.gold >= game.CONFIG.recruitCost && guard++ < 80) {
+    progressed = false;
+    for (const tgt of order) {
+      if (S.gold < game.CONFIG.recruitCost) break;
+      if (S.regions[tgt] && S.regions[tgt].owner === "patriot" && game.recruit(tgt)) {
+        progressed = true; S = game.getState();
+      }
+    }
   }
 
   // 2) Consolidate: march interior armies one step toward the threatened front.

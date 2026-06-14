@@ -10,11 +10,13 @@
     startGold: 120,
     crownStartGold: 95,
     crownRecruitCap: 5,    // max soldiers the AI musters per turn
-    crownReinforceEvery: 4, // British regulars arrive by sea every N turns
-    crownReinforceBase: 4, // troops per wave (grows over the war)
-    crownReinforceGrowth: 8,// +1 trooper per this many turns
+    crownReinforceEvery: 3, // British regulars arrive by sea every N turns
+    crownReinforceBase: 6, // troops per wave (grows over the war)
+    crownReinforceGrowth: 7,// +1 trooper per this many turns
     recruitCost: 14,        // gold per soldier
-    recruitBatch: 3,        // soldiers added per Recruit press
+    recruitBatch: 3,        // soldiers mustered per Recruit press
+    manpowerFraction: 0.05, // share of a region's population that is musterable
+    manpowerRegen: 0.0015,  // fraction of population coming of age each turn
     cityDefenseBonus: 1.5,  // multiplier to defender strength in cities/capitals
     capitalDefenseBonus: 1.95,
     startMorale: 100,
@@ -29,28 +31,30 @@
 
   /* ------------------------------- Map data ------------------------------- */
   // Regions of the colonial seaboard. Geometry (path + label anchor) lives in
-  // MAPDATA; `label` (optional) overrides the on-map text, `name` shows in the panel.
+  // MAPDATA; `label` (optional) overrides the on-map text, `name` shows in the
+  // panel. `pop` is the ~1775 free population in thousands — the well of young
+  // men a region can muster.
   const REGION_DEFS = [
-    { id: "quebec",    name: "Quebec",          income: 6,  city: true,  capital: false },
-    { id: "maine",     name: "District of Maine", income: 3, city: false, capital: false, label: "Maine" },
-    { id: "nh",        name: "New Hampshire",  income: 4,  city: false, capital: false },
-    { id: "mass",      name: "Massachusetts",  income: 7,  city: true,  capital: false },
-    { id: "rhode",     name: "Rhode Island",   income: 3,  city: false, capital: false, label: "R.I." },
-    { id: "conn",      name: "Connecticut",    income: 4,  city: false, capital: false },
-    { id: "ny",        name: "New York",       income: 8,  city: true,  capital: "crown" },
-    { id: "nj",        name: "New Jersey",     income: 4,  city: false, capital: false },
-    { id: "penn",      name: "Pennsylvania",   income: 8,  city: true,  capital: "patriot" },
-    { id: "del",       name: "Delaware",       income: 3,  city: false, capital: false },
-    { id: "md",        name: "Maryland",       income: 5,  city: false, capital: false },
-    { id: "va",        name: "Virginia",       income: 8,  city: true,  capital: false },
-    { id: "nc",        name: "North Carolina", income: 5,  city: false, capital: false },
-    { id: "sc",        name: "South Carolina", income: 6,  city: true,  capital: false },
-    { id: "ga",        name: "Georgia",        income: 4,  city: false, capital: false },
-    // Neutral / disputed frontier — lands either side may seize and use.
-    { id: "vermont",   name: "Vermont",        income: 3,  city: false, capital: false },
-    { id: "ohio",      name: "Ohio Country",   income: 4,  city: false, capital: false },
-    { id: "appalachia",name: "Appalachia",     income: 3,  city: false, capital: false },
-    { id: "florida",   name: "East Florida",   income: 4,  city: true,  capital: false },
+    { id: "quebec",    name: "Quebec",          income: 6,  city: true,  capital: false, pop: 90 },
+    { id: "maine",     name: "District of Maine", income: 3, city: false, capital: false, label: "Maine", pop: 25 },
+    { id: "nh",        name: "New Hampshire",  income: 4,  city: false, capital: false, pop: 82 },
+    { id: "mass",      name: "Massachusetts",  income: 7,  city: true,  capital: false, pop: 320 },
+    { id: "rhode",     name: "Rhode Island",   income: 3,  city: false, capital: false, label: "R.I.", pop: 58 },
+    { id: "conn",      name: "Connecticut",    income: 4,  city: false, capital: false, pop: 195 },
+    { id: "ny",        name: "New York",       income: 8,  city: true,  capital: "crown", pop: 185 },
+    { id: "nj",        name: "New Jersey",     income: 4,  city: false, capital: false, pop: 120 },
+    { id: "penn",      name: "Pennsylvania",   income: 8,  city: true,  capital: "patriot", pop: 300 },
+    { id: "del",       name: "Delaware",       income: 3,  city: false, capital: false, pop: 37 },
+    { id: "md",        name: "Maryland",       income: 5,  city: false, capital: false, pop: 170 },
+    { id: "va",        name: "Virginia",       income: 8,  city: true,  capital: false, pop: 300 },
+    { id: "nc",        name: "North Carolina", income: 5,  city: false, capital: false, pop: 230 },
+    { id: "sc",        name: "South Carolina", income: 6,  city: true,  capital: false, pop: 90 },
+    { id: "ga",        name: "Georgia",        income: 4,  city: false, capital: false, pop: 30 },
+    // Neutral / disputed frontier — sparsely settled, little manpower to muster.
+    { id: "vermont",   name: "Vermont",        income: 3,  city: false, capital: false, pop: 20 },
+    { id: "ohio",      name: "Ohio Country",   income: 4,  city: false, capital: false, pop: 4 },
+    { id: "appalachia",name: "Appalachia",     income: 3,  city: false, capital: false, pop: 12 },
+    { id: "florida",   name: "East Florida",   income: 4,  city: true,  capital: false, pop: 5 },
   ];
 
   const ADJACENCY = {
@@ -115,6 +119,7 @@
         id: def.id,
         owner: setup.owner,
         troops: setup.troops,
+        manpower: maxManpower(def.id),
         acted: false,
       };
     }
@@ -139,6 +144,10 @@
 
   function regionIncome(id) {
     return def(id).income;
+  }
+  // The most musterable men a region can ever hold (a share of its population).
+  function maxManpower(id) {
+    return Math.round((def(id).pop || 0) * CONFIG.manpowerFraction);
   }
   function defenseBonus(id) {
     const d = def(id);
@@ -356,6 +365,7 @@
       ownerEl.textContent = "";
       ownerEl.className = "ri-owner";
       $("#ri-troops").textContent = "—";
+      $("#ri-manpower").textContent = "—";
       $("#ri-income").textContent = "—";
       $("#ri-def").textContent = "—";
       hintEl.textContent = "Click a region to inspect it. Click one of your armies to give orders.";
@@ -370,6 +380,7 @@
     ownerEl.className = "ri-owner " + r.owner;
 
     $("#ri-troops").textContent = r.troops;
+    $("#ri-manpower").textContent = r.manpower + " / " + maxManpower(selected);
     $("#ri-income").textContent = regionIncome(selected);
     const bonus = defenseBonus(selected);
     $("#ri-def").textContent = bonus > 1 ? "+" + Math.round((bonus - 1) * 100) + "%" : "—";
@@ -377,16 +388,19 @@
     const moves = legalMoves(selected);
 
     if (r.owner === "patriot") {
-      // Recruit
+      // Recruit — limited by gold and the region's musterable manpower.
+      const n = Math.min(CONFIG.recruitBatch, r.manpower);
+      const cost = n * CONFIG.recruitCost;
       const recruitBtn = document.createElement("button");
-      const cost = CONFIG.recruitCost * CONFIG.recruitBatch;
       recruitBtn.className = "btn";
-      recruitBtn.textContent = `Recruit ${CONFIG.recruitBatch} troops (${cost}g)`;
-      recruitBtn.disabled = S.gold < cost;
+      recruitBtn.textContent = n > 0 ? `Muster ${n} troops (${cost}g)` : "No men to muster";
+      recruitBtn.disabled = n <= 0 || S.gold < CONFIG.recruitCost;
       recruitBtn.addEventListener("click", () => recruit(selected));
       actionsEl.appendChild(recruitBtn);
 
-      if (r.acted) {
+      if (r.manpower <= 0) {
+        hintEl.textContent = "This region's young men are spent — no one left to muster here.";
+      } else if (r.acted) {
         hintEl.textContent = "This army has already marched this turn.";
       } else if (r.troops <= 0) {
         hintEl.textContent = "No troops stationed here. Recruit or reinforce.";
@@ -456,14 +470,23 @@
   }
 
   /* ------------------------------- Recruit -------------------------------- */
+  // Muster up to a batch, limited by gold AND the region's remaining manpower.
+  // Returns true if at least one soldier was raised.
   function recruit(id) {
-    const cost = CONFIG.recruitCost * CONFIG.recruitBatch;
-    if (S.gold < cost) return;
-    S.gold -= cost;
-    S.regions[id].troops += CONFIG.recruitBatch;
-    log(`Mustered ${CONFIG.recruitBatch} troops in ${def(id).name}.`, "");
+    const r = S.regions[id];
+    const n = Math.min(
+      CONFIG.recruitBatch,
+      r.manpower,
+      Math.floor(S.gold / CONFIG.recruitCost)
+    );
+    if (n <= 0) return false;
+    S.gold -= n * CONFIG.recruitCost;
+    r.manpower -= n;
+    r.troops += n;
+    log(`Mustered ${n} troops in ${def(id).name}.`, "");
     save();
     renderAll();
+    return true;
   }
 
   /* --------------------------- Troop move dialog -------------------------- */
@@ -619,7 +642,12 @@
 
     // Advance turn & reset action flags.
     S.turn += 1;
-    for (const r of Object.values(S.regions)) r.acted = false;
+    for (const r of Object.values(S.regions)) {
+      r.acted = false;
+      // A fresh cohort comes of age each turn, up to the region's ceiling.
+      const regen = Math.round((def(r.id).pop || 0) * CONFIG.manpowerRegen);
+      r.manpower = Math.min(maxManpower(r.id), r.manpower + regen);
+    }
 
     // Crown income (internal economy for AI recruiting).
     S.crownGold += incomeFor("crown");
@@ -654,8 +682,8 @@
       showBanner("⚓  British regulars land at " + def(landing.id).name);
     }
 
-    // 1) Recruit reinforcements at the strongest front-line city.
-
+    // 1) Muster local Loyalists at a front-line city — limited by that
+    //    region's manpower (the regulars from overseas are the main force).
     let recruits = Math.floor(S.crownGold / CONFIG.recruitCost);
     recruits = Math.min(recruits, CONFIG.crownRecruitCap); // pace the AI
     if (recruits > 0) {
@@ -665,9 +693,13 @@
       const pool = front.length ? front : crownRegions;
       const target = pool.reduce((best, r) =>
         (def(r.id).city ? 1 : 0) - (best && def(best.id).city ? 1 : 0) >= 0 ? r : best, pool[0]);
-      target.troops += recruits;
-      S.crownGold -= recruits * CONFIG.recruitCost;
-      log(`British reinforcements land at ${def(target.id).name} (+${recruits}).`, "l-bad");
+      recruits = Math.min(recruits, target.manpower);
+      if (recruits > 0) {
+        target.troops += recruits;
+        target.manpower -= recruits;
+        S.crownGold -= recruits * CONFIG.recruitCost;
+        log(`Loyalists muster at ${def(target.id).name} (+${recruits}).`, "l-bad");
+      }
     }
 
     // 2) Each Crown army acts once: attack a beatable neighbour, else mass toward Philadelphia.

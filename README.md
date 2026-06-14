@@ -26,8 +26,13 @@ Click **New Campaign** to begin. Your progress autosaves to the browser, so
 - **Resolve (morale):** each side's will to fight. Win battles and seize ground
   to raise yours and drain the enemy's. If a side's Resolve hits zero, it
   collapses.
-- **Recruit:** select one of your regions and press *Recruit* to muster soldiers
-  there.
+- **Recruit:** select one of your regions and press *Muster* to raise soldiers
+  there (costs gold).
+- **Manpower:** each region has a finite pool of musterable young men, scaled to
+  its ~1775 population. Mustering depletes it and the fallen never return, so a
+  long war drains the colonies dry — populous regions can field armies while the
+  frontier cannot. Gold is no use without men. The British, by contrast, ship
+  regulars from overseas, unconstrained by colonial population.
 - **March & Attack:** select a region holding troops, then click an adjacent
   region — green to reinforce your own land, red to attack the enemy. Each army
   acts once per turn. A slider lets you choose how many troops to commit.
