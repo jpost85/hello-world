@@ -50,8 +50,13 @@ push.
 | `index.html` | Page structure and screens |
 | `styles.css` | Colonial/parchment theme and layout |
 | `game.js` | Game state, map, battles, AI, and persistence |
+| `liberty-call.html` | Single-file build (CSS + JS inlined) for easy sharing |
+| `tools-genmap.js` | Dev tool: projects a US-states GeoJSON into the SVG map paths in `game.js` |
 | `test-sim.js` | Headless smoke test (runtime errors, decisive endings) |
 | `test-balance.js` | Headless balance check (win rate, game length) |
+
+The map is drawn from real state outlines (projected to SVG), with surrounding
+states shown as neutral terrain and a hand-built Quebec to the north.
 
 ## Tests
 

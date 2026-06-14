@@ -135,34 +135,49 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
-  background:
-    radial-gradient(circle at 30% 30%, #2e6b8a, #1c4a63 70%);
+  padding: 10px;
+  background: #14333b;
   overflow: hidden;
 }
 #map { width: 100%; height: 100%; max-height: calc(100vh - 70px); }
 
 /* Map elements */
-.link-line { stroke: rgba(255,255,255,0.22); stroke-width: 2; stroke-dasharray: 4 4; }
+.terrain { fill: #d9c79c; stroke: #b7a276; stroke-width: 0.8; }
+.land-base { fill: #e3d3a8; stroke: none; }
+
 .region-shape {
-  stroke: #2b2118; stroke-width: 2.5; cursor: pointer;
-  transition: filter 0.15s ease, stroke-width 0.15s ease;
+  stroke: #4a3a22; stroke-width: 1.4; cursor: pointer;
+  transition: fill 0.15s ease, stroke-width 0.1s ease;
 }
-.region-shape:hover { filter: brightness(1.12); }
-.region-patriot { fill: var(--patriot); }
-.region-crown { fill: var(--crown); }
-.region-neutral { fill: var(--neutral); }
-.region-shape.selected { stroke: #ffd24a; stroke-width: 5; }
-.region-shape.movable { stroke: #6fe06f; stroke-width: 4.5; }
-.region-shape.attackable { stroke: #ff7a4a; stroke-width: 4.5; }
-.capital-star { fill: #ffd24a; stroke: #2b2118; stroke-width: 0.8; pointer-events: none; }
+.region-shape:hover { fill-opacity: 0.92; stroke-width: 2; }
+.region-patriot { fill: rgba(31, 78, 121, 0.74); }
+.region-crown { fill: rgba(140, 43, 43, 0.76); }
+.region-neutral { fill: rgba(154, 140, 110, 0.55); }
+.region-shape.selected { stroke: #ffd24a; stroke-width: 3.5; }
+.region-shape.movable { stroke: #43c443; stroke-width: 3.5; }
+.region-shape.attackable { stroke: #ff7a3a; stroke-width: 3.5; }
+
+.capital-star { fill: #ffd24a; stroke: #2b2118; stroke-width: 0.7; }
 .region-label {
-  fill: #f4ead2; font-size: 12px; font-weight: bold; text-anchor: middle;
-  pointer-events: none; paint-order: stroke; stroke: rgba(0,0,0,0.55); stroke-width: 3px;
+  fill: #f7efd9; font-size: 13px; font-weight: bold; text-anchor: middle;
+  paint-order: stroke; stroke: rgba(20, 12, 4, 0.75); stroke-width: 3px;
+  letter-spacing: 0.3px;
 }
-.troop-badge { fill: #f7f2e2; stroke: #2b2118; stroke-width: 1.5; pointer-events: none; }
-.troop-text { fill: #2b2118; font-size: 12px; font-weight: bold; text-anchor: middle; pointer-events: none; }
-.acted-mark { fill: rgba(0,0,0,0.35); pointer-events: none; }
+.troop-badge { fill: #f7f2e2; stroke-width: 2; }
+.troop-badge.troop-patriot { stroke: var(--patriot); }
+.troop-badge.troop-crown { stroke: var(--crown); }
+.troop-badge.troop-neutral { stroke: var(--neutral); }
+.troop-text { fill: #2b2118; font-size: 13px; font-weight: bold; text-anchor: middle; }
+.acted-mark { fill: rgba(20, 14, 6, 0.28); pointer-events: none; }
+
+/* Cartographic decoration */
+.ocean-label {
+  fill: rgba(30, 60, 70, 0.55); font-size: 17px; font-style: italic;
+  letter-spacing: 4px; text-anchor: middle; font-weight: bold;
+}
+.compass-ring { fill: rgba(247, 242, 226, 0.65); stroke: #4a3a22; stroke-width: 1.2; }
+.compass-star { fill: #8c2b2b; stroke: #2b2118; stroke-width: 0.6; }
+.compass-n { fill: #2b2118; font-size: 11px; font-weight: bold; text-anchor: middle; }
 
 /* ---------- Sidebar ---------- */
 #sidebar {
