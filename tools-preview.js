@@ -5,17 +5,17 @@ const { execSync } = require("child_process");
 eval(fs.readFileSync("/tmp/mapdata.js", "utf8")); // defines MAPDATA
 
 const OWN = {
-  nh: "patriot", mass: "patriot", rhode: "patriot", conn: "patriot", ny: "crown",
+  maine: "patriot", nh: "patriot", mass: "patriot", rhode: "patriot", conn: "patriot", ny: "crown",
   nj: "patriot", penn: "patriot", del: "patriot", md: "patriot", va: "patriot",
   nc: "patriot", sc: "patriot", ga: "crown", quebec: "crown",
   vermont: "neutral", ohio: "neutral", appalachia: "neutral", florida: "neutral",
 };
 const TR = {
-  nh: 4, mass: 6, rhode: 3, conn: 4, ny: 16, nj: 4, penn: 10, del: 3, md: 4,
+  maine: 2, nh: 4, mass: 6, rhode: 3, conn: 4, ny: 16, nj: 4, penn: 10, del: 3, md: 4,
   va: 7, nc: 4, sc: 5, ga: 8, quebec: 10, vermont: 2, ohio: 3, appalachia: 3, florida: 5,
 };
 const NM = {
-  nh: "New Hampshire", mass: "Massachusetts", rhode: "Rhode Island", conn: "Connecticut",
+  maine: "Maine", nh: "New Hampshire", mass: "Massachusetts", rhode: "Rhode Island", conn: "Connecticut",
   ny: "New York", nj: "New Jersey", penn: "Pennsylvania", del: "Delaware", md: "Maryland",
   va: "Virginia", nc: "North Carolina", sc: "South Carolina", ga: "Georgia", quebec: "Quebec", rhode: "R.I.",
   vermont: "Vermont", ohio: "Ohio Country", appalachia: "Appalachia", florida: "East Florida",

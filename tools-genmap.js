@@ -10,8 +10,9 @@ const gj = JSON.parse(fs.readFileSync("/tmp/us-states.json", "utf8"));
 const PLAYABLE = {
   // Original thirteen colonies (Maine was part of Massachusetts; West
   // Virginia was part of Virginia).
+  maine: "Maine",            // the District of Maine (administered by Mass.)
   nh:    "New Hampshire",
-  mass:  ["Massachusetts", "Maine"],
+  mass:  "Massachusetts",
   rhode: "Rhode Island",
   conn:  "Connecticut",
   ny:    "New York",
@@ -119,7 +120,7 @@ function centroidOf(v) {
 // Manual label-anchor overrides (lon, lat) where a centroid sits awkwardly or
 // must land on a region's *visible* (un-cropped) portion.
 const ANCHOR = {
-  nh: [-71.45, 43.6], mass: [-71.7, 42.5], rhode: [-71.45, 41.55], conn: [-73.0, 41.4],
+  maine: [-69.2, 45.25], nh: [-71.45, 43.6], mass: [-71.8, 42.4], rhode: [-71.45, 41.55], conn: [-73.0, 41.4],
   vermont: [-72.9, 44.35], ny: [-75.3, 42.95], nj: [-74.5, 40.1], del: [-75.45, 39.05],
   md: [-77.2, 39.45], va: [-79.5, 38.3], quebec: [-73.5, 46.9],
   ohio: [-82.7, 40.3], appalachia: [-82.3, 36.3], florida: [-82.0, 30.45],
@@ -138,9 +139,7 @@ for (const id in PLAYABLE) {
 const terrain = TERRAIN.map((n) => { const f = featByName(n); return f ? geomPath(f.geometry) : null; }).filter(Boolean);
 
 // Decorative, non-interactive sub-labels (lon, lat).
-const ANNOTATIONS = [
-  { text: "District of Maine", lonlat: [-69.3, 45.3] },
-];
+const ANNOTATIONS = [];
 const annotations = ANNOTATIONS.map((a) => {
   const [x, y] = px(...a.lonlat);
   return { text: a.text, x: +x.toFixed(1), y: +y.toFixed(1) };

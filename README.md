@@ -56,10 +56,11 @@ push.
 | `test-balance.js` | Headless balance check (win rate, game length) |
 
 The map is drawn from real state outlines (projected to SVG), arranged in their
-colonial configurations: the District of Maine and present-day West Virginia
-are part of Massachusetts and Virginia respectively, and all thirteen colonies
-(including New Hampshire and Rhode Island) are represented. A hand-built Quebec
-sits to the north, and distant states form neutral backdrop terrain.
+colonial configurations: present-day West Virginia is part of Virginia, all
+thirteen colonies (including New Hampshire and Rhode Island) are represented,
+and the District of Maine is its own Patriot territory reachable only via New
+Hampshire or from Quebec. A hand-built Quebec sits to the north, and distant
+states form neutral backdrop terrain.
 
 Beyond the colonies lie four **neutral / disputed frontier regions** held by
 local militia — Vermont (the New Hampshire Grants), the Ohio Country, Appalachia
