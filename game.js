@@ -11,8 +11,8 @@
     crownStartGold: 95,
     crownRecruitCap: 3,    // local Loyalist mustering is only a minor trickle
     crownReinforceEvery: 3, // British regulars arrive by sea every N turns
-    crownReinforceBase: 6,  // troops per wave (grows over the war) — Britain's main force
-    crownReinforceGrowth: 7,// +1 trooper per this many turns
+    crownReinforceBase: 8,  // troops per wave (grows over the war) — Britain's main force
+    crownReinforceGrowth: 10,// +1 trooper per this many turns
     recruitCost: 14,        // gold per soldier
     recruitBatch: 3,        // soldiers mustered per Recruit press
     manpowerFraction: 0.05, // share of a region's population that is musterable
@@ -103,15 +103,25 @@
     florida:    { owner: "neutral", troops: 5 },
   };
 
-  // Historical commanders. `bonus` multiplies their army's strength in battle.
+  // Historical commanders, each with their own character:
+  //   atk/def  — multiply their army's strength when attacking / defending
+  //   own      — multiplier on their OWN army's casualties (<1 spares men)
+  //   foe      — multiplier on the ENEMY's casualties in their battles
+  //   capRisk  — multiplier on the chance of capture after a broken assault
   // A general leads marches/assaults and can be captured if overrun.
   const GENERAL_SETUP = {
-    penn: { name: "Gen. Washington", bonus: 1.25, chief: true },
-    va:   { name: "Gen. Greene",     bonus: 1.18 },
-    mass: { name: "Gen. Gates",      bonus: 1.12 },
-    ny:   { name: "Gen. Howe",       bonus: 1.18, chief: true },
-    ga:   { name: "Gen. Cornwallis", bonus: 1.22 },
-    quebec: { name: "Gen. Burgoyne", bonus: 1.12 },
+    penn: { name: "Gen. Washington", chief: true, atk: 1.14, def: 1.26, own: 0.85, foe: 1.0,  capRisk: 0.5,
+            trait: "Fabian Strategy", desc: "A masterful defender who spends his men sparingly." },
+    va:   { name: "Gen. Greene",     atk: 1.18, def: 1.12, own: 0.80, foe: 1.0,  capRisk: 0.6,
+            trait: "Fighting Retreat", desc: "Loses few men even in defeat; hard to pin down." },
+    mass: { name: "Gen. Gates",      atk: 1.05, def: 1.22, own: 1.0,  foe: 1.22, capRisk: 1.0,
+            trait: "Entrenched", desc: "On the defensive, mauls any army that assaults him." },
+    ny:   { name: "Gen. Howe",       chief: true, atk: 1.20, def: 1.24, own: 0.88, foe: 1.0,  capRisk: 0.8,
+            trait: "Methodical", desc: "Steady and capable in both attack and defense." },
+    ga:   { name: "Gen. Cornwallis", atk: 1.32, def: 1.16, own: 1.12, foe: 1.30, capRisk: 1.1,
+            trait: "Aggressive", desc: "Hits devastatingly hard, but bleeds his own army." },
+    quebec: { name: "Gen. Burgoyne", atk: 1.16, def: 1.14, own: 1.12, foe: 1.0,  capRisk: 2.0,
+            trait: "Overconfident", desc: "Bold to a fault — and exposed to outright disaster." },
   };
 
   /* ----------------- Generated geographic map data (see tools-genmap.js) -- */
@@ -401,7 +411,11 @@
 
     const genEl = $("#ri-general");
     if (r.general) {
-      genEl.textContent = "✦ " + r.general.name + "  (+" + Math.round((r.general.bonus - 1) * 100) + "% in battle)";
+      const gnl = r.general;
+      const pct = (m) => (m >= 1 ? "+" : "") + Math.round((m - 1) * 100) + "%";
+      genEl.textContent = "✦ " + gnl.name + " — " + gnl.trait +
+        " (Atk " + pct(gnl.atk) + " · Def " + pct(gnl.def) + ")";
+      genEl.title = gnl.desc || "";
     } else {
       genEl.textContent = "";
     }
@@ -614,6 +628,14 @@
     return { win, attLoss, defLoss };
   }
 
+  // Adjust casualties for the commanders' traits, in place.
+  function tuneCasualties(result, committed, defenders, attGen, defGen) {
+    const aOwn = attGen ? attGen.own : 1, aFoe = attGen ? attGen.foe : 1;
+    const dOwn = defGen ? defGen.own : 1, dFoe = defGen ? defGen.foe : 1;
+    result.attLoss = clamp(Math.round(result.attLoss * aOwn * dFoe), 1, committed);
+    result.defLoss = clamp(Math.round(result.defLoss * dOwn * aFoe), 0, defenders);
+  }
+
   function doAttack(fromId, toId, count, withGeneral) {
     const from = S.regions[fromId];
     const to = S.regions[toId];
@@ -621,10 +643,11 @@
     const defenders = to.troops;
     const defGen = to.general;
     const attGen = (withGeneral !== false) ? from.general : null;
-    const defBonus = defenseBonus(toId) * (defGen ? defGen.bonus : 1);
+    const defBonus = defenseBonus(toId) * (defGen ? defGen.def : 1);
     from.acted = true;
 
-    const result = resolveBattle(count, defenders, defBonus, attGen ? attGen.bonus : 1);
+    const result = resolveBattle(count, defenders, defBonus, attGen ? attGen.atk : 1);
+    tuneCasualties(result, count, defenders, attGen, defGen);
     from.troops -= count; // committed troops leave home region
 
     const defName = def(toId).name;
@@ -662,7 +685,7 @@
       showBanner("Assault on " + defName + " repelled");
       adjustMorale("patriot", -3);
       // A general leading a broken assault may be taken.
-      if (attGen && survivors <= 1 && Math.random() < 0.2) loseGeneral(from, "patriot", "crown");
+      if (attGen && survivors <= 2 && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, "patriot", "crown");
     }
 
     selected = result.win ? toId : fromId;
@@ -822,12 +845,13 @@
     const to = S.regions[toId];
     const defGen = to.general;
     const attGen = from.general;
-    const defMult = defenseBonus(toId) * (defGen ? defGen.bonus : 1);
+    const defMult = defenseBonus(toId) * (defGen ? defGen.def : 1);
     // Commit enough to win with margin; keep a reserve when comfortably superior.
     const need = to.troops * defMult;
     let committed = from.troops;
     if (from.troops > need * 1.7) committed = Math.min(from.troops, Math.ceil(need * 1.4) + 2);
-    const result = resolveBattle(committed, to.troops, defMult, attGen ? attGen.bonus : 1);
+    const result = resolveBattle(committed, to.troops, defMult, attGen ? attGen.atk : 1);
+    tuneCasualties(result, committed, to.troops, attGen, defGen);
     const defenders = to.troops;
     from.troops -= committed;
 
@@ -860,7 +884,7 @@
       log(`We repulsed a British attack on ${def(toId).name}! Enemy lost ${result.attLoss}.`, "l-good");
       adjustMorale("patriot", 4);
       adjustMorale("crown", -4);
-      if (attGen && survivors <= 1 && Math.random() < 0.2) loseGeneral(from, "crown", "patriot");
+      if (attGen && survivors <= 2 && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, "crown", "patriot");
     }
   }
 

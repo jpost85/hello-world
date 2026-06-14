@@ -36,11 +36,15 @@ Click **New Campaign** to begin. Your progress autosaves to the browser, so
 - **March & Attack:** select a region holding troops, then click an adjacent
   region — green to reinforce your own land, red to attack the enemy. Each army
   acts once per turn. A slider lets you choose how many troops to commit.
-- **Generals (✦):** historical commanders — Washington, Greene, Gates for the
-  Patriots; Howe, Cornwallis, Burgoyne for the Crown — boost their army's
-  strength in attack and defense and ride with it when it marches or assaults.
-  A general whose region is overrun (or whose shattered assault is run down) is
-  captured: a heavy morale blow with no replacement, so guard them.
+- **Generals (✦):** historical commanders, each with their own character.
+  Washington is a peerless defender who spares his men; Greene retreats with his
+  army intact; Gates mauls whoever assaults him. Cornwallis hits devastatingly
+  hard but bleeds his ranks; Burgoyne is bold but courts disaster; Howe is a
+  steady all-rounder. Each has separate attack/defense ratings and traits
+  (casualties inflicted/avoided, risk of capture), shown in the region panel.
+  They ride with their army on a march or assault; a general whose region is
+  overrun — or whose shattered assault is run down — is captured: a heavy morale
+  blow with no replacement, so guard them.
 - **Cities & capitals** produce more gold and defend better; taking or losing
   one swings morale hard.
 - **France** may enter the war on your side if your Resolve stays high past
