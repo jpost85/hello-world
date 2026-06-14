@@ -11,8 +11,8 @@ const OWN = {
   vermont: "neutral", ohio: "neutral", appalachia: "neutral", florida: "neutral",
 };
 const TR = {
-  maine: 2, nh: 4, mass: 6, rhode: 3, conn: 4, ny: 16, nj: 4, penn: 10, del: 3, md: 4,
-  va: 7, nc: 4, sc: 5, ga: 8, quebec: 10, vermont: 2, ohio: 3, appalachia: 3, florida: 5,
+  maine: 2, nh: 4, mass: 6, rhode: 3, conn: 4, ny: 12, nj: 4, penn: 10, del: 3, md: 4,
+  va: 7, nc: 4, sc: 5, ga: 10, quebec: 12, vermont: 2, ohio: 3, appalachia: 3, florida: 5,
 };
 const NM = {
   maine: "Maine", nh: "New Hampshire", mass: "Massachusetts", rhode: "Rhode Island", conn: "Connecticut",

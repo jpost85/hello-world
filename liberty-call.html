@@ -295,9 +295,10 @@ html, body {
           <li><strong>Recruit</strong> — select one of your regions, then press <em>Recruit</em> to muster soldiers there (costs gold).</li>
           <li><strong>March &amp; Attack</strong> — select a region with troops, then click an adjacent region. Move into your own land to reinforce, or into enemy land to give battle. Each army may act once per turn.</li>
           <li><strong>Cities &amp; forts</strong> defend better and produce more gold. Capitals are vital — losing yours is a catastrophe.</li>
-          <li><strong>France</strong> may join your cause if your Resolve stays strong — bringing gold, regulars, and a fleet.</li>
+          <li><strong>The British are relentless.</strong> Their colonies are few, but fresh regulars arrive by sea throughout the war and concentrate to drive on Philadelphia. You out-produce them — but only if you hold your ground.</li>
+          <li><strong>France</strong> may join your cause if your Resolve stays strong past 1777 — bringing gold, regulars, and a fleet.</li>
         </ul>
-        <p><strong>Victory:</strong> Seize the British capital or break the Crown's Resolve. Or simply endure to 1783 still holding your capital — the war of attrition is yours to win.</p>
+        <p><strong>Victory:</strong> Drive the British from the colonies or break the Crown's Resolve. Failing that, you must reach 1783 still holding Philadelphia <em>and</em> winning the war of will — a passive defence will not be enough; the Crown holds on unless you have the upper hand. Lose your capital or your own Resolve and the cause is lost.</p>
         <button id="btn-howto-back" class="btn btn-primary">Back</button>
       </div>
     </section>
@@ -399,19 +400,20 @@ html, body {
   /* ----------------------------- Configuration ---------------------------- */
   const CONFIG = {
     startGold: 120,
-    crownStartGold: 110,
-    crownRecruitCap: 6,     // max soldiers the AI musters per turn
-    crownReinforceEvery: 3, // British regulars arrive by sea every N turns
-    crownReinforceBase: 7,  // troops per wave (grows slowly over the war)
+    crownStartGold: 95,
+    crownRecruitCap: 5,    // max soldiers the AI musters per turn
+    crownReinforceEvery: 4, // British regulars arrive by sea every N turns
+    crownReinforceBase: 4, // troops per wave (grows over the war)
+    crownReinforceGrowth: 8,// +1 trooper per this many turns
     recruitCost: 14,        // gold per soldier
     recruitBatch: 3,        // soldiers added per Recruit press
-    cityDefenseBonus: 1.35, // multiplier to defender strength in cities/capitals
-    capitalDefenseBonus: 1.6,
+    cityDefenseBonus: 1.5,  // multiplier to defender strength in cities/capitals
+    capitalDefenseBonus: 1.95,
     startMorale: 100,
     maxMorale: 120,
     finalTurn: 32,          // ~1783
-    franceTurn: 6,          // earliest France may intervene
-    franceMoraleNeeded: 75, // patriot resolve required to draw France in
+    franceTurn: 9,          // earliest France may intervene
+    franceMoraleNeeded: 85, // patriot resolve required to draw France in
     seasons: ["Spring", "Summer", "Autumn", "Winter"],
   };
 
@@ -450,9 +452,9 @@ html, body {
     mass:   ["conn", "rhode", "nh", "vermont"],
     rhode:  ["mass", "conn"],
     conn:   ["mass", "ny", "rhode"],
-    ny:     ["quebec", "conn", "nj", "penn", "vermont"],
+    ny:     ["quebec", "conn", "nj", "vermont"],
     nj:     ["ny", "penn", "del"],
-    penn:   ["ny", "nj", "md", "del", "ohio", "va"],
+    penn:   ["nj", "md", "del", "ohio", "va"],
     del:    ["nj", "penn", "md"],
     md:     ["penn", "del", "va"],
     va:     ["md", "nc", "penn", "appalachia", "ohio"],
@@ -468,13 +470,13 @@ html, body {
 
   // Starting positions: owner + troops.
   const SETUP = {
-    quebec: { owner: "crown",   troops: 10 },
+    quebec: { owner: "crown",   troops: 12 },
     maine:  { owner: "patriot", troops: 2 },
     nh:     { owner: "patriot", troops: 4 },
     mass:   { owner: "patriot", troops: 6 },
     rhode:  { owner: "patriot", troops: 3 },
     conn:   { owner: "patriot", troops: 4 },
-    ny:     { owner: "crown",   troops: 16 },
+    ny:     { owner: "crown",   troops: 12 },
     nj:     { owner: "patriot", troops: 4 },
     penn:   { owner: "patriot", troops: 10 },
     del:    { owner: "patriot", troops: 3 },
@@ -482,7 +484,7 @@ html, body {
     va:     { owner: "patriot", troops: 7 },
     nc:     { owner: "patriot", troops: 4 },
     sc:     { owner: "patriot", troops: 5 },
-    ga:     { owner: "crown",   troops: 8 },
+    ga:     { owner: "crown",   troops: 10 },
     vermont:    { owner: "neutral", troops: 2 },
     ohio:       { owner: "neutral", troops: 3 },
     appalachia: { owner: "neutral", troops: 3 },
@@ -1024,7 +1026,7 @@ html, body {
       const ports = crownRegions.filter((r) => def(r.id).city);
       const landing = S.regions.ny.owner === "crown" ? S.regions.ny
         : (ports[0] || crownRegions[0]);
-      const wave = CONFIG.crownReinforceBase + Math.floor(S.turn / 8);
+      const wave = CONFIG.crownReinforceBase + Math.floor(S.turn / CONFIG.crownReinforceGrowth);
       landing.troops += wave;
       S.crownGold += 20;
       log(`A British fleet lands ${wave} regulars at ${def(landing.id).name}.`, "l-bad");
@@ -1055,24 +1057,23 @@ html, body {
       const r = S.regions[id];
       if (!r || r.owner !== "crown" || acted.has(id) || r.troops <= 1) continue;
 
-      // Prefer striking the rebels; pick the patriot neighbour we can best beat.
-      const patriotTargets = ADJACENCY[id].filter((n) => S.regions[n].owner === "patriot");
-      let bestAtk = null, bestScore = -Infinity;
-      for (const t of patriotTargets) {
-        const score = r.troops - S.regions[t].troops * defenseBonus(t);
-        if (score > bestScore) { bestScore = score; bestAtk = t; }
-      }
+      // Strike the rebels: among neighbours we can beat, drive on the one
+      // nearest Philadelphia (the war aim), not merely the weakest.
+      const beatable = ADJACENCY[id]
+        .filter((n) => S.regions[n].owner === "patriot" &&
+          r.troops - S.regions[n].troops * defenseBonus(n) > 1)
+        .sort((a, b) => dist(a, "penn") - dist(b, "penn"));
+      const bestAtk = beatable[0] || null;
 
       // Otherwise, grab adjacent neutral frontier if clearly winnable.
       let neutralGrab = null;
-      if (!(bestAtk && bestScore > -2)) {
+      if (!bestAtk) {
         for (const t of ADJACENCY[id].filter((n) => S.regions[n].owner === "neutral")) {
-          const score = r.troops - S.regions[t].troops * defenseBonus(t);
-          if (score > 2) { neutralGrab = t; break; }
+          if (r.troops - S.regions[t].troops * defenseBonus(t) > 2) { neutralGrab = t; break; }
         }
       }
 
-      if (bestAtk && bestScore > -2) {
+      if (bestAtk) {
         crownAttack(id, bestAtk);
         acted.add(id);
         acted.add(bestAtk); // captured/contested region shouldn't act again
@@ -1101,10 +1102,13 @@ html, body {
   function crownAttack(fromId, toId) {
     const from = S.regions[fromId];
     const to = S.regions[toId];
-    const committed = from.troops; // AI commits its full stack
+    // Commit enough to win with margin; keep a reserve when comfortably superior.
+    const need = to.troops * defenseBonus(toId);
+    let committed = from.troops;
+    if (from.troops > need * 1.7) committed = Math.min(from.troops, Math.ceil(need * 1.4) + 2);
     const result = resolveBattle(committed, to.troops, defenseBonus(toId));
     const defenders = to.troops;
-    from.troops = 0;
+    from.troops -= committed;
 
     if (result.win) {
       const survivors = committed - result.attLoss;
@@ -1127,7 +1131,7 @@ html, body {
         log(`Our capital at ${def(toId).name} is taken! The cause teeters.`, "l-event");
       }
     } else {
-      from.troops = committed - result.attLoss; // survivors hold their ground
+      from.troops += committed - result.attLoss; // survivors retreat home
       to.troops -= result.defLoss;
       log(`We repulsed a British attack on ${def(toId).name}! Enemy lost ${result.attLoss}.`, "l-good");
       adjustMorale("patriot", 4);
@@ -1158,11 +1162,11 @@ html, body {
     if (S.morale.patriot < CONFIG.franceMoraleNeeded) return;
 
     S.franceJoined = true;
-    S.gold += 80;
-    adjustMorale("patriot", 12);
+    S.gold += 50;
+    adjustMorale("patriot", 8);
     // French regulars land in a Patriot coastal city if available.
     const landing = ["va", "sc", "penn", "mass"].find((id) => S.regions[id].owner === "patriot");
-    if (landing) S.regions[landing].troops += 10;
+    if (landing) S.regions[landing].troops += 7;
     log("FRANCE ENTERS THE WAR! French gold, regulars, and a fleet bolster the cause.", "l-event");
     showBanner("⚜  France joins the Revolution!", 3800);
   }
@@ -1190,12 +1194,17 @@ html, body {
   function endByAttrition() {
     S.turn = CONFIG.finalTurn; // freeze display
     const holdsCapital = capitalOwner("patriot") === "patriot";
-    if (holdsCapital && S.morale.patriot >= S.morale.crown) {
-      gameOver(true, "1783: Weary of a war it cannot win, Britain recognizes American independence. You endured!");
+    const crownCount = ownedRegions("crown").length;
+    const moraleEdge = S.morale.patriot - S.morale.crown;
+    // To prevail at 1783 the rebellion must hold Philadelphia and not be losing
+    // the war of will (or have already taken a British stronghold).
+    const patriotWins = holdsCapital && (crownCount < 3 || moraleEdge >= 0);
+    if (patriotWins) {
+      gameOver(true, "1783: Worn down at last, Britain recognizes American independence. Hard-won, but yours!");
     } else if (holdsCapital) {
-      gameOver(true, "1783: The war grinds to a close. Bloodied but unbroken, the colonies secure their independence.");
+      gameOver(false, "1783: The colonies still hold Philadelphia, but Britain remains entrenched and the people's will has broken. A negotiated peace leaves them in the Crown's grip.");
     } else {
-      gameOver(false, "1783: With its capital lost, the rebellion could not hold. The crown prevails.");
+      gameOver(false, "1783: With its capital lost, the rebellion could not hold. The Crown prevails.");
     }
   }
 

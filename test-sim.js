@@ -83,10 +83,10 @@ for (let g = 0; g < GAMES; g++) {
 }
 console.log(`games=${GAMES} decisive_wins=${wins} losses=${losses} errors/undecided=${errors}`);
 
-// --- Test 4: France can trigger ---
+// --- Test 4: France can trigger once conditions are met ---
 game.setState(game.newState());
 const st = game.getState();
-st.turn = 8; st.morale.patriot = 100;
+st.turn = game.CONFIG.franceTurn; st.morale.patriot = game.CONFIG.franceMoraleNeeded;
 game.maybeFranceEvent();
 console.log("france triggers:", game.getState().franceJoined ? "OK" : "FAIL");
 

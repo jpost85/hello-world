@@ -39,9 +39,17 @@ Click **New Campaign** to begin. Your progress autosaves to the browser, so
 ### Winning
 
 Drive every British garrison from the colonies, or break the Crown's Resolve.
-Lose your last region or your own Resolve and the rebellion falls. Reckless
-attacks bleed you dry — mass your forces, pick favourable fights, and time your
-push.
+Failing an outright victory, you must reach 1783 still holding Philadelphia
+**and** winning the war of will — a passive defence is not enough, as the Crown
+holds on unless the rebellion has the upper hand. Lose your last region, lose
+your capital with broken morale, or let your own Resolve hit zero, and the
+rebellion falls.
+
+The Crown is a hard opponent by design: it holds little territory but receives
+fresh regulars by sea throughout the war and concentrates them to drive on
+Philadelphia. You out-produce Britain, but reckless attacks bleed you dry —
+defend your capital, mass your forces, pick favourable fights, and time your
+push. Against a competent defence the campaign is roughly a one-in-three win.
 
 ## Project layout
 

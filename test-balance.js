@@ -1,6 +1,7 @@
-/* Balance check: play full games as a competent Patriot (recruit into the
-   front, mass forces, attack only with favourable odds) and report the win
-   rate and game length. Uses the game's own recorded winner. */
+/* Balance check: play full games as a COMPETENT Patriot who both defends and
+   attacks — pours recruits into the capital and threatened fronts, consolidates
+   interior troops toward the front, and only attacks with a clear advantage —
+   then report the win rate and game length. Uses the game's recorded winner. */
 function makeEl() {
   return { style: {}, classList: { add(){}, remove(){}, contains(){return false;} },
     _value:"1", set textContent(v){this._tc=v;}, get textContent(){return this._tc;},
@@ -15,15 +16,59 @@ global.localStorage = { _d:{}, getItem(k){return this._d[k]||null;}, setItem(k,v
 
 const game = require("./game.js");
 const ADJ = game.ADJACENCY;
+const BATCH = game.CONFIG.recruitCost * game.CONFIG.recruitBatch;
 
-function bestAttack(S, id) {
-  const r = S.regions[id];
-  const enemies = ADJ[id].filter(n => S.regions[n].owner === "crown");
-  if (!enemies.length) return null;
-  enemies.sort((a,b) => S.regions[a].troops - S.regions[b].troops);
-  const t = enemies[0];
-  const need = S.regions[t].troops * game.defenseBonus(t);
-  return r.troops >= need * 1.25 + 2 ? t : null;
+function crownAdjStack(S, id) {
+  let m = 0;
+  for (const n of ADJ[id]) if (S.regions[n].owner === "crown") m = Math.max(m, S.regions[n].troops);
+  return m;
+}
+function minDistToSet(id, set) {
+  let m = 99; for (const t of set) m = Math.min(m, game.dist(id, t)); return m;
+}
+
+function playTurn() {
+  let S = game.getState();
+  const isPatriot = (id) => S.regions[id].owner === "patriot";
+  const threatened = Object.keys(S.regions).filter((id) => isPatriot(id) && crownAdjStack(S, id) > 0);
+
+  // 1) Recruit: weight the capital, then the most-threatened fronts.
+  const order = ["penn", "penn"];
+  threatened.slice().sort((a, b) => crownAdjStack(S, b) - crownAdjStack(S, a)).forEach((id) => order.push(id));
+  let i = 0, guard = 0;
+  while (S.gold >= BATCH && guard++ < 60) {
+    const tgt = order[i++ % order.length];
+    if (S.regions[tgt] && S.regions[tgt].owner === "patriot") game.recruit(tgt);
+    S = game.getState();
+  }
+
+  // 2) Consolidate: march interior armies one step toward the threatened front.
+  if (threatened.length) {
+    for (const id of Object.keys(S.regions)) {
+      const r = S.regions[id];
+      if (r.owner !== "patriot" || r.acted || r.troops <= 2) continue;
+      if (ADJ[id].some((n) => S.regions[n].owner === "crown")) continue; // front holds
+      const step = ADJ[id].filter((n) => S.regions[n].owner === "patriot")
+        .sort((a, b) => minDistToSet(a, threatened) - minDistToSet(b, threatened))[0];
+      if (step && minDistToSet(step, threatened) < minDistToSet(id, threatened)) {
+        game.doMove(id, step, r.troops - 1);
+        S = game.getState();
+      }
+    }
+  }
+
+  // 3) Attack only with a clear advantage, keeping a garrison.
+  for (const id of Object.keys(S.regions)) {
+    const r = S.regions[id];
+    if (r.owner !== "patriot" || r.acted || r.troops <= 3) continue;
+    const t = ADJ[id].filter((n) => S.regions[n].owner !== "patriot")
+      .map((n) => ({ n, need: S.regions[n].troops * game.defenseBonus(n) }))
+      .filter((o) => r.troops >= o.need * 1.5 + 3)
+      .sort((a, b) => a.need - b.need)[0];
+    if (t) { game.doAttack(id, t.n, r.troops - 2); S = game.getState(); }
+  }
+
+  game.endTurn();
 }
 
 let wins = 0, losses = 0, undecided = 0;
@@ -32,29 +77,12 @@ const N = 1000;
 for (let g = 0; g < N; g++) {
   game.setState(game.newState());
   let guard = 0;
-  while (!game.getState().over && guard++ < 400) {
-    let S = game.getState();
-    const front = Object.keys(S.regions).filter(id =>
-      S.regions[id].owner === "patriot" && ADJ[id].some(n => S.regions[n].owner === "crown"));
-    const targets = front.length ? front : ["penn"];
-    let safety = 0;
-    while (S.gold >= game.CONFIG.recruitCost * game.CONFIG.recruitBatch && safety++ < 40) {
-      game.recruit(targets[safety % targets.length]); S = game.getState();
-    }
-    for (const id of Object.keys(S.regions)) {
-      const r = S.regions[id];
-      if (r.owner !== "patriot" || r.acted || r.troops <= 2) continue;
-      const t = bestAttack(S, id);
-      if (t) game.doAttack(id, t, r.troops - 1);
-    }
-    if (game.getState().over) break;
-    game.endTurn();
-  }
+  while (!game.getState().over && guard++ < 400) playTurn();
   const S = game.getState();
   turns.push(S.turn);
   if (!S.over) undecided++;
   else if (S.winner === "patriot") wins++;
   else losses++;
 }
-const avg = (turns.reduce((a,b)=>a+b,0)/N).toFixed(1);
-console.log(`competent player: games=${N} wins=${wins} (${(wins/N*100).toFixed(0)}%) losses=${losses} undecided=${undecided} avgTurns=${avg}`);
+const avg = (turns.reduce((a, b) => a + b, 0) / N).toFixed(1);
+console.log(`competent player: games=${N} wins=${wins} (${(wins / N * 100).toFixed(0)}%) losses=${losses} undecided=${undecided} avgTurns=${avg}`);
