@@ -1285,7 +1285,7 @@ function tick(ts) {
   lastTs = ts;
   if (state.speed > 0) {
     // advance sim minutes
-    minuteAccumulator += dt * state.speed * 0.06; // tune: ~ minutes per ms
+    minuteAccumulator += dt * state.speed * 0.03; // tune: ~ minutes per ms (50% slower)
     while (minuteAccumulator >= 1) {
       advanceMinute();
       minuteAccumulator -= 1;
