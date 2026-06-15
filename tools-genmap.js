@@ -159,6 +159,7 @@ const CITY_POINTS = {
   boston:       [-70.70, 42.15],
   nyc:          [-74.00, 40.71],
   philadelphia: [-75.16, 39.95],
+  yorktown:     [-76.51, 37.24],
   charleston:   [-79.93, 32.78],
   savannah:     [-81.10, 32.08],
   halifax:      [-63.57, 44.65],
