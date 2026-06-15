@@ -657,6 +657,18 @@ function hasOpenSkyAbove(col, row, w) {
   return true;
 }
 
+// Would a unit placed here sit directly on top of an outdoor space?
+function coversOutdoor(col, row, w) {
+  for (let dc = 0; dc < w; dc++) {
+    const id = state.grid[key(col + dc, row - 1)];
+    if (id) {
+      const below = state.units.find(x => x.id === id);
+      if (below && TYPES[below.type].kind === "outdoor") return true;
+    }
+  }
+  return false;
+}
+
 // A habitable unit needs a stair or elevator on the same floor within 8 cells.
 function hasTransitAccess(col, row, w) {
   if (row === 0) return true;
@@ -682,6 +694,10 @@ function tryBuild(col, row, key_) {
   }
   if (t.kind === "outdoor" && !hasOpenSkyAbove(col, row, t.w)) {
     toast("Outdoor spaces need open sky directly above.");
+    return;
+  }
+  if (t.kind !== "outdoor" && coversOutdoor(col, row, t.w)) {
+    toast("Can't build right on top of an outdoor space — it needs open sky.");
     return;
   }
 
@@ -957,6 +973,8 @@ function amenityBonus(u) {
   let best = 0;
   for (const a of state.units) {
     if (TYPES[a.type].kind !== "outdoor") continue;
+    // A covered outdoor space (no open sky above) provides no benefit.
+    if (!hasOpenSkyAbove(a.col, a.row, a.w)) continue;
     const dx = Math.max(a.col - (u.col + u.w), u.col - (a.col + a.w), 0);
     const dy = Math.abs(a.row - u.row);
     if (dx <= 8 && dy <= 3) {
