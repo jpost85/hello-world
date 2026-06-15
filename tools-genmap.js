@@ -163,6 +163,18 @@ for (const id in CITY_POINTS) {
   regions[id] = { point: true, cx: +c[0].toFixed(1), cy: +c[1].toFixed(1) };
 }
 
+// Sea zones: offshore nodes in the Atlantic (harbors defined game-side).
+const SEA_POINTS = {
+  north: [-66.0, 42.8],
+  mid:   [-72.0, 36.8],
+  south: [-77.0, 30.8],
+};
+const seaZones = {};
+for (const id in SEA_POINTS) {
+  const c = px(...SEA_POINTS[id]);
+  seaZones[id] = { cx: +c[0].toFixed(1), cy: +c[1].toFixed(1) };
+}
+
 // Terrain = every other state/province overlapping the visible window.
 const playableNames = new Set();
 for (const id in PLAYABLE) for (const n of statesOf(PLAYABLE[id])) playableNames.add(n);
@@ -179,6 +191,7 @@ const MAPDATA = {
   viewBox: `0 0 ${WIDTH.toFixed(0)} ${HEIGHT.toFixed(0)}`,
   terrain,
   regions,
+  seaZones,
   annotations: [],
 };
 

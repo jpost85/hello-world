@@ -50,6 +50,11 @@ Click **New Campaign** to begin. Your progress autosaves to the browser, so
   Philadelphia are the capitals. A city can be held even when its countryside is
   enemy (the British supply New York City by sea), so taking one means besieging
   it through the surrounding countryside.
+- **Sea zones (⚓)** link the harbours out in the Atlantic. Whoever's navy holds
+  a zone can sail armies between its harbours in one move, mount amphibious
+  assaults, and blockade enemy ports there (halving their income). Britain rules
+  the waves at the start; France's entry seizes the mid-Atlantic and southern
+  seas, opening Patriot sea movement and blockading New York.
 - **Winter** thins sizable armies left in the open each year — some winters far
   worse than others — while armies sheltering in a city are spared. Don't keep a
   great host in the field through the winter.

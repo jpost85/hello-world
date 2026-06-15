@@ -178,6 +178,19 @@ html, body {
 .region-shape.city-marker.region-neutral { fill: #9a8c6e; }
 .city-troop { fill: #f7f2e2; stroke: rgba(15, 9, 4, 0.85); stroke-width: 3px; paint-order: stroke; }
 
+/* Sea zones */
+.sea-link { stroke-width: 1.5; stroke-dasharray: 5 5; opacity: 0.45; }
+.sea-link.sea-crown { stroke: #b94b4b; }
+.sea-link.sea-patriot { stroke: #3a6ea5; }
+.sea-node { stroke: #14100a; stroke-width: 1.5; }
+.sea-node.sea-crown { fill: #8c2b2b; }
+.sea-node.sea-patriot { fill: #1f4e79; }
+.sea-anchor { fill: #f7f2e2; font-size: 11px; text-anchor: middle; }
+.sea-label {
+  fill: #21424c; font-size: 9px; font-style: italic; text-anchor: middle; font-weight: bold;
+  paint-order: stroke; stroke: rgba(247, 242, 226, 0.7); stroke-width: 2px;
+}
+
 /* Cartographic decoration */
 .ocean-label {
   fill: rgba(30, 60, 70, 0.55); font-size: 17px; font-style: italic;

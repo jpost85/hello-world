@@ -44,6 +44,23 @@ for (const id in MAP.regions) {
   if (!g.point) continue;
   s += `<rect x="${g.cx-11}" y="${g.cy-11}" width="22" height="22" rx="3" fill="${cityFill[r.owner]}" stroke="#14100a" stroke-width="2"/>`;
 }
+// sea zones: dashed routes + navy-coloured anchor nodes
+const seaStroke = { crown: "#b94b4b", patriot: "#3a6ea5" };
+for (const zid in game.SEA_ZONES) {
+  const sea = (MAP.seaZones || {})[zid]; if (!sea) continue;
+  const navy = S.seaNavy[zid];
+  for (const h of game.SEA_ZONES[zid].harbors) {
+    const hg = MAP.regions[h]; if (!hg) continue;
+    s += `<line x1="${sea.cx}" y1="${sea.cy}" x2="${hg.cx}" y2="${hg.cy}" stroke="${seaStroke[navy]}" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.45"/>`;
+  }
+}
+for (const zid in game.SEA_ZONES) {
+  const sea = (MAP.seaZones || {})[zid]; if (!sea) continue;
+  const navy = S.seaNavy[zid];
+  s += `<circle cx="${sea.cx}" cy="${sea.cy}" r="9" fill="${cityFill[navy]}" stroke="#14100a" stroke-width="1.5"/>`;
+  s += `<text x="${sea.cx}" y="${sea.cy+4}" font-size="11" text-anchor="middle" fill="#f7f2e2">&#9875;</text>`;
+  s += `<text x="${sea.cx}" y="${sea.cy+22}" font-family="Georgia,serif" font-size="9" font-style="italic" font-weight="bold" text-anchor="middle" fill="#21424c" stroke="rgba(247,242,226,0.7)" stroke-width="2" paint-order="stroke">${navy==="crown"?"Royal Navy":"French Fleet"}</text>`;
+}
 // labels, badges, stars
 function star(cx, cy, o, i, fillc) { let p=""; for (let k=0;k<10;k++){const rr=k%2?i:o;const a=Math.PI/5*k-Math.PI/2;p+=(k?"L":"M")+(cx+Math.cos(a)*rr).toFixed(1)+" "+(cy+Math.sin(a)*rr).toFixed(1);} return `<path d="${p}Z" fill="${fillc}" stroke="#2b2118" stroke-width="0.7"/>`; }
 for (const id in MAP.regions) {
