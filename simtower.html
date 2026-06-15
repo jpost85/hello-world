@@ -133,6 +133,12 @@
     width: 34px; height: 30px; flex: 0 0 auto;
   }
   #menuToggle:active { transform: translateY(1px); }
+  #soundToggle {
+    background: var(--panel-2); border: 2px solid #000; border-radius: 6px;
+    color: var(--text); font-size: 14px; line-height: 1; cursor: pointer;
+    width: 34px; height: 30px; flex: 0 0 auto; margin-left: 4px;
+  }
+  #soundToggle:active { transform: translateY(1px); }
 
   /* Mobile: drawer overlays the tower instead of shrinking it */
   @media (max-width: 700px) {
@@ -534,6 +540,7 @@
       <span class="hud-item stars" id="h-stars">☆☆☆☆☆</span>
       <span class="spacer"></span>
       <span class="hud-item time" id="h-time">1 · 6:00</span>
+      <button id="soundToggle" title="Sound on/off">🔊</button>
     </div>
     <div id="scroller">
       <div id="world">
@@ -809,18 +816,18 @@ function hasTransitAccess(col, row, w) {
 function tryBuild(col, row, key_) {
   const t = TYPES[key_];
   if (!t || t.tool) return;
-  if (!cellsFree(col, row, t.w, t.h)) { toast("Space is occupied or out of bounds."); return; }
-  if (state.cash < t.cost) { toast("Not enough cash."); flash(false); return; }
+  if (!cellsFree(col, row, t.w, t.h)) { toast("Space is occupied or out of bounds."); sfx("error"); return; }
+  if (state.cash < t.cost) { toast("Not enough cash."); sfx("error"); flash(false); return; }
   if ((t.kind === "work" || t.kind === "home" || t.kind === "shop" || t.kind === "hotel" || t.kind === "outdoor" || t.kind === "amenity") && !hasTransitAccess(col, row, t.w)) {
-    toast("Needs stairs or an elevator within 8 cells on this floor.");
+    toast("Needs stairs or an elevator within 8 cells on this floor."); sfx("error");
     return;
   }
   if (t.kind === "outdoor" && !hasOpenSkyAbove(col, row, t.w)) {
-    toast("Outdoor spaces need open sky directly above.");
+    toast("Outdoor spaces need open sky directly above."); sfx("error");
     return;
   }
   if (t.kind !== "outdoor" && coversOutdoor(col, row, t.w)) {
-    toast("Can't build right on top of an outdoor space — it needs open sky.");
+    toast("Can't build right on top of an outdoor space — it needs open sky."); sfx("error");
     return;
   }
 
@@ -834,6 +841,7 @@ function tryBuild(col, row, key_) {
   if (key_ === "elevator") rebuildShafts();
   state.cash -= t.cost;
   log(`Built ${t.name} on floor ${row} for $${t.cost.toLocaleString()}`, "good");
+  sfx("build");
   refreshStats();
   saveGame(true);
 }
@@ -894,6 +902,7 @@ function sellUnit(unit, refund) {
   if (unit.type === "elevator") rebuildShafts();
   state.cash += refund;
   log(`Sold ${TYPES[unit.type].name} for $${refund.toLocaleString()}`, "bad");
+  sfx("sell");
   refreshStats();
   saveGame(true);
 }
@@ -1159,7 +1168,7 @@ function collectRent() {
   if (total !== 0) {
     state.cash += total;
     log(`Daily income: +$${total.toLocaleString()}`, "good");
-    if (total > 0) floatText(`+$${total.toLocaleString()}`);
+    if (total > 0) { floatText(`+$${total.toLocaleString()}`); sfx("cash"); }
   }
   refreshStats();
 }
@@ -1173,6 +1182,7 @@ function maybeEvent() {
     const bonus = 3000 + Math.round(state.pop * 80);
     state.cash += bonus;
     toast("📈 Economic boom!");
+    sfx("bonus");
     floatText(`+$${bonus.toLocaleString()}`);
     log(`📈 Economic boom — investors pour in: +$${bonus.toLocaleString()}`, "good");
   } else if (roll < 0.55) {
@@ -1180,6 +1190,7 @@ function maybeEvent() {
       const b = 5000;
       state.cash += b;
       toast("🎩 VIP inspection passed!");
+      sfx("bonus");
       floatText(`+$${b.toLocaleString()}`);
       log(`🎩 VIP inspection passed — reputation bonus: +$${b.toLocaleString()}`, "good");
     } else {
@@ -1207,6 +1218,7 @@ function maybeEvent() {
       const repair = 4000;
       state.cash -= repair;
       toast("🔥 Fire!");
+      sfx("fire");
       spawnSmoke(u);
       floatText(`-$${repair.toLocaleString()}`, "bad");
       log(`🔥 Fire in ${TYPES[u.type].name} on floor ${u.row}! Evacuated; repairs -$${repair.toLocaleString()}.`, "bad");
@@ -1224,6 +1236,7 @@ function recomputeStars() {
     if (s > state.stars) {
       log(`★ Promoted to ${s}-star tower!`, "good");
       banner(`★ ${s}-STAR TOWER! ★`);
+      sfx("promote");
     }
     state.stars = s;
   }
@@ -1527,6 +1540,102 @@ document.getElementById("btnSave").addEventListener("click", () => saveGame(fals
 document.getElementById("btnLoad").addEventListener("click", () => loadGame(false));
 document.getElementById("btnNew").addEventListener("click", newGame);
 
+// ---------- Audio (synthesized — no external files) ----------
+// actx: null = not yet started, false = unavailable, else an AudioContext.
+let actx = null, aMaster = null, aMusic = null, aSfx = null, musicStep = 0;
+let soundOn = true;
+try { const s = localStorage.getItem("microtower.sound"); if (s !== null) soundOn = s === "1"; } catch (e) {}
+
+function audioEnsure() {
+  if (actx !== null) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { actx = false; return; }
+    actx = new AC();
+    aMaster = actx.createGain(); aMaster.gain.value = 0.85; aMaster.connect(actx.destination);
+    aMusic = actx.createGain(); aMusic.gain.value = soundOn ? 0.5 : 0; aMusic.connect(aMaster);
+    aSfx = actx.createGain(); aSfx.gain.value = 0.6; aSfx.connect(aMaster);
+  } catch (e) { actx = false; }
+}
+function audioResume() { if (actx && actx.state === "suspended") actx.resume(); }
+function audioKick() { audioEnsure(); audioResume(); }
+document.addEventListener("pointerdown", audioKick);
+document.addEventListener("keydown", audioKick);
+
+// Short synthesized sound effects keyed by event name.
+function sfx(name) {
+  if (!actx || !soundOn) return;
+  const now = actx.currentTime;
+  const beep = (freq, dur, type, gain, when, glide) => {
+    const t = now + (when || 0);
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || "sine";
+    o.frequency.setValueAtTime(freq, t);
+    if (glide) o.frequency.exponentialRampToValueAtTime(glide, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain || 0.3, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(aSfx);
+    o.start(t); o.stop(t + dur + 0.02);
+  };
+  switch (name) {
+    case "build":   beep(660, 0.08, "triangle", 0.30); beep(990, 0.10, "triangle", 0.24, 0.06); break;
+    case "sell":    beep(520, 0.14, "triangle", 0.26, 0, 300); break;
+    case "error":   beep(150, 0.16, "square",   0.16); break;
+    case "cash":    beep(880, 0.07, "triangle", 0.24); beep(1320, 0.12, "triangle", 0.20, 0.07); break;
+    case "bonus":   beep(587, 0.10, "sine",     0.26); beep(880, 0.14, "sine", 0.22, 0.09); break;
+    case "promote": [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.18, "triangle", 0.24, i * 0.1)); break;
+    case "fire":    beep(110, 0.5, "sawtooth",  0.20, 0, 70); break;
+  }
+}
+
+// Soft, sparse generative pad — wanders a little, dims at night.
+const MUSIC_ROOTS = [220.00, 174.61, 261.63, 196.00]; // A3, F3, C4, G3
+const PENTA = [1, 9/8, 5/4, 3/2, 5/3, 2];
+function pad(freq, dur, gain, type) {
+  const t = actx.currentTime;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + dur * 0.4);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(aMusic);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+function musicTick() {
+  if (!actx || !soundOn || actx.state !== "running") return;
+  const root = MUSIC_ROOTS[musicStep++ % MUSIC_ROOTS.length];
+  const oct = state.isNight ? 0.5 : 1;
+  pad(root * oct, 5.5, 0.07, "sine");
+  pad(root * 1.5 * oct, 5.5, 0.05, "sine");
+  if (!state.isNight || Math.random() < 0.5) pad(root * 2 * oct, 5.0, 0.035, "triangle");
+  if (Math.random() < (state.isNight ? 0.3 : 0.6)) {
+    const m = PENTA[Math.floor(Math.random() * PENTA.length)];
+    pad(root * 2 * oct * m, 1.6, 0.04, "triangle");
+  }
+}
+setInterval(musicTick, 2600);
+
+function updateSoundBtn() {
+  const b = document.getElementById("soundToggle");
+  if (b) b.textContent = soundOn ? "🔊" : "🔇";
+}
+function setSound(on) {
+  soundOn = on;
+  try { localStorage.setItem("microtower.sound", on ? "1" : "0"); } catch (e) {}
+  if (on) audioKick();
+  if (actx && aMusic) {
+    const t = actx.currentTime;
+    aMusic.gain.cancelScheduledValues(t);
+    aMusic.gain.setTargetAtTime(on ? 0.5 : 0.0, t, 0.3);
+  }
+  updateSoundBtn();
+}
+document.getElementById("soundToggle").addEventListener("click", (e) => {
+  e.stopPropagation();
+  setSound(!soundOn);
+});
+
 // ---------- Init ----------
 function init() {
   buildBackground();
@@ -1552,6 +1661,7 @@ function init() {
   scroller.scrollTop = world.clientHeight - scroller.clientHeight;
   scroller.scrollLeft = (worldWidth - scroller.clientWidth) / 2;
   selectTool("pointer");
+  updateSoundBtn();
   if (isMobile()) app.classList.add("nav-closed");
   requestAnimationFrame((t) => { lastTs = t; requestAnimationFrame(tick); });
 }
