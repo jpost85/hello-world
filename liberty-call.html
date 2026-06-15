@@ -167,9 +167,9 @@ html, body {
 .capital-star { fill: #ffd24a; stroke: #2b2118; stroke-width: 0.7; }
 .general-star { fill: #fff3cf; stroke: #6b4a12; stroke-width: 0.9; }
 .region-label {
-  fill: #f7efd9; font-size: 13px; font-weight: bold; text-anchor: middle;
-  paint-order: stroke; stroke: rgba(20, 12, 4, 0.75); stroke-width: 3px;
-  letter-spacing: 0.3px;
+  fill: #f7efd9; font-size: 11px; font-weight: bold; text-anchor: middle;
+  paint-order: stroke; stroke: rgba(20, 12, 4, 0.75); stroke-width: 2.6px;
+  letter-spacing: 0.2px;
 }
 .troop-badge { fill: #f7f2e2; stroke-width: 2; }
 .troop-badge.troop-patriot { stroke: var(--patriot); }
@@ -452,15 +452,15 @@ html, body {
     { id: "maine",     name: "District of Maine", income: 3, city: false, capital: false, label: "Maine", pop: 25 },
     { id: "nh",        name: "New Hampshire",  income: 4,  city: false, capital: false, pop: 82 },
     { id: "mass",      name: "Massachusetts",  income: 4,  city: false, capital: false, pop: 300 },
-    { id: "boston",    name: "Boston",         income: 5,  city: true,  capital: false, pop: 16, point: true, label: "Boston" },
+    { id: "boston",    name: "Boston",         income: 5,  city: true,  capital: false, pop: 16, point: true, label: "Boston", labelDx: 15, labelDy: 4 },
     { id: "rhode",     name: "Rhode Island",   income: 3,  city: false, capital: false, label: "R.I.", pop: 58 },
     { id: "conn",      name: "Connecticut",    income: 4,  city: false, capital: false, pop: 195 },
     { id: "ny",        name: "New York",       income: 5,  city: false, capital: false, pop: 160 },
-    { id: "nyc",       name: "New York City",  income: 6,  city: true,  capital: "crown", pop: 25, point: true, label: "N.Y. City" },
-    { id: "nj",        name: "New Jersey",     income: 4,  city: false, capital: false, pop: 120 },
+    { id: "nyc",       name: "New York City",  income: 6,  city: true,  capital: "crown", pop: 25, point: true, label: "N.Y.C.", labelDx: 30, labelDy: 4 },
+    { id: "nj",        name: "New Jersey",     income: 4,  city: false, capital: false, pop: 120, labelDx: 16, labelDy: 8 },
     { id: "penn",      name: "Pennsylvania",   income: 5,  city: false, capital: false, pop: 260 },
-    { id: "philadelphia", name: "Philadelphia", income: 6, city: true,  capital: "patriot", pop: 40, point: true, label: "Phila." },
-    { id: "del",       name: "Delaware",       income: 3,  city: false, capital: false, pop: 37 },
+    { id: "philadelphia", name: "Philadelphia", income: 6, city: true,  capital: "patriot", pop: 40, point: true, label: "Phila.", labelDx: -4, labelDy: 25 },
+    { id: "del",       name: "Delaware",       income: 3,  city: false, capital: false, pop: 37, labelDx: 26, labelDy: 8 },
     { id: "md",        name: "Maryland",       income: 5,  city: false, capital: false, pop: 170 },
     { id: "va",        name: "Virginia",       income: 7,  city: false, capital: false, pop: 300 },
     { id: "nc",        name: "North Carolina", income: 5,  city: false, capital: false, pop: 230 },
@@ -721,8 +721,11 @@ html, body {
       const g = svgEl("g", { class: "overlay", "pointer-events": "none" });
       const isCity = geo.point;
 
-      // Region name (below a city marker, above a region's badge).
-      const label = svgEl("text", { x: geo.cx, y: geo.cy + (isCity ? 23 : -13), class: "region-label" });
+      // Region name (below a city marker, above a region's badge). Per-region
+      // labelDx/labelDy override the default offset to clear crowded clusters.
+      const lx = geo.cx + (d.labelDx || 0);
+      const ly = (d.labelDy != null) ? geo.cy + d.labelDy : geo.cy + (isCity ? 23 : -13);
+      const label = svgEl("text", { x: lx, y: ly, class: "region-label" });
       label.textContent = d.label || d.name;
       g.appendChild(label);
 

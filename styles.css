@@ -160,9 +160,9 @@ html, body {
 .capital-star { fill: #ffd24a; stroke: #2b2118; stroke-width: 0.7; }
 .general-star { fill: #fff3cf; stroke: #6b4a12; stroke-width: 0.9; }
 .region-label {
-  fill: #f7efd9; font-size: 13px; font-weight: bold; text-anchor: middle;
-  paint-order: stroke; stroke: rgba(20, 12, 4, 0.75); stroke-width: 3px;
-  letter-spacing: 0.3px;
+  fill: #f7efd9; font-size: 11px; font-weight: bold; text-anchor: middle;
+  paint-order: stroke; stroke: rgba(20, 12, 4, 0.75); stroke-width: 2.6px;
+  letter-spacing: 0.2px;
 }
 .troop-badge { fill: #f7f2e2; stroke-width: 2; }
 .troop-badge.troop-patriot { stroke: var(--patriot); }

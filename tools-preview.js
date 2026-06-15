@@ -49,8 +49,9 @@ for (const id in MAP.regions) {
   const g = MAP.regions[id], r = S.regions[id], d = DEF[id];
   const isCity = g.point;
   const label = d.label || d.name;
-  const ly = g.cy + (isCity ? 23 : -13);
-  s += `<text x="${g.cx}" y="${ly}" font-family="Georgia,serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#f7efd9" stroke="rgba(20,12,4,0.75)" stroke-width="3" paint-order="stroke">${label}</text>`;
+  const lx = g.cx + (d.labelDx || 0);
+  const ly = (d.labelDy != null) ? g.cy + d.labelDy : g.cy + (isCity ? 23 : -13);
+  s += `<text x="${lx}" y="${ly}" font-family="Georgia,serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#f7efd9" stroke="rgba(20,12,4,0.75)" stroke-width="2.6" paint-order="stroke">${label}</text>`;
   if (d.capital) s += star(g.cx, g.cy - (isCity ? 18 : 28), 6.5, 2.8, "#ffd24a");
   if (isCity) {
     s += `<text x="${g.cx}" y="${g.cy+4.5}" font-family="Georgia,serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#f7f2e2" stroke="rgba(15,9,4,0.85)" stroke-width="3" paint-order="stroke">${r.troops}</text>`;
