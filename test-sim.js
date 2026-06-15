@@ -44,7 +44,7 @@ for (let i = 0; i < 20000; i++) {
 console.log("battle bounds:", battleOk ? "OK" : "FAIL");
 
 // --- Test 2: distance symmetry & connectivity ---
-console.log("dist penn->ga:", game.dist("penn", "ga"), "(expect 5)");
+console.log("dist philadelphia->ga:", game.dist("philadelphia", "ga"));
 console.log("dist self:", game.dist("ny", "ny"), "(expect 0)");
 
 // --- Test 3: stress the loop with a RECKLESS player (no recruiting, commits

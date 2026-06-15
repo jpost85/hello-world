@@ -149,6 +149,18 @@ for (const id in PLAYABLE) {
   regions[id] = { path: regionPath(PLAYABLE[id]), cx: +c[0].toFixed(1), cy: +c[1].toFixed(1) };
 }
 
+// City sub-regions: point markers placed at the real city, inside their colony.
+const CITY_POINTS = {
+  boston:       [-71.06, 42.36],
+  nyc:          [-74.00, 40.71],
+  philadelphia: [-75.16, 39.95],
+  charleston:   [-79.93, 32.78],
+};
+for (const id in CITY_POINTS) {
+  const c = px(...CITY_POINTS[id]);
+  regions[id] = { point: true, cx: +c[0].toFixed(1), cy: +c[1].toFixed(1) };
+}
+
 // Terrain = every other state/province overlapping the visible window.
 const playableNames = new Set();
 for (const id in PLAYABLE) for (const n of statesOf(PLAYABLE[id])) playableNames.add(n);
@@ -170,6 +182,6 @@ const MAPDATA = {
 
 fs.writeFileSync("/tmp/mapdata.js", "var MAPDATA = " + JSON.stringify(MAPDATA) + ";\n");
 console.log("viewBox:", MAPDATA.viewBox);
-for (const id in regions) console.log(" ", id.padEnd(11), regions[id].cx, regions[id].cy, "pathlen", regions[id].path.length);
+for (const id in regions) console.log(" ", id.padEnd(12), regions[id].cx, regions[id].cy, regions[id].point ? "(city)" : "pathlen " + regions[id].path.length);
 console.log("terrain shapes:", terrain.length);
 console.log("file bytes:", fs.statSync("/tmp/mapdata.js").size);

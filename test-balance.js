@@ -34,7 +34,7 @@ function playTurn() {
 
   // 1) Recruit: weight the capital, then the most-threatened fronts. Stops when
   //    no targeted region can muster (gold or manpower exhausted).
-  const order = ["penn", "penn"];
+  const order = ["philadelphia", "penn", "philadelphia"];
   threatened.slice().sort((a, b) => crownAdjStack(S, b) - crownAdjStack(S, a)).forEach((id) => order.push(id));
   let progressed = true, guard = 0;
   while (progressed && S.gold >= game.CONFIG.recruitCost && guard++ < 80) {
@@ -46,6 +46,24 @@ function playTurn() {
       }
     }
   }
+
+  // 1b) Garrison the capital and front: pull troops from safe neighbours into
+  //     the capital and any threatened region (this is how you defend a city
+  //     you can't muster much in).
+  const pullInto = (target) => {
+    let St = game.getState();
+    if (!St.regions[target] || St.regions[target].owner !== "patriot") return;
+    for (const n of ADJ[target]) {
+      const nr = St.regions[n];
+      if (!nr || nr.owner !== "patriot" || nr.acted || nr.troops <= 2) continue;
+      if (ADJ[n].some((x) => St.regions[x].owner === "crown")) continue; // don't strip the front
+      game.doMove(n, target, nr.troops - 1);
+      St = game.getState();
+    }
+  };
+  pullInto("philadelphia");
+  threatened.slice().sort((a, b) => crownAdjStack(S, b) - crownAdjStack(S, a)).forEach(pullInto);
+  S = game.getState();
 
   // 2) Consolidate: march interior armies one step toward the threatened front.
   if (threatened.length) {

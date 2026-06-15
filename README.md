@@ -45,8 +45,14 @@ Click **New Campaign** to begin. Your progress autosaves to the browser, so
   They ride with their army on a march or assault; a general whose region is
   overrun — or whose shattered assault is run down — is captured: a heavy morale
   blow with no replacement, so guard them.
-- **Cities & capitals** produce more gold and defend better; taking or losing
-  one swings morale hard.
+- **Cities** (Boston, New York City, Philadelphia, Charleston) are fortified
+  port sub-regions inside their colony's countryside; New York City and
+  Philadelphia are the capitals. A city can be held even when its countryside is
+  enemy (the British supply New York City by sea), so taking one means besieging
+  it through the surrounding countryside.
+- **Winter** thins sizable armies left in the open each year — some winters far
+  worse than others — while armies sheltering in a city are spared. Don't keep a
+  great host in the field through the winter.
 - **France** may enter the war on your side if your Resolve stays high past
   1776, bringing gold, regulars, and a fleet.
 
