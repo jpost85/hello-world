@@ -285,6 +285,25 @@
   }
   .unit-cinema.lit .u-extra { filter: drop-shadow(0 0 2px #ffd34d); }
 
+  /* Outdoor spaces — open to the sky (no walls), so the backdrop shows through */
+  .unit-terrace, .unit-garden { --wall: transparent; border: none; }
+  .unit-terrace .u-face {
+    background:
+      radial-gradient(circle at 22% 56%, #ef8f6f 0 7px, transparent 8px),   /* parasol */
+      radial-gradient(circle at 68% 56%, #6fb0ef 0 7px, transparent 8px),   /* parasol */
+      radial-gradient(circle at 90% 74%, #4e9d54 0 3px, transparent 4px),   /* planter */
+      linear-gradient(180deg, transparent 0 calc(100% - 12px), #8a949e calc(100% - 12px) calc(100% - 11px), transparent calc(100% - 11px)), /* rail */
+      linear-gradient(180deg, transparent 0 calc(100% - 10px), #d4b884 calc(100% - 10px) calc(100% - 3px), #a8854f calc(100% - 3px)); /* deck */
+  }
+  .unit-garden .u-face {
+    background:
+      radial-gradient(circle at 22% 52%, #3f8f46 0 8px, transparent 9px),   /* tree */
+      radial-gradient(circle at 52% 60%, #5bb061 0 6px, transparent 7px),   /* shrub */
+      radial-gradient(circle at 80% 54%, #3f8f46 0 8px, transparent 9px),   /* tree */
+      linear-gradient(180deg, transparent 0 calc(100% - 12px), #6cae54 calc(100% - 12px) calc(100% - 3px), #4f8b3d calc(100% - 3px)); /* lawn */
+  }
+  .unit-terrace .u-tag, .unit-garden .u-tag { color: rgba(0,0,0,.55); }
+
   /* Lobby — columns, ceiling trim, marble floor */
   .unit-lobby { --wall:#e7d8ad; }
   .unit-lobby .u-face {
@@ -483,12 +502,14 @@ const TYPES = {
   shop:      { name: "Retail Shop", cost: 25000, w: 2, h: 1, color: "#c3a6e0", income: 0,    cap: 0,  kind: "shop", draw: 1 },
   restaurant:{ name: "Restaurant",  cost: 35000, w: 3, h: 1, color: "#f08c8c", income: 0,    cap: 0,  kind: "shop", draw: 1.3 },
   cinema:    { name: "Cinema",      cost: 70000, w: 4, h: 1, color: "#b08be0", income: 0,    cap: 0,  kind: "shop", draw: 2.5 },
+  terrace:   { name: "Terrace",     cost: 20000, w: 3, h: 1, color: "#cbb083", income: 0,    cap: 0,  kind: "outdoor", appeal: 12 },
+  garden:    { name: "Sky Garden",  cost: 45000, w: 4, h: 1, color: "#6cae54", income: 0,    cap: 0,  kind: "outdoor", appeal: 20 },
   stair:     { name: "Stairs",      cost: 5000,  w: 1, h: 1, color: "#8d99ae", kind: "transit" },
   elevator:  { name: "Elevator",    cost: 18000, w: 1, h: 1, color: "#5c6b7a", kind: "transit" },
   floor:     { name: "Floor Slab",  cost: 8000,  w: 1, h: 1, color: "#b8bfc7", kind: "structure" },
 };
 
-const BUILD_ORDER = ["pointer","floor","office","apartment","condo","hotel","shop","restaurant","cinema","stair","elevator"];
+const BUILD_ORDER = ["pointer","floor","office","apartment","condo","hotel","shop","restaurant","cinema","terrace","garden","stair","elevator"];
 const STAR_THRESHOLDS = [10, 40, 100, 200, 350];
 const SAVE_KEY = "microtower.save.v1";
 
@@ -503,6 +524,8 @@ const TYPE_DESC = {
   shop:      "Earns from foot traffic — the busier your tower, the bigger the sales.",
   restaurant:"Like a shop, but draws larger crowds and earns more.",
   cinema:    "Highest-draw venue. A big earner once your tower is busy.",
+  terrace:   "Open-air deck. Lifts satisfaction of nearby tenants. Needs open sky above.",
+  garden:    "Lush rooftop park. A strong satisfaction boost for nearby tenants. Needs open sky above.",
   stair:     "Cheap transit. Rooms need a stair or elevator within 8 cells.",
   elevator:  "Vertical transit. Stack several in a column to form a riding shaft.",
   lobby:     "Ground-floor entrance. Free, pre-built, and can't be sold.",
@@ -627,6 +650,13 @@ function cellsFree(col, row, w, h) {
   return true;
 }
 
+// Outdoor spaces must be open to the sky: nothing on the floor directly above.
+function hasOpenSkyAbove(col, row, w) {
+  for (let dc = 0; dc < w; dc++)
+    if (state.grid[key(col + dc, row + 1)]) return false;
+  return true;
+}
+
 // A habitable unit needs a stair or elevator on the same floor within 8 cells.
 function hasTransitAccess(col, row, w) {
   if (row === 0) return true;
@@ -646,8 +676,12 @@ function tryBuild(col, row, key_) {
   if (!t || t.tool) return;
   if (!cellsFree(col, row, t.w, t.h)) { toast("Space is occupied or out of bounds."); return; }
   if (state.cash < t.cost) { toast("Not enough cash."); flash(false); return; }
-  if ((t.kind === "work" || t.kind === "home" || t.kind === "shop" || t.kind === "hotel") && !hasTransitAccess(col, row, t.w)) {
+  if ((t.kind === "work" || t.kind === "home" || t.kind === "shop" || t.kind === "hotel" || t.kind === "outdoor") && !hasTransitAccess(col, row, t.w)) {
     toast("Needs stairs or an elevator within 8 cells on this floor.");
+    return;
+  }
+  if (t.kind === "outdoor" && !hasOpenSkyAbove(col, row, t.w)) {
+    toast("Outdoor spaces need open sky directly above.");
     return;
   }
 
@@ -697,7 +731,7 @@ function unitInnerHTML(type) {
 
 function shortLabel(type) {
   return ({office:"OFF", apartment:"APT", condo:"CONDO", hotel:"🛏", shop:"SHOP", restaurant:"REST",
-           cinema:"🎬", stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
+           cinema:"🎬", terrace:"⛱", garden:"🌳", stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
 }
 
 function onUnitClick(unit) {
@@ -903,7 +937,7 @@ function simHotels() {
   hotelUnits().forEach(u => {
     const t = TYPES[u.type];
     if (evening && u.occupants < t.cap) {
-      const appeal = 0.05 + state.stars * 0.012;
+      const appeal = 0.05 + state.stars * 0.012 + amenityBonus(u) * 0.0009;
       if (Math.random() < appeal) { u.occupants++; state.pop++; updateUnitVisual(u); }
     } else if (morning && u.occupants > 0) {
       if (Math.random() < 0.25) { u.occupants--; state.pop--; updateUnitVisual(u); }
@@ -917,13 +951,30 @@ function avgSatisfaction() {
   return us.reduce((a, u) => a + u.satisfaction, 0) / us.length;
 }
 
+// How much nearby outdoor space (terraces / gardens) lifts a unit. Falls off
+// with distance; the best amenity within reach wins (8 cells across, 3 floors).
+function amenityBonus(u) {
+  let best = 0;
+  for (const a of state.units) {
+    if (TYPES[a.type].kind !== "outdoor") continue;
+    const dx = Math.max(a.col - (u.col + u.w), u.col - (a.col + a.w), 0);
+    const dy = Math.abs(a.row - u.row);
+    if (dx <= 8 && dy <= 3) {
+      const val = (TYPES[a.type].appeal || 10) * (1 - dy / 4);
+      if (val > best) best = val;
+    }
+  }
+  return best;
+}
+
 // Tenants move in over time if there is transit access and demand
 function simTenants() {
   rentableUnits().forEach(u => {
     const t = TYPES[u.type];
+    const amen = amenityBonus(u);
     if (u.occupants < t.cap) {
-      // chance to gain a tenant scales with overall tower appeal
-      const appeal = 0.02 + state.stars * 0.01;
+      // chance to gain a tenant scales with tower appeal + nearby outdoor space
+      const appeal = 0.02 + state.stars * 0.01 + amen * 0.0009;
       if (Math.random() < appeal) {
         u.occupants++;
         state.pop++;
@@ -931,9 +982,9 @@ function simTenants() {
         if (u.occupants === t.cap) log(`${t.name} on floor ${u.row} fully leased!`, "good");
       }
     }
-    // satisfaction drifts based on transit proximity
+    // satisfaction drifts toward a target set by transit access + outdoor amenities
     const access = hasTransitAccess(u.col, u.row, u.w);
-    const target = access ? 100 : 40;
+    const target = Math.min(100, (access ? 85 : 40) + amen);
     u.satisfaction += (target - u.satisfaction) * 0.05;
     if (u.satisfaction < 30 && u.occupants > 0 && Math.random() < 0.1) {
       u.occupants--; state.pop--; updateUnitVisual(u);
@@ -1053,9 +1104,10 @@ function spawnPerson() {
     const k = TYPES[u.type].kind;
     return (k === "work" || k === "home" || k === "hotel") && u.occupants > 0;
   });
-  // ...and once anyone lives/works here, the lobby sees foot traffic too.
+  // ...and once anyone lives/works here, the lobby and outdoor spaces see visitors too.
   if (state.pop > 0) {
-    for (const u of state.units) if (u.type === "lobby") pool.push(u);
+    for (const u of state.units)
+      if (u.type === "lobby" || TYPES[u.type].kind === "outdoor") pool.push(u);
   }
   if (pool.length === 0) return;
   const u = pool[Math.floor(Math.random() * pool.length)];
