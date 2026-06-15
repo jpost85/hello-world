@@ -787,6 +787,18 @@ function hasOpenSkyAbove(col, row, w) {
   return true;
 }
 
+// Structural support: anything above the ground floor must rest on the floor
+// directly below it, overhanging that support by at most one cell on each side.
+function isSupported(col, row, w) {
+  if (row === 0) return true; // ground floor sits on the ground
+  let first = -1, last = -1;
+  for (let dc = 0; dc < w; dc++) {
+    if (state.grid[key(col + dc, row - 1)]) { if (first === -1) first = dc; last = dc; }
+  }
+  if (first === -1) return false;            // nothing underneath at all -> floating
+  return first <= 1 && (w - 1 - last) <= 1;  // overhang at most one cell each side
+}
+
 // Would a unit placed here sit directly on top of an outdoor space?
 function coversOutdoor(col, row, w) {
   for (let dc = 0; dc < w; dc++) {
@@ -817,6 +829,11 @@ function tryBuild(col, row, key_) {
   const t = TYPES[key_];
   if (!t || t.tool) return;
   if (!cellsFree(col, row, t.w, t.h)) { toast("Space is occupied or out of bounds."); sfx("error"); return; }
+  if (!isSupported(col, row, t.w)) {
+    toast("Must rest on the ground or the floor below (1-cell overhang max).");
+    sfx("error");
+    return;
+  }
   if (state.cash < t.cost) { toast("Not enough cash."); sfx("error"); flash(false); return; }
   if ((t.kind === "work" || t.kind === "home" || t.kind === "shop" || t.kind === "hotel" || t.kind === "outdoor" || t.kind === "amenity") && !hasTransitAccess(col, row, t.w)) {
     toast("Needs stairs or an elevator within 8 cells on this floor."); sfx("error");
