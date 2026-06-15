@@ -1562,6 +1562,18 @@ function audioKick() { audioEnsure(); audioResume(); }
 document.addEventListener("pointerdown", audioKick);
 document.addEventListener("keydown", audioKick);
 
+// Cached white-noise buffer for percussive (hammer) sounds.
+let _noiseBuf = null;
+function noiseBuffer() {
+  if (!_noiseBuf && actx) {
+    const len = Math.floor(actx.sampleRate * 0.4);
+    _noiseBuf = actx.createBuffer(1, len, actx.sampleRate);
+    const d = _noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  }
+  return _noiseBuf;
+}
+
 // Short synthesized sound effects keyed by event name.
 function sfx(name) {
   if (!actx || !soundOn) return;
@@ -1579,7 +1591,20 @@ function sfx(name) {
     o.start(t); o.stop(t + dur + 0.02);
   };
   switch (name) {
-    case "build":   beep(660, 0.08, "triangle", 0.30); beep(990, 0.10, "triangle", 0.24, 0.06); break;
+    case "build": { // hammering: a few metallic tinks + low thunks, like construction
+      for (let i = 0; i < 3; i++) {
+        const w = i * 0.13, tt = now + w;
+        const src = actx.createBufferSource(); src.buffer = noiseBuffer();
+        const bp = actx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 2200; bp.Q.value = 5;
+        const ng = actx.createGain();
+        ng.gain.setValueAtTime(0.28, tt);
+        ng.gain.exponentialRampToValueAtTime(0.0001, tt + 0.07);
+        src.connect(bp); bp.connect(ng); ng.connect(aSfx);
+        src.start(tt); src.stop(tt + 0.08);
+        beep(150, 0.09, "square", 0.16, w, 90);
+      }
+      break;
+    }
     case "sell":    beep(520, 0.14, "triangle", 0.26, 0, 300); break;
     case "error":   beep(150, 0.16, "square",   0.16); break;
     case "cash":    beep(880, 0.07, "triangle", 0.24); beep(1320, 0.12, "triangle", 0.20, 0.07); break;
@@ -1615,6 +1640,34 @@ function musicTick() {
   }
 }
 setInterval(musicTick, 2600);
+
+// Sparse bird chirps in the daytime background (quiet at night).
+function chirp() {
+  if (!actx || !soundOn || actx.state !== "running" || state.isNight) return;
+  const t0 = actx.currentTime;
+  const base = 2600 + Math.random() * 1600;
+  const syllables = 2 + Math.floor(Math.random() * 3);
+  let w = 0;
+  for (let i = 0; i < syllables; i++) {
+    const t = t0 + w;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "sine";
+    const f = base * (0.9 + Math.random() * 0.3);
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.exponentialRampToValueAtTime(f * 1.5, t + 0.035);
+    o.frequency.exponentialRampToValueAtTime(f * 0.8, t + 0.08);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.07, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    o.connect(g); g.connect(aMusic);
+    o.start(t); o.stop(t + 0.1);
+    w += 0.07 + Math.random() * 0.06;
+  }
+}
+function scheduleBird() {
+  setTimeout(() => { chirp(); scheduleBird(); }, 1400 + Math.random() * 4200);
+}
+scheduleBird();
 
 function updateSoundBtn() {
   const b = document.getElementById("soundToggle");
