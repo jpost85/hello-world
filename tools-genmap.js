@@ -172,7 +172,7 @@ for (const id in CITY_POINTS) {
 const SEA_POINTS = {
   north: [-66.0, 42.8],
   mid:   [-72.0, 36.8],
-  south: [-77.0, 30.8],
+  south: [-77.2, 32.1],
 };
 const seaZones = {};
 for (const id in SEA_POINTS) {
