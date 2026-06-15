@@ -45,11 +45,13 @@ Click **New Campaign** to begin. Your progress autosaves to the browser, so
   They ride with their army on a march or assault; a general whose region is
   overrun — or whose shattered assault is run down — is captured: a heavy morale
   blow with no replacement, so guard them.
-- **Cities** (Boston, New York City, Philadelphia, Charleston) are fortified
-  port sub-regions inside their colony's countryside; New York City and
-  Philadelphia are the capitals. A city can be held even when its countryside is
-  enemy (the British supply New York City by sea), so taking one means besieging
-  it through the surrounding countryside.
+- **Cities** (Boston, New York City, Philadelphia, Charleston, and British
+  Halifax in Nova Scotia) are fortified port sub-regions inside their colony's
+  countryside; New York City and Philadelphia are the capitals. A city can be
+  held even when its countryside is enemy (the British supply New York City and
+  Halifax by sea), so taking one means besieging it through the surrounding
+  countryside. Nova Scotia is a British northern bastion reachable overland from
+  Maine or by sea.
 - **Sea zones (⚓)** link the harbours out in the Atlantic. Whoever's navy holds
   a zone can sail armies between its harbours in one move, mount amphibious
   assaults, and blockade enemy ports there (halving their income). Britain rules

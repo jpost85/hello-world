@@ -37,6 +37,7 @@ const PLAYABLE = {
   // Neutral / disputed lands
   vermont:    "Vermont",                 // New Hampshire Grants / Vermont Republic
   ontario:    "Ontario",                 // the Ontario peninsula (British Canada)
+  novascotia: "Nova Scotia",             // British Nova Scotia (Halifax naval base)
   ohio:       "Ohio",                    // the Ohio Country / Northwest frontier
   appalachia: ["Kentucky", "Tennessee"], // trans-Appalachian backcountry
   florida:    "Florida",                 // East Florida (cropped to its north)
@@ -44,8 +45,9 @@ const PLAYABLE = {
 };
 // Regions kept out of the projection bounds so a long tail (Florida's
 // peninsula, Kentucky/Tennessee to the Mississippi, Quebec/Ontario to the
-// Arctic) doesn't stretch the map; they crop at the frame edge instead.
-const NO_BOUNDS = new Set(["florida", "appalachia", "quebec", "ontario"]);
+// Arctic, Nova Scotia reaching east) doesn't stretch the map; they crop at the
+// frame edge instead.
+const NO_BOUNDS = new Set(["florida", "appalachia", "quebec", "ontario", "novascotia"]);
 
 function featByName(name) { return FEATURES.find((f) => f.properties.name === name); }
 function statesOf(v) { return Array.isArray(v) ? v : [v]; }
@@ -143,6 +145,7 @@ const ANCHOR = {
   vermont: [-72.9, 44.35], ny: [-75.3, 42.95], nj: [-74.5, 40.1], del: [-75.45, 39.05],
   md: [-77.2, 39.45], va: [-79.5, 38.3], quebec: [-71.5, 47.2],
   ohio: [-82.7, 40.3], appalachia: [-85.8, 36.4], florida: [-83.0, 29.65], ontario: [-80.6, 43.6],
+  novascotia: [-64.7, 45.0],
 };
 
 const regions = {};
@@ -157,6 +160,7 @@ const CITY_POINTS = {
   nyc:          [-74.00, 40.71],
   philadelphia: [-75.16, 39.95],
   charleston:   [-79.93, 32.78],
+  halifax:      [-63.57, 44.65],
 };
 for (const id in CITY_POINTS) {
   const c = px(...CITY_POINTS[id]);
