@@ -91,8 +91,9 @@ for (const id in PLAYABLE) {
 
 const PAD = 0.4; // degrees of margin
 minLon -= PAD; maxLon += PAD; minLat -= PAD; maxLat += PAD;
-minLat = Math.min(minLat, 29.4); // extend south to reveal north Florida
-maxLat = Math.max(maxLat, 48.8); // extend north to frame Quebec / Canada
+minLon = Math.min(minLon, -88.0); // extend west to reveal the Kentucky/Tennessee backcountry
+minLat = Math.min(minLat, 29.1);  // extend south to reveal north Florida
+maxLat = Math.max(maxLat, 48.8);  // extend north to frame Quebec / Canada
 const midLat = (minLat + maxLat) / 2;
 const lonScale = Math.cos((midLat * Math.PI) / 180); // horizontal compression
 
@@ -139,7 +140,7 @@ const ANCHOR = {
   maine: [-69.2, 45.25], nh: [-71.45, 43.6], mass: [-71.8, 42.4], rhode: [-71.45, 41.55], conn: [-73.0, 41.4],
   vermont: [-72.9, 44.35], ny: [-75.3, 42.95], nj: [-74.5, 40.1], del: [-75.45, 39.05],
   md: [-77.2, 39.45], va: [-79.5, 38.3], quebec: [-71.5, 47.2],
-  ohio: [-82.7, 40.3], appalachia: [-83.6, 36.4], florida: [-82.0, 30.45],
+  ohio: [-82.7, 40.3], appalachia: [-85.8, 36.4], florida: [-83.0, 29.65],
 };
 
 const regions = {};
