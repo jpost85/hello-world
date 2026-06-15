@@ -94,7 +94,7 @@
   }
   #app.nav-closed #stage { left: 0; }
   #scroller {
-    position: absolute; top: 42px; left: 0; right: 0; bottom: 0;
+    position: absolute; top: 42px; left: 0; right: 0; bottom: 0; z-index: 1;
     overflow: auto; -webkit-overflow-scrolling: touch;
   }
   #world { position: relative; }
@@ -179,19 +179,44 @@
 
   .unit {
     position: absolute; box-sizing: border-box;
-    border: 1px solid rgba(0,0,0,.35);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; color: rgba(0,0,0,.55);
+    border: 1px solid rgba(0,0,0,.32);
     overflow: hidden; cursor: pointer;
+    background: var(--wall, #c9d3da);
   }
-  .unit .occ { position:absolute; bottom:2px; left:0; right:0; height:4px; }
-  .unit small { font-size: 9px; opacity:.8; }
+  .u-face { position: absolute; inset: 0; }
+  .u-extra { position: absolute; left: 0; right: 0; top: 0; pointer-events: none; }
+  .unit .occ { position:absolute; bottom:0; left:0; right:0; height:3px; z-index:4; }
+  .u-tag {
+    position:absolute; top:1px; left:2px; z-index:4;
+    font-size:8px; font-weight:700; letter-spacing:.5px;
+    color: rgba(0,0,0,.5); pointer-events:none;
+  }
+  .unit-shop .u-tag, .unit-restaurant .u-tag, .unit-cinema .u-tag {
+    top:auto; bottom:4px; color: rgba(255,255,255,.85); text-shadow:0 1px 1px rgba(0,0,0,.6);
+  }
+  .u-vac {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-6deg);
+    z-index:4; display:none; font-size:7px; font-weight:800; letter-spacing:.5px;
+    background:#ffe9a8; color:#7a5a12; border:1px solid #b9912f; border-radius:2px;
+    padding:1px 3px; box-shadow:0 1px 2px rgba(0,0,0,.3); white-space:nowrap;
+  }
+  .unit.vacant .u-vac { display:block; }
 
   .person {
-    position: absolute; width: 6px; height: 10px; border-radius: 2px;
-    bottom: 2px; transition: left .25s linear;
-    box-shadow: 0 1px 0 rgba(0,0,0,.3);
+    position: absolute; width: 5px; height: 9px; border-radius: 2px 2px 1px 1px;
+    bottom: 2px; transition: left .25s linear; z-index: 2;
+    background: #aab7c4; box-shadow: 0 1px 0 rgba(0,0,0,.3);
+    animation: bob .5s infinite alternate ease-in-out;
   }
+  .person::before {
+    content:""; position:absolute; top:-3px; left:0; width:5px; height:3px;
+    border-radius:50%; background:inherit; filter:brightness(1.25);
+  }
+  .person.role-work    { background:#5b8def; }
+  .person.role-home    { background:#56c271; }
+  .person.role-hotel   { background:#d9b36b; }
+  .person.role-visitor { background:#b4bfca; }
+  @keyframes bob { from{ transform:translateY(0);} to{ transform:translateY(-1.5px);} }
 
   #ghost {
     position: absolute; pointer-events: none; border: 2px dashed #fff;
@@ -208,6 +233,149 @@
 
   .hint { font-size: 11px; color: var(--muted); line-height: 1.4; }
   kbd { background:#000; border-radius:3px; padding:0 4px; font-size:10px; }
+
+  /* ---------- Unit interiors ---------- */
+  /* Window facade shared by residential / office / hotel */
+  .win .u-face {
+    background:
+      linear-gradient(180deg, var(--wall) 0 5px, transparent 5px calc(100% - 6px), var(--wall) calc(100% - 6px) 100%),
+      repeating-linear-gradient(90deg, var(--frame, #5a6b7a) 0 2px, var(--glass) 2px 11px);
+  }
+  .win.lit { --glass: #ffe7a6; }            /* warm light spills from windows at night */
+
+  .unit-office    { --wall:#7f93a6; --glass:#bfe0f5; --frame:#52677d; }
+  .unit-apartment { --wall:#caa06a; --glass:#ffe4b3; --frame:#9c7642; }
+  .unit-condo     { --wall:#c98f53; --glass:#ffd9a0; --frame:#8f5f2c; }
+  .unit-hotel     { --wall:#4fae9f; --glass:#cdeee8; --frame:#2f7d72; }
+  /* a thin balcony rail across condos */
+  .unit-condo .u-extra {
+    top:auto; bottom:5px; height:4px;
+    background: repeating-linear-gradient(90deg, #6b4a22 0 1px, transparent 1px 5px);
+    border-top:1px solid #6b4a22;
+  }
+
+  /* Storefronts */
+  .unit-shop .u-face {
+    background: linear-gradient(180deg, transparent 0 6px, #ead9fb 6px calc(100% - 4px), #5a3f86 calc(100% - 4px));
+  }
+  .unit-shop .u-extra {
+    height:6px; border-bottom:1px solid rgba(0,0,0,.3);
+    background: repeating-linear-gradient(90deg, #efe0ff 0 7px, #7e5fb0 7px 14px);
+  }
+  .unit-restaurant .u-face {
+    background: linear-gradient(180deg, transparent 0 6px, #f6e7d6 6px calc(100% - 4px), #8a5a44 calc(100% - 4px)),
+      radial-gradient(circle at 25% 78%, #c98a5e 0 2px, transparent 3px),
+      radial-gradient(circle at 65% 78%, #c98a5e 0 2px, transparent 3px);
+  }
+  .unit-restaurant .u-extra {
+    height:6px; border-bottom:1px solid rgba(0,0,0,.3);
+    background: repeating-linear-gradient(90deg, #ef6f6f 0 8px, #f7dada 8px 16px);
+  }
+  .unit-cinema .u-face {
+    background: linear-gradient(180deg, #2a1f3d 0 8px, #5a3f86 8px calc(100% - 4px), #1f1630 calc(100% - 4px));
+  }
+  .unit-cinema .u-extra {
+    height:8px;
+    background: radial-gradient(circle at 5px 4px, #ffe27a 0 1.6px, transparent 2.2px) repeat-x;
+    background-size:10px 8px;
+  }
+  .unit-cinema.lit .u-extra { filter: drop-shadow(0 0 2px #ffd34d); }
+
+  /* Lobby — columns, ceiling trim, marble floor */
+  .unit-lobby { --wall:#e7d8ad; }
+  .unit-lobby .u-face {
+    background:
+      linear-gradient(180deg, #cdb988 0 4px, transparent 4px),
+      linear-gradient(180deg, transparent 0 calc(100% - 6px), #b9a36a calc(100% - 6px)),
+      repeating-linear-gradient(90deg, #ddcc97 0 13px, #c6b079 13px 16px);
+  }
+
+  /* Floor slab */
+  .unit-floor { --wall:#b8bfc7; }
+  .unit-floor .u-face { background: linear-gradient(180deg, #c8cfd6, #a9b1b9); }
+
+  /* Stairs — diagonal treads */
+  .unit-stair { --wall:#8d99ae; }
+  .unit-stair .u-face { background: repeating-linear-gradient(-45deg, #75839a 0 4px, #9aa6b8 4px 8px); }
+
+  /* Elevator shaft + moving car */
+  .unit-elevator { --wall:#2b3440; }
+  .unit-elevator .u-face {
+    background: linear-gradient(90deg, #141a22 0 4px, #3a4552 4px calc(100% - 4px), #141a22 calc(100% - 4px));
+  }
+  .elev-car {
+    position:absolute; z-index:3; border-radius:1px;
+    background: linear-gradient(#f4d98a, #e2bc55);
+    border:1px solid #6b5418; box-shadow: inset 0 0 3px rgba(0,0,0,.45);
+    display:flex; align-items:flex-end; justify-content:center; gap:1px; padding-bottom:1px;
+  }
+  .elev-car i { width:2px; height:4px; background:#33414f; border-radius:1px; display:inline-block; }
+
+  /* ---------- Sky backdrop ---------- */
+  #sky { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+  #sun, #moon { position:absolute; width:46px; height:46px; border-radius:50%; transition:opacity .8s; }
+  #sun  { background:radial-gradient(circle at 38% 38%, #fff6c8, #ffd24a 60%, #ffb020); box-shadow:0 0 30px 8px rgba(255,200,60,.5); }
+  #moon { background:radial-gradient(circle at 40% 38%, #fdfdff, #d4dcec 60%, #aab4c8); box-shadow:0 0 18px 4px rgba(200,215,255,.35); }
+  #stars { position:absolute; inset:0; transition:opacity 1s; }
+  .star { position:absolute; width:2px; height:2px; border-radius:50%; background:#fff; opacity:.85; animation:twinkle 3s infinite ease-in-out; }
+  @keyframes twinkle { 0%,100%{ opacity:.2; } 50%{ opacity:.9; } }
+  #clouds { position:absolute; inset:0; transition:opacity 1s; }
+  .cloud {
+    position:absolute; background:rgba(255,255,255,.82); border-radius:50px;
+    filter: blur(1px); box-shadow:0 6px 14px rgba(255,255,255,.5);
+  }
+  .cloud::before, .cloud::after { content:""; position:absolute; background:inherit; border-radius:50%; }
+  .cloud::before { width:55%; height:160%; top:-55%; left:12%; }
+  .cloud::after  { width:42%; height:150%; top:-45%; right:14%; }
+  .cloud.c1 { width:120px; height:26px; top:14%; animation:drift 70s linear infinite; }
+  .cloud.c2 { width:84px;  height:18px; top:30%; animation:drift 95s linear infinite; animation-delay:-30s; }
+  .cloud.c3 { width:150px; height:30px; top:8%;  animation:drift 120s linear infinite; animation-delay:-60s; }
+  @keyframes drift { from{ transform:translateX(-180px); } to{ transform:translateX(110vw); } }
+  #skyline {
+    position:absolute; left:0; right:0; bottom:0; height:70px; opacity:.4;
+    background:
+      linear-gradient(180deg, transparent, rgba(20,30,45,.5)),
+      repeating-linear-gradient(90deg, #20303f 0 18px, #1a2735 18px 22px, #243748 22px 46px, #1a2735 46px 50px);
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 40%);
+            mask-image: linear-gradient(180deg, transparent, #000 40%);
+  }
+
+  /* ---------- Juice / effects ---------- */
+  .float-text {
+    position:absolute; z-index:19; font-weight:800; font-size:14px; color:var(--good);
+    text-shadow:0 1px 3px rgba(0,0,0,.7); pointer-events:none; transform:translateX(-50%);
+    animation: floatup 1.3s ease-out forwards;
+  }
+  .float-text.bad { color:var(--bad); }
+  @keyframes floatup { from{ opacity:1; } to{ transform:translate(-50%,-42px); opacity:0; } }
+
+  .banner {
+    position:absolute; left:50%; top:38%; transform:translate(-50%,-50%);
+    z-index:21; pointer-events:none; white-space:nowrap;
+    font-size:26px; font-weight:900; letter-spacing:1px; color:#fff;
+    text-shadow:0 2px 0 #b8860b, 0 0 18px rgba(255,210,80,.9);
+    animation: pop 2.6s ease-out forwards;
+  }
+  @keyframes pop {
+    0%   { opacity:0; transform:translate(-50%,-50%) scale(.4); }
+    15%  { opacity:1; transform:translate(-50%,-50%) scale(1.1); }
+    30%  { transform:translate(-50%,-50%) scale(1); }
+    80%  { opacity:1; }
+    100% { opacity:0; transform:translate(-50%,-130%) scale(1); }
+  }
+
+  .smoke {
+    position:absolute; width:10px; height:10px; border-radius:50%; z-index:6;
+    background:radial-gradient(circle, rgba(80,80,80,.8), rgba(80,80,80,0) 70%);
+    pointer-events:none; animation: rise 2s ease-out forwards;
+  }
+  @keyframes rise {
+    from { opacity:.8; transform:translateY(0) scale(.6); }
+    to   { opacity:0;  transform:translateY(-46px) scale(2.2); }
+  }
+
+  #hud .hud-item b.bump { animation: cashbump .5s ease; }
+  @keyframes cashbump { 0%{ transform:scale(1);} 35%{ transform:scale(1.25); color:#fff;} 100%{ transform:scale(1);} }
 </style>
 </head>
 <body>
@@ -253,6 +421,17 @@
   <div id="backdrop"></div>
 
   <div id="stage">
+    <div id="sky">
+      <div id="stars"></div>
+      <div id="clouds">
+        <div class="cloud c1"></div>
+        <div class="cloud c2"></div>
+        <div class="cloud c3"></div>
+      </div>
+      <div id="sun"></div>
+      <div id="moon"></div>
+      <div id="skyline"></div>
+    </div>
     <div id="hud">
       <button id="menuToggle" title="Show/hide build menu">☰</button>
       <span class="hud-item">💰 <b id="h-cash">$0</b></span>
@@ -320,6 +499,7 @@ const state = {
   grid: {},          // "col,row" -> unit id  (occupancy map)
   nextId: 1,
   people: [],
+  shafts: [],
   stars: 0,
   isNight: false,
   pending: null,
@@ -332,6 +512,10 @@ const scroller = document.getElementById("scroller");
 const ghost = document.getElementById("ghost");
 const toastEl = document.getElementById("toast");
 const logEl = document.getElementById("log");
+const sunEl = document.getElementById("sun");
+const moonEl = document.getElementById("moon");
+const starsEl = document.getElementById("stars");
+const cloudsEl = document.getElementById("clouds");
 
 const worldWidth = COLS * CELL_W;
 const totalRows = MAX_FLOORS + 1; // ground + above
@@ -445,6 +629,7 @@ function tryBuild(col, row, key_) {
     revenueTimer: Math.random() * 60,
   };
   placeUnit(unit);
+  if (key_ === "elevator") rebuildShafts();
   state.cash -= t.cost;
   log(`Built ${t.name} on floor ${row} for $${t.cost.toLocaleString()}`, "good");
   refreshStats();
@@ -457,20 +642,28 @@ function placeUnit(unit) {
     for (let dc = 0; dc < unit.w; dc++)
       state.grid[key(unit.col + dc, unit.row + dr)] = unit.id;
 
+  const winTypes = ["office", "apartment", "condo", "hotel"];
   const el = document.createElement("div");
-  el.className = "unit";
+  el.className = "unit unit-" + unit.type + (winTypes.includes(unit.type) ? " win" : "");
   el.style.left = colLeft(unit.col) + "px";
   el.style.top = rowTop(unit.row + unit.h - 1) + "px";
   el.style.width = (unit.w * CELL_W) + "px";
   el.style.height = (unit.h * CELL_H) + "px";
-  el.style.background = t.color;
   el.dataset.id = unit.id;
-  el.innerHTML = `<span>${shortLabel(unit.type)}</span><div class="occ"></div>`;
+  el.innerHTML = unitInnerHTML(unit.type);
   el.addEventListener("click", (e) => { e.stopPropagation(); onUnitClick(unit); });
   world.appendChild(el);
   unit.el = el;
   state.units.push(unit);
   updateUnitVisual(unit);
+}
+
+// Layered interior markup for a unit: facade + type extras + tag + vacancy sign + occupancy bar.
+function unitInnerHTML(type) {
+  const t = TYPES[type];
+  const tag = (type === "floor") ? "" : `<div class="u-tag">${shortLabel(type)}</div>`;
+  const vac = (t.cap > 0) ? `<div class="u-vac">FOR LEASE</div>` : "";
+  return `<div class="u-face"></div><div class="u-extra"></div>${tag}${vac}<div class="occ"></div>`;
 }
 
 function shortLabel(type) {
@@ -495,6 +688,7 @@ function sellUnit(unit, refund) {
       delete state.grid[key(unit.col + dc, unit.row + dr)];
   unit.el.remove();
   state.units = state.units.filter(u => u.id !== unit.id);
+  if (unit.type === "elevator") rebuildShafts();
   state.cash += refund;
   log(`Sold ${TYPES[unit.type].name} for $${refund.toLocaleString()}`, "bad");
   refreshStats();
@@ -508,6 +702,7 @@ function updateUnitVisual(unit) {
     const ratio = unit.occupants / t.cap;
     occBar.style.background = ratio > 0.66 ? "var(--good)" : ratio > 0 ? "var(--accent)" : "var(--bad)";
     occBar.style.width = (ratio * 100) + "%";
+    unit.el.classList.toggle("vacant", unit.occupants === 0);
   } else {
     occBar.style.width = "0";
   }
@@ -527,6 +722,17 @@ function lerpColor(a, b, f) {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 function bump(x, center, width) { return Math.max(0, 1 - Math.abs(x-center)/width); }
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+// Place a celestial body along an arc: frac 0 = left horizon, .5 = zenith, 1 = right horizon.
+function placeArc(el, frac) {
+  if (frac < -0.05 || frac > 1.05) { el.style.opacity = "0"; return false; }
+  const w = stage.clientWidth || 1000, hH = stage.clientHeight || 700;
+  const horizon = hH * 0.80;
+  el.style.left = (frac * (w + 60) - 30 - 23) + "px";
+  el.style.top = (horizon - Math.sin(clamp01(frac) * Math.PI) * (horizon - 30) - 23) + "px";
+  return true;
+}
 
 function updateSky(force) {
   const h = state.minutes / 60;
@@ -538,11 +744,30 @@ function updateSky(force) {
   bot = lerpColor(bot, SKY.dusk[1], duskAmt);
   stage.style.background = `linear-gradient(${top}, ${bot})`;
 
+  // Sun rides 6:00 → 18:00; moon rides 18:00 → 6:00.
+  if (placeArc(sunEl, (h - 6) / 12)) sunEl.style.opacity = String(clamp01(bright * 1.4));
+  const moonH = h < 6 ? h + 24 : h;
+  if (placeArc(moonEl, (moonH - 18) / 12)) moonEl.style.opacity = String(clamp01((1 - bright) - 0.15));
+  starsEl.style.opacity = String(clamp01(1 - bright * 2.4));
+  cloudsEl.style.opacity = String(0.25 + bright * 0.6);
+
   const isNight = bright < 0.12;
   if (force || isNight !== state.isNight) {
     state.isNight = isNight;
     state.units.forEach(u =>
       u.el.classList.toggle("lit", isNight && (u.occupants > 0 || u.type === "lobby")));
+  }
+}
+
+function buildStars() {
+  if (!starsEl) return;
+  for (let i = 0; i < 60; i++) {
+    const d = document.createElement("div");
+    d.className = "star";
+    d.style.left = (Math.random() * 100) + "%";
+    d.style.top = (Math.random() * 68) + "%";
+    d.style.animationDelay = (Math.random() * 3) + "s";
+    starsEl.appendChild(d);
   }
 }
 
@@ -710,6 +935,7 @@ function collectRent() {
   if (total !== 0) {
     state.cash += total;
     log(`Daily income: +$${total.toLocaleString()}`, "good");
+    if (total > 0) floatText(`+$${total.toLocaleString()}`);
   }
   refreshStats();
 }
@@ -723,12 +949,14 @@ function maybeEvent() {
     const bonus = 3000 + Math.round(state.pop * 80);
     state.cash += bonus;
     toast("📈 Economic boom!");
+    floatText(`+$${bonus.toLocaleString()}`);
     log(`📈 Economic boom — investors pour in: +$${bonus.toLocaleString()}`, "good");
   } else if (roll < 0.55) {
     if (avgSatisfaction() >= 70) {
       const b = 5000;
       state.cash += b;
       toast("🎩 VIP inspection passed!");
+      floatText(`+$${b.toLocaleString()}`);
       log(`🎩 VIP inspection passed — reputation bonus: +$${b.toLocaleString()}`, "good");
     } else {
       log("🎩 A VIP toured the tower and left unimpressed by tenant satisfaction.", "bad");
@@ -736,17 +964,25 @@ function maybeEvent() {
   } else if (roll < 0.80) {
     const fee = 1000 + state.units.length * 150;
     state.cash -= fee;
+    floatText(`-$${fee.toLocaleString()}`, "bad");
     log(`🔧 Routine maintenance and upkeep: -$${fee.toLocaleString()}`, "bad");
   } else {
     const targets = state.units.filter(u =>
       !["lobby", "floor", "stair", "elevator"].includes(u.type));
     if (targets.length) {
       const u = targets[Math.floor(Math.random() * targets.length)];
-      if (u.occupants > 0) { state.pop -= u.occupants; u.occupants = 0; updateUnitVisual(u); }
+      const k = TYPES[u.type].kind;
+      // Only residents/workers/guests count toward population; shop "occupants"
+      // are foot-traffic figures and must not be subtracted from it.
+      if ((k === "work" || k === "home" || k === "hotel") && u.occupants > 0) {
+        state.pop -= u.occupants; u.occupants = 0; updateUnitVisual(u);
+      }
       u.satisfaction = Math.max(0, u.satisfaction - 40);
       const repair = 4000;
       state.cash -= repair;
       toast("🔥 Fire!");
+      spawnSmoke(u);
+      floatText(`-$${repair.toLocaleString()}`, "bad");
       log(`🔥 Fire in ${TYPES[u.type].name} on floor ${u.row}! Evacuated; repairs -$${repair.toLocaleString()}.`, "bad");
     }
   }
@@ -759,7 +995,10 @@ function recomputeStars() {
   for (let i = 0; i < STAR_THRESHOLDS.length; i++)
     if (state.pop >= STAR_THRESHOLDS[i]) s = i + 1;
   if (s !== state.stars) {
-    if (s > state.stars) log(`★ Promoted to ${s}-star tower!`, "good");
+    if (s > state.stars) {
+      log(`★ Promoted to ${s}-star tower!`, "good");
+      banner(`★ ${s}-STAR TOWER! ★`);
+    }
     state.stars = s;
   }
 }
@@ -793,11 +1032,12 @@ function spawnPerson() {
   const u = pool[Math.floor(Math.random() * pool.length)];
   const ext = floorExtent(u.row) || { min: u.col, max: u.col + u.w - 1 };
   const startCol = u.col + Math.random() * Math.max(1, u.w);
+  const roleClass = { work: "role-work", home: "role-home", hotel: "role-hotel" }[TYPES[u.type].kind] || "role-visitor";
   const el = document.createElement("div");
-  el.className = "person";
-  el.style.background = `hsl(${Math.floor(Math.random()*360)},60%,55%)`;
+  el.className = "person " + roleClass;
   el.style.left = colLeft(startCol) + "px";
   el.style.top = (rowTop(u.row) + CELL_H - 12) + "px";
+  el.style.animationDelay = (Math.random() * 0.5) + "s";
   world.appendChild(el);
   state.people.push({ el, col: startCol, row: u.row, life: 200 + Math.random()*200 });
 }
@@ -813,6 +1053,48 @@ function movepeople() {
     p.col = Math.max(ext.min, Math.min(ext.max, p.col));
     p.el.style.left = colLeft(p.col) + "px";
   }
+}
+
+// ---------- Elevator cars ----------
+// Group stacked elevator cells in a column into shafts, each with a car that
+// rides up and down. Recomputed whenever the tower changes.
+function rebuildShafts() {
+  state.shafts.forEach(s => s.carEl && s.carEl.remove());
+  state.shafts = [];
+  const byCol = {};
+  state.units.forEach(u => {
+    if (u.type === "elevator") (byCol[u.col] = byCol[u.col] || []).push(u.row);
+  });
+  Object.keys(byCol).forEach(colStr => {
+    const col = Number(colStr);
+    const rows = byCol[col].sort((a, b) => a - b);
+    let lo = rows[0], prev = rows[0];
+    for (let i = 1; i <= rows.length; i++) {
+      if (i < rows.length && rows[i] === prev + 1) { prev = rows[i]; continue; }
+      if (prev > lo) addShaft(col, lo, prev); // a shaft needs 2+ cells to ride
+      if (i < rows.length) { lo = rows[i]; prev = rows[i]; }
+    }
+  });
+}
+
+function addShaft(col, lo, hi) {
+  const carEl = document.createElement("div");
+  carEl.className = "elev-car";
+  carEl.style.left = (colLeft(col) + 3) + "px";
+  carEl.style.width = (CELL_W - 6) + "px";
+  carEl.style.height = (CELL_H - 6) + "px";
+  carEl.innerHTML = "<i></i><i></i>";
+  world.appendChild(carEl);
+  state.shafts.push({ col, lo, hi, carEl, pos: lo, dir: 1 });
+}
+
+function moveShafts() {
+  state.shafts.forEach(s => {
+    s.pos += s.dir * 0.16;
+    if (s.pos >= s.hi) { s.pos = s.hi; s.dir = -1; }
+    if (s.pos <= s.lo) { s.pos = s.lo; s.dir = 1; }
+    s.carEl.style.top = (rowTop(s.pos) + 3) + "px";
+  });
 }
 
 // ---------- Time loop ----------
@@ -857,10 +1139,11 @@ function updateClock() {
   updateSky(false);
 }
 
-// animation for people on a steadier cadence
-setInterval(() => { if (state.speed > 0) movepeople(); }, 250);
+// animation for people + elevator cars on a steadier cadence
+setInterval(() => { if (state.speed > 0) { movepeople(); moveShafts(); } }, 250);
 
 // ---------- Stats / UI ----------
+let _lastCash = null;
 function refreshStats() {
   const cash = "$" + state.cash.toLocaleString();
   const stars = "★".repeat(state.stars) + "☆".repeat(5 - state.stars);
@@ -869,7 +1152,14 @@ function refreshStats() {
   document.getElementById("s-pop").textContent = state.pop;
   document.getElementById("s-floors").textContent = floorsUsed;
   document.getElementById("s-stars").textContent = stars;
-  document.getElementById("h-cash").textContent = cash;
+  const hCash = document.getElementById("h-cash");
+  if (_lastCash !== null && state.cash !== _lastCash) {
+    hCash.classList.remove("bump");
+    void hCash.offsetWidth; // restart the animation
+    hCash.classList.add("bump");
+  }
+  _lastCash = state.cash;
+  hCash.textContent = cash;
   document.getElementById("h-pop").textContent = state.pop;
   document.getElementById("h-stars").textContent = stars;
   const nextEl = document.getElementById("s-next");
@@ -885,6 +1175,39 @@ function toast(msg) {
   toast._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
 }
 function flash(good) { /* hook for future fx */ }
+
+// ---------- Juice / effects ----------
+// A small number that floats up and fades, anchored in stage (screen) space.
+function floatText(text, cls) {
+  const el = document.createElement("div");
+  el.className = "float-text" + (cls ? " " + cls : "");
+  el.textContent = text;
+  el.style.left = ((stage.clientWidth || 800) / 2) + "px";
+  el.style.top = "70px";
+  stage.appendChild(el);
+  setTimeout(() => el.remove(), 1300);
+}
+
+function banner(text) {
+  const el = document.createElement("div");
+  el.className = "banner";
+  el.textContent = text;
+  stage.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+// Puffs of smoke rising from a unit, in world (scrolling) space.
+function spawnSmoke(unit) {
+  for (let i = 0; i < 6; i++) {
+    const s = document.createElement("div");
+    s.className = "smoke";
+    s.style.left = (colLeft(unit.col) + Math.random() * unit.w * CELL_W) + "px";
+    s.style.top = (rowTop(unit.row + unit.h - 1) + 4) + "px";
+    s.style.animationDelay = (i * 0.18) + "s";
+    world.appendChild(s);
+    setTimeout(() => s.remove(), 2200 + i * 180);
+  }
+}
 
 function log(msg, cls) {
   const e = document.createElement("div");
@@ -917,9 +1240,11 @@ document.getElementById("backdrop").addEventListener("click", closeNav);
 function clearWorld() {
   state.units.forEach(u => u.el && u.el.remove());
   state.people.forEach(p => p.el && p.el.remove());
+  state.shafts.forEach(s => s.carEl && s.carEl.remove());
   state.units = [];
   state.grid = {};
   state.people = [];
+  state.shafts = [];
 }
 
 function saveGame(silent) {
@@ -957,6 +1282,7 @@ function loadGame(silent) {
       satisfaction: su.satisfaction == null ? 100 : su.satisfaction,
     });
   });
+  rebuildShafts();
   refreshStats(); updateClock(); updateSky(true);
   if (!silent) { toast("Tower loaded."); }
   return true;
@@ -976,6 +1302,7 @@ document.getElementById("btnNew").addEventListener("click", newGame);
 function init() {
   buildBackground();
   buildToolbar();
+  buildStars();
 
   const loaded = loadGame(true);
   if (loaded) {
