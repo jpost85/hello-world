@@ -151,7 +151,7 @@ for (const id in PLAYABLE) {
 
 // City sub-regions: point markers placed at the real city, inside their colony.
 const CITY_POINTS = {
-  boston:       [-71.06, 42.36],
+  boston:       [-70.70, 42.15],
   nyc:          [-74.00, 40.71],
   philadelphia: [-75.16, 39.95],
   charleston:   [-79.93, 32.78],
