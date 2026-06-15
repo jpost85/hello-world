@@ -62,7 +62,7 @@ for (let g = 0; g < GAMES; g++) {
       const adj = game.ADJACENCY;
       for (const id of Object.keys(S.regions)) {
         const r = S.regions[id];
-        if (r.owner !== "patriot" || r.acted || r.troops <= 1) continue;
+        if (r.owner !== "patriot" || r.acted || r.troops < game.CONFIG.regiment) continue;
         const enemies = adj[id].filter((n) => S.regions[n].owner === "crown");
         if (enemies.length) {
           enemies.sort((a, b) => S.regions[a].troops - S.regions[b].troops);

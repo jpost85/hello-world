@@ -7,17 +7,19 @@
 
   /* ----------------------------- Configuration ---------------------------- */
   const CONFIG = {
+    // All troop/manpower quantities are real soldiers. Recruiting and
+    // reinforcement come in whole regiments of `regiment` men.
+    regiment: 500,          // men per regiment (the recruiting/reinforcement increment)
     startGold: 120,
     crownStartGold: 95,
-    crownRecruitCap: 3,    // local Loyalist mustering is only a minor trickle
+    crownRecruitCap: 1500,  // most men the AI can muster locally per turn
     crownReinforceEvery: 3, // British regulars arrive by sea every N turns
-    crownReinforceBase: 5,  // troops per wave (grows over the war) — Britain's main force
-    crownReinforceGrowth: 4,// +1 trooper per this many turns
-    recruitCost: 14,        // gold per soldier
-    recruitBatch: 3,        // soldiers mustered per Recruit press
-    manpowerFraction: 0.05, // share of a region's population that is musterable
-    manpowerRegen: 0.0015,  // fraction of population coming of age each turn
-    menPerUnit: 500,        // display only: soldiers represented by one unit
+    crownReinforceBase: 2500, // men per wave (grows over the war) — Britain's main force
+    crownReinforceGrowth: 4,// +1 regiment per this many turns
+    recruitCost: 14,        // gold per regiment
+    recruitBatch: 3,        // regiments mustered per Recruit press
+    manpowerFraction: 25,   // musterable men per 1,000 population
+    manpowerRegen: 0.22,    // men coming of age per 1,000 population each turn
     cityDefenseBonus: 1.4,  // multiplier to defender strength in cities/capitals
     capitalDefenseBonus: 1.7,
     startMorale: 100,
@@ -91,29 +93,29 @@
 
   // Starting positions: owner + troops.
   const SETUP = {
-    quebec: { owner: "crown",   troops: 12 },
-    maine:  { owner: "patriot", troops: 2 },
-    nh:     { owner: "patriot", troops: 4 },
-    mass:   { owner: "patriot", troops: 3 },
-    boston: { owner: "patriot", troops: 3 },
-    rhode:  { owner: "patriot", troops: 3 },
-    conn:   { owner: "patriot", troops: 4 },
-    ny:     { owner: "patriot", troops: 4 },
-    nyc:    { owner: "crown",   troops: 16 },
-    nj:     { owner: "patriot", troops: 4 },
-    penn:   { owner: "patriot", troops: 4 },
-    philadelphia: { owner: "patriot", troops: 6 },
-    del:    { owner: "patriot", troops: 3 },
-    md:     { owner: "patriot", troops: 4 },
-    va:     { owner: "patriot", troops: 7 },
-    nc:     { owner: "patriot", troops: 4 },
-    sc:     { owner: "patriot", troops: 3 },
-    charleston: { owner: "patriot", troops: 3 },
-    ga:     { owner: "crown",   troops: 10 },
-    vermont:    { owner: "neutral", troops: 2 },
-    ohio:       { owner: "neutral", troops: 3 },
-    appalachia: { owner: "neutral", troops: 3 },
-    florida:    { owner: "neutral", troops: 5 },
+    quebec: { owner: "crown",   troops: 6000 },
+    maine:  { owner: "patriot", troops: 1000 },
+    nh:     { owner: "patriot", troops: 2000 },
+    mass:   { owner: "patriot", troops: 1500 },
+    boston: { owner: "patriot", troops: 1500 },
+    rhode:  { owner: "patriot", troops: 1500 },
+    conn:   { owner: "patriot", troops: 2000 },
+    ny:     { owner: "patriot", troops: 2000 },
+    nyc:    { owner: "crown",   troops: 8000 },
+    nj:     { owner: "patriot", troops: 2000 },
+    penn:   { owner: "patriot", troops: 2000 },
+    philadelphia: { owner: "patriot", troops: 3000 },
+    del:    { owner: "patriot", troops: 1500 },
+    md:     { owner: "patriot", troops: 2000 },
+    va:     { owner: "patriot", troops: 3500 },
+    nc:     { owner: "patriot", troops: 2000 },
+    sc:     { owner: "patriot", troops: 1500 },
+    charleston: { owner: "patriot", troops: 1500 },
+    ga:     { owner: "crown",   troops: 5000 },
+    vermont:    { owner: "neutral", troops: 1000 },
+    ohio:       { owner: "neutral", troops: 1500 },
+    appalachia: { owner: "neutral", troops: 1500 },
+    florida:    { owner: "neutral", troops: 2500 },
   };
 
   // Historical commanders, each with their own character:
@@ -184,12 +186,12 @@
   function maxManpower(id) {
     return Math.round((def(id).pop || 0) * CONFIG.manpowerFraction);
   }
-  // Display only: each abstract unit stands for ~CONFIG.menPerUnit soldiers.
-  function menFull(units) { return (units * CONFIG.menPerUnit).toLocaleString("en-US"); }
-  function menShort(units) {
-    const m = units * CONFIG.menPerUnit;
-    if (m < 1000) return String(m);
-    const k = m / 1000;
+  // Troop/manpower counts are real soldiers. Format them for display.
+  function menFull(n) { return Math.round(n).toLocaleString("en-US"); }
+  function menShort(n) {
+    n = Math.round(n);
+    if (n < 1000) return String(n);
+    const k = n / 1000;
     return (Number.isInteger(k) ? k.toFixed(0) : k.toFixed(1)) + "k";
   }
   function defenseBonus(id) {
@@ -462,16 +464,16 @@
 
     if (r.owner === "patriot") {
       // Recruit — limited by gold and the region's musterable manpower.
-      const n = Math.min(CONFIG.recruitBatch, r.manpower);
-      const cost = n * CONFIG.recruitCost;
+      const regts = Math.min(CONFIG.recruitBatch, Math.floor(r.manpower / CONFIG.regiment), Math.floor(S.gold / CONFIG.recruitCost));
+      const men = regts * CONFIG.regiment;
       const recruitBtn = document.createElement("button");
       recruitBtn.className = "btn";
-      recruitBtn.textContent = n > 0 ? `Muster ${menFull(n)} men (${cost}g)` : "No men to muster";
-      recruitBtn.disabled = n <= 0 || S.gold < CONFIG.recruitCost;
+      recruitBtn.textContent = regts > 0 ? `Muster ${menFull(men)} men (${regts * CONFIG.recruitCost}g)` : "No men to muster";
+      recruitBtn.disabled = regts <= 0;
       recruitBtn.addEventListener("click", () => recruit(selected));
       actionsEl.appendChild(recruitBtn);
 
-      if (r.manpower <= 0) {
+      if (r.manpower < CONFIG.regiment) {
         hintEl.textContent = "This region's young men are spent — no one left to muster here.";
       } else if (r.acted) {
         hintEl.textContent = "This army has already marched this turn.";
@@ -543,20 +545,21 @@
   }
 
   /* ------------------------------- Recruit -------------------------------- */
-  // Muster up to a batch, limited by gold AND the region's remaining manpower.
-  // Returns true if at least one soldier was raised.
+  // Muster whole regiments, limited by gold AND the region's remaining
+  // manpower. Returns true if at least one regiment was raised.
   function recruit(id) {
     const r = S.regions[id];
-    const n = Math.min(
+    const regts = Math.min(
       CONFIG.recruitBatch,
-      r.manpower,
+      Math.floor(r.manpower / CONFIG.regiment),
       Math.floor(S.gold / CONFIG.recruitCost)
     );
-    if (n <= 0) return false;
-    S.gold -= n * CONFIG.recruitCost;
-    r.manpower -= n;
-    r.troops += n;
-    log(`Mustered ${menFull(n)} men in ${def(id).name}.`, "");
+    if (regts <= 0) return false;
+    const men = regts * CONFIG.regiment;
+    S.gold -= regts * CONFIG.recruitCost;
+    r.manpower -= men;
+    r.troops += men;
+    log(`Mustered ${menFull(men)} men in ${def(id).name}.`, "");
     save();
     renderAll();
     return true;
@@ -717,7 +720,7 @@
       showBanner("Assault on " + defName + " repelled");
       adjustMorale("patriot", -3);
       // A general leading a broken assault may be taken.
-      if (attGen && survivors <= 2 && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, "patriot", "crown");
+      if (attGen && survivors <= 2 * CONFIG.regiment && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, "patriot", "crown");
     }
 
     selected = result.win ? toId : fromId;
@@ -790,7 +793,7 @@
   function applyWinter() {
     if ((S.turn - 1) % 4 !== 3) return; // only on winter turns
     const severity = rng(0.08, 0.18);
-    const FIELD = 6; // a mobilized field army; smaller home garrisons endure
+    const FIELD = 3000; // a mobilized field army; smaller home garrisons endure
     let total = 0;
     for (const r of Object.values(S.regions)) {
       if (def(r.id).city || r.troops <= FIELD) continue; // cities shelter; small garrisons endure
@@ -815,30 +818,32 @@
       const ports = crownRegions.filter((r) => def(r.id).city);
       const landing = S.regions.nyc.owner === "crown" ? S.regions.nyc
         : (ports[0] || crownRegions[0]);
-      const wave = CONFIG.crownReinforceBase + Math.floor(S.turn / CONFIG.crownReinforceGrowth);
+      const wave = CONFIG.crownReinforceBase + Math.floor(S.turn / CONFIG.crownReinforceGrowth) * CONFIG.regiment;
       landing.troops += wave;
       S.crownGold += 20;
       log(`A British fleet lands ${menFull(wave)} regulars at ${def(landing.id).name}.`, "l-bad");
       showBanner("⚓  British regulars land at " + def(landing.id).name);
     }
 
-    // 1) Muster local Loyalists at a front-line city — limited by that
-    //    region's manpower (the regulars from overseas are the main force).
-    let recruits = Math.floor(S.crownGold / CONFIG.recruitCost);
-    recruits = Math.min(recruits, CONFIG.crownRecruitCap); // pace the AI
-    if (recruits > 0) {
+    // 1) Muster local Loyalists (in whole regiments) at a front-line city —
+    //    limited by manpower; the regulars from overseas are the main force.
+    if (crownRegions.length) {
       // Prefer a city adjacent to a patriot region (the front).
       const front = crownRegions.filter((r) =>
         ADJACENCY[r.id].some((n) => S.regions[n].owner === "patriot"));
       const pool = front.length ? front : crownRegions;
       const target = pool.reduce((best, r) =>
         (def(r.id).city ? 1 : 0) - (best && def(best.id).city ? 1 : 0) >= 0 ? r : best, pool[0]);
-      recruits = Math.min(recruits, target.manpower);
-      if (recruits > 0) {
-        target.troops += recruits;
-        target.manpower -= recruits;
-        S.crownGold -= recruits * CONFIG.recruitCost;
-        log(`Loyalists muster at ${def(target.id).name} (+${menFull(recruits)}).`, "l-bad");
+      const regts = Math.min(
+        Math.floor(CONFIG.crownRecruitCap / CONFIG.regiment),
+        Math.floor(S.crownGold / CONFIG.recruitCost),
+        Math.floor(target.manpower / CONFIG.regiment));
+      if (regts > 0) {
+        const men = regts * CONFIG.regiment;
+        target.troops += men;
+        target.manpower -= men;
+        S.crownGold -= regts * CONFIG.recruitCost;
+        log(`Loyalists muster at ${def(target.id).name} (+${menFull(men)}).`, "l-bad");
       }
     }
 
@@ -848,13 +853,13 @@
     const armies = ownedRegions("crown").map((r) => r.id);
     for (const id of armies) {
       const r = S.regions[id];
-      if (!r || r.owner !== "crown" || acted.has(id) || r.troops <= 1) continue;
+      if (!r || r.owner !== "crown" || acted.has(id) || r.troops < CONFIG.regiment) continue;
 
       // Strike the rebels: among neighbours we can beat, drive on the one
       // nearest Philadelphia (the war aim), not merely the weakest.
       const beatable = ADJACENCY[id]
         .filter((n) => S.regions[n].owner === "patriot" &&
-          r.troops - S.regions[n].troops * defenseBonus(n) > 1)
+          r.troops - S.regions[n].troops * defenseBonus(n) > CONFIG.regiment)
         .sort((a, b) => dist(a, "philadelphia") - dist(b, "philadelphia"));
       const bestAtk = beatable[0] || null;
 
@@ -862,7 +867,7 @@
       let neutralGrab = null;
       if (!bestAtk) {
         for (const t of ADJACENCY[id].filter((n) => S.regions[n].owner === "neutral")) {
-          if (r.troops - S.regions[t].troops * defenseBonus(t) > 2) { neutralGrab = t; break; }
+          if (r.troops - S.regions[t].troops * defenseBonus(t) > 2 * CONFIG.regiment) { neutralGrab = t; break; }
         }
       }
 
@@ -879,7 +884,7 @@
         const reinforceTo = ADJACENCY[id]
           .filter((n) => S.regions[n].owner === "crown")
           .sort((a, b) => dist(a, "philadelphia") - dist(b, "philadelphia"))[0];
-        if (reinforceTo && dist(reinforceTo, "philadelphia") < dist(id, "philadelphia") && r.troops > 2) {
+        if (reinforceTo && dist(reinforceTo, "philadelphia") < dist(id, "philadelphia") && r.troops > 2 * CONFIG.regiment) {
           const move = Math.floor(r.troops / 2);
           r.troops -= move;
           S.regions[reinforceTo].troops += move;
@@ -904,7 +909,7 @@
     // Commit enough to win with margin; keep a reserve when comfortably superior.
     const need = to.troops * defMult;
     let committed = from.troops;
-    if (from.troops > need * 1.7) committed = Math.min(from.troops, Math.ceil(need * 1.4) + 2);
+    if (from.troops > need * 1.7) committed = Math.min(from.troops, Math.ceil(need * 1.4) + 2 * CONFIG.regiment);
     const result = resolveBattle(committed, to.troops, defMult, attGen ? attGen.atk : 1);
     tuneCasualties(result, committed, to.troops, attGen, defGen);
     const defenders = to.troops;
@@ -939,7 +944,7 @@
       log(`We repulsed a British attack on ${def(toId).name}! Enemy lost ${menFull(result.attLoss)}.`, "l-good");
       adjustMorale("patriot", 4);
       adjustMorale("crown", -4);
-      if (attGen && survivors <= 2 && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, "crown", "patriot");
+      if (attGen && survivors <= 2 * CONFIG.regiment && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, "crown", "patriot");
     }
   }
 
@@ -970,7 +975,7 @@
     adjustMorale("patriot", 8);
     // French regulars land in a Patriot coastal city if available.
     const landing = ["philadelphia", "charleston", "boston", "va"].find((id) => S.regions[id].owner === "patriot");
-    if (landing) S.regions[landing].troops += 7;
+    if (landing) S.regions[landing].troops += 7 * CONFIG.regiment;
     log("FRANCE ENTERS THE WAR! French gold, regulars, and a fleet bolster the cause.", "l-event");
     showBanner("⚜  France joins the Revolution!", 3800);
   }

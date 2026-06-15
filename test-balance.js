@@ -16,7 +16,7 @@ global.localStorage = { _d:{}, getItem(k){return this._d[k]||null;}, setItem(k,v
 
 const game = require("./game.js");
 const ADJ = game.ADJACENCY;
-const BATCH = game.CONFIG.recruitCost * game.CONFIG.recruitBatch;
+const R = game.CONFIG.regiment; // men per regiment
 
 function crownAdjStack(S, id) {
   let m = 0;
@@ -55,9 +55,9 @@ function playTurn() {
     if (!St.regions[target] || St.regions[target].owner !== "patriot") return;
     for (const n of ADJ[target]) {
       const nr = St.regions[n];
-      if (!nr || nr.owner !== "patriot" || nr.acted || nr.troops <= 2) continue;
+      if (!nr || nr.owner !== "patriot" || nr.acted || nr.troops < 2 * R) continue;
       if (ADJ[n].some((x) => St.regions[x].owner === "crown")) continue; // don't strip the front
-      game.doMove(n, target, nr.troops - 1);
+      game.doMove(n, target, nr.troops - R);
       St = game.getState();
     }
   };
@@ -69,12 +69,12 @@ function playTurn() {
   if (threatened.length) {
     for (const id of Object.keys(S.regions)) {
       const r = S.regions[id];
-      if (r.owner !== "patriot" || r.acted || r.troops <= 2) continue;
+      if (r.owner !== "patriot" || r.acted || r.troops < 2 * R) continue;
       if (ADJ[id].some((n) => S.regions[n].owner === "crown")) continue; // front holds
       const step = ADJ[id].filter((n) => S.regions[n].owner === "patriot")
         .sort((a, b) => minDistToSet(a, threatened) - minDistToSet(b, threatened))[0];
       if (step && minDistToSet(step, threatened) < minDistToSet(id, threatened)) {
-        game.doMove(id, step, r.troops - 1);
+        game.doMove(id, step, r.troops - R);
         S = game.getState();
       }
     }
@@ -83,12 +83,12 @@ function playTurn() {
   // 3) Attack only with a clear advantage, keeping a garrison.
   for (const id of Object.keys(S.regions)) {
     const r = S.regions[id];
-    if (r.owner !== "patriot" || r.acted || r.troops <= 3) continue;
+    if (r.owner !== "patriot" || r.acted || r.troops <= 3 * R) continue;
     const t = ADJ[id].filter((n) => S.regions[n].owner !== "patriot")
       .map((n) => ({ n, need: S.regions[n].troops * game.defenseBonus(n) }))
-      .filter((o) => r.troops >= o.need * 1.5 + 3)
+      .filter((o) => r.troops >= o.need * 1.5 + 3 * R)
       .sort((a, b) => a.need - b.need)[0];
-    if (t) { game.doAttack(id, t.n, r.troops - 2); S = game.getState(); }
+    if (t) { game.doAttack(id, t.n, r.troops - 2 * R); S = game.getState(); }
   }
 
   game.endTurn();

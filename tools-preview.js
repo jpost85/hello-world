@@ -20,7 +20,7 @@ const DEF = {};
 for (const d of game.REGION_DEFS) DEF[d.id] = d;
 game.setState(game.newState());
 const S = game.getState();
-function menShort(u) { const m = u * game.CONFIG.menPerUnit; if (m < 1000) return String(m); const k = m / 1000; return (Number.isInteger(k) ? k.toFixed(0) : k.toFixed(1)) + "k"; }
+function menShort(m) { m = Math.round(m); if (m < 1000) return String(m); const k = m / 1000; return (Number.isInteger(k) ? k.toFixed(0) : k.toFixed(1)) + "k"; }
 
 const fill = { patriot: "rgba(31,78,121,0.74)", crown: "rgba(140,43,43,0.76)", neutral: "rgba(154,140,110,0.55)" };
 const cityFill = { patriot: "#1f4e79", crown: "#8c2b2b", neutral: "#9a8c6e" };
