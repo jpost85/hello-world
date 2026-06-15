@@ -49,7 +49,7 @@ const seaStroke = { crown: "#b94b4b", patriot: "#3a6ea5" };
 const seaPos = MAP.seaZones || {};
 for (const zid in game.SEA_ZONES) {
   const sea = seaPos[zid]; if (!sea) continue;
-  const navy = S.seaNavy[zid];
+  const navy = S.regions[zid].owner;
   for (const n of game.SEA_ZONES[zid].links) {
     if (zid < n && seaPos[n]) s += `<line x1="${sea.cx}" y1="${sea.cy}" x2="${seaPos[n].cx}" y2="${seaPos[n].cy}" stroke="${seaStroke[navy]}" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.45"/>`;
   }
@@ -59,11 +59,12 @@ for (const zid in game.SEA_ZONES) {
   }
 }
 for (const zid in game.SEA_ZONES) {
-  const sea = (MAP.seaZones || {})[zid]; if (!sea) continue;
-  const navy = S.seaNavy[zid];
-  s += `<circle cx="${sea.cx}" cy="${sea.cy}" r="9" fill="${cityFill[navy]}" stroke="#14100a" stroke-width="1.5"/>`;
+  const sea = seaPos[zid]; if (!sea) continue;
+  const node = S.regions[zid];
+  s += `<circle cx="${sea.cx}" cy="${sea.cy}" r="11" fill="${cityFill[node.owner]}" stroke="#14100a" stroke-width="1.5"/>`;
+  s += `<text x="${sea.cx}" y="${sea.cy-15}" font-family="Georgia,serif" font-size="10" font-weight="bold" text-anchor="middle" fill="#f7efd9" stroke="rgba(20,12,4,0.8)" stroke-width="2.4" paint-order="stroke">&#9973; ${node.ships.crown}–${node.ships.patriot}</text>`;
   s += `<text x="${sea.cx}" y="${sea.cy+4}" font-size="11" text-anchor="middle" fill="#f7f2e2">&#9875;</text>`;
-  s += `<text x="${sea.cx}" y="${sea.cy+22}" font-family="Georgia,serif" font-size="9" font-style="italic" font-weight="bold" text-anchor="middle" fill="#21424c" stroke="rgba(247,242,226,0.7)" stroke-width="2" paint-order="stroke">${navy==="crown"?"Royal Navy":"French Fleet"}</text>`;
+  s += `<text x="${sea.cx}" y="${sea.cy+24}" font-family="Georgia,serif" font-size="9" font-style="italic" font-weight="bold" text-anchor="middle" fill="#21424c" stroke="rgba(247,242,226,0.7)" stroke-width="2" paint-order="stroke">${game.SEA_ZONES[zid].name}</text>`;
 }
 // labels, badges, stars
 function star(cx, cy, o, i, fillc) { let p=""; for (let k=0;k<10;k++){const rr=k%2?i:o;const a=Math.PI/5*k-Math.PI/2;p+=(k?"L":"M")+(cx+Math.cos(a)*rr).toFixed(1)+" "+(cy+Math.sin(a)*rr).toFixed(1);} return `<path d="${p}Z" fill="${fillc}" stroke="#2b2118" stroke-width="0.7"/>`; }

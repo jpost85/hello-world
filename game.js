@@ -14,7 +14,7 @@
     crownStartGold: 95,
     crownRecruitCap: 1500,  // most men the AI can muster locally per turn
     crownReinforceEvery: 3, // British regulars arrive by sea every N turns
-    crownReinforceBase: 2800, // men per wave (grows over the war) — Britain's main force
+    crownReinforceBase: 2150, // men per wave (grows over the war) — Britain's main force
     crownReinforceGrowth: 4,// +1 regiment per this many turns
     recruitCost: 14,        // gold per regiment
     recruitBatch: 3,        // regiments mustered per Recruit press
@@ -27,10 +27,13 @@
     finalTurn: 32,          // ~1783
     franceTurn: 9,          // earliest France may intervene
     franceMoraleNeeded: 85, // patriot resolve required to draw France in
+    franceFleet: 4,         // ships the French fleet brings to the mid & south seas (each)
+    shipCost: 26,           // gold to build one ship at a port
+    shipsPerPort: 1,        // ships a port can build per turn
     seasons: ["Spring", "Summer", "Autumn", "Winter"],
   };
 
-  const SAVE_KEY = "libertys-call-save-v1";
+  const SAVE_KEY = "libertys-call-save-v2";
 
   /* ------------------------------- Map data ------------------------------- */
   // Regions of the colonial seaboard. Geometry (path + label anchor) lives in
@@ -67,48 +70,63 @@
     { id: "ohio",      name: "Ohio Country",   income: 4,  city: false, capital: false, pop: 4 },
     { id: "appalachia",name: "Appalachia",     income: 3,  city: false, capital: false, pop: 12 },
     { id: "florida",   name: "East Florida",   income: 4,  city: false, capital: false, pop: 5 },
+    // Sea nodes — open water; armies pass through, no income or manpower.
+    { id: "north",     name: "New England Waters",  income: 0, city: false, capital: false, pop: 0, sea: true, label: "New England Waters" },
+    { id: "mid",       name: "Mid-Atlantic",        income: 0, city: false, capital: false, pop: 0, sea: true, label: "Mid-Atlantic" },
+    { id: "south",     name: "Southern Approaches", income: 0, city: false, capital: false, pop: 0, sea: true, label: "Southern Approaches" },
   ];
 
   const ADJACENCY = {
     quebec: ["maine", "ny", "nh", "vermont", "ontario"],
     maine:  ["nh", "quebec", "novascotia"],
     novascotia: ["maine", "halifax"],
-    halifax: ["novascotia"],
+    halifax: ["novascotia", "north"],
     nh:     ["maine", "mass", "quebec", "vermont"],
     mass:   ["conn", "rhode", "nh", "vermont", "boston"],
-    boston: ["mass"],
+    boston: ["mass", "north"],
     rhode:  ["mass", "conn"],
     conn:   ["mass", "ny", "rhode"],
     ny:     ["quebec", "conn", "nj", "vermont", "penn", "nyc", "ontario"],
-    nyc:    ["ny"],
+    nyc:    ["ny", "mid"],
     nj:     ["ny", "penn", "del"],
     penn:   ["nj", "md", "del", "ohio", "va", "ny", "philadelphia"],
     philadelphia: ["penn"],
     del:    ["nj", "penn", "md"],
     md:     ["penn", "del", "va"],
     va:     ["md", "nc", "penn", "appalachia", "ohio", "yorktown"],
-    yorktown: ["va"],
+    yorktown: ["va", "mid"],
     nc:     ["va", "sc", "appalachia"],
     sc:     ["nc", "ga", "charleston"],
-    charleston: ["sc"],
+    charleston: ["sc", "south"],
     ga:     ["sc", "florida", "appalachia", "savannah"],
-    savannah: ["ga"],
+    savannah: ["ga", "south"],
     // Neutral frontier adjacency
     vermont:    ["ny", "nh", "mass", "quebec"],
     ontario:    ["quebec", "ny"],
     ohio:       ["penn", "va", "appalachia"],
     appalachia: ["va", "nc", "ga", "ohio"],
     florida:    ["ga"],
+    // Sea nodes: linked to their ports and to neighbouring nodes
+    north:  ["halifax", "boston", "mid"],
+    mid:    ["nyc", "yorktown", "north", "south"],
+    south:  ["charleston", "savannah", "mid"],
   };
 
-  // Sea zones form a connected chain of ocean nodes. Each node links some
-  // coastal cities (ports) and the neighbouring nodes. Whoever's navy controls
-  // a node may sail through it; a fleet routes city -> node -> node -> city.
+  // Sea nodes are real positions on the map: an army can embark from a port,
+  // sail node-to-node, and disembark — but only through nodes its navy controls.
+  // Control of a node goes to whichever side has more SHIPS there; ships are
+  // built at ports and may redeploy along the node links. `start` is the Royal
+  // Navy's opening strength (the Patriots begin with none).
   const SEA_ZONES = {
-    north: { name: "New England Waters",  cities: ["halifax", "boston"], links: ["mid"] },
-    mid:   { name: "Mid-Atlantic",        cities: ["nyc", "yorktown"], links: ["north", "south"] },
-    south: { name: "Southern Approaches", cities: ["charleston", "savannah"], links: ["mid"] },
+    north: { name: "New England Waters",  cities: ["halifax", "boston"], links: ["mid"], start: 4 },
+    mid:   { name: "Mid-Atlantic",        cities: ["nyc", "yorktown"], links: ["north", "south"], start: 5 },
+    south: { name: "Southern Approaches", cities: ["charleston", "savannah"], links: ["mid"], start: 3 },
   };
+  const SEA_IDS = Object.keys(SEA_ZONES);
+  // The sea node a port feeds (for embarking and blockade).
+  function nodeOfPort(portId) {
+    return SEA_IDS.find((z) => SEA_ZONES[z].cities.includes(portId)) || null;
+  }
 
   // Starting positions: owner + troops.
   const SETUP = {
@@ -174,6 +192,15 @@
   function newState() {
     const regions = {};
     for (const def of REGION_DEFS) {
+      if (def.sea) {
+        // A sea node: ships per side (Royal Navy starts dominant), no garrison yet.
+        regions[def.id] = {
+          id: def.id, sea: true,
+          ships: { crown: SEA_ZONES[def.id].start, patriot: 0 },
+          owner: "crown", troops: 0, general: null, manpower: 0, acted: false,
+        };
+        continue;
+      }
       const setup = SETUP[def.id];
       regions[def.id] = {
         id: def.id,
@@ -191,7 +218,6 @@
       crownGold: CONFIG.crownStartGold,
       morale: { patriot: CONFIG.startMorale, crown: CONFIG.startMorale },
       franceJoined: false,
-      seaNavy: { north: "crown", mid: "crown", south: "crown" }, // Royal Navy holds the seas
       over: false,
       log: [],
     };
@@ -231,32 +257,50 @@
 
   /* ------------------------------- Naval ---------------------------------- */
   const enemyOf = (side) => (side === "patriot" ? "crown" : "patriot");
-  // The ocean nodes a city (port) is attached to.
-  function seaNodesOf(cityId) {
-    return Object.keys(SEA_ZONES).filter((z) => SEA_ZONES[z].cities.includes(cityId));
+  const isSea = (id) => !!(def(id) && def(id).sea);
+  const isHarbor = (portId) => nodeOfPort(portId) !== null;
+  // Control of a sea node goes to whichever side has more ships; on a tie the
+  // current controller holds (no thrashing).
+  function shipMajority(nodeId) {
+    const s = S.regions[nodeId].ships;
+    if (s.crown > s.patriot) return "crown";
+    if (s.patriot > s.crown) return "patriot";
+    return S.regions[nodeId].owner;
   }
-  const isHarbor = (cityId) => seaNodesOf(cityId).length > 0;
-  // A port is blockaded when an ocean node it sits on is held by the enemy navy.
-  function isBlockaded(cityId) {
-    const owner = S.regions[cityId] && S.regions[cityId].owner;
+  // Re-evaluate who controls each sea node. An embarked army whose side loses
+  // control is lost at sea (a fleet without command of the water is doomed).
+  function refreshSeaControl() {
+    for (const id of SEA_IDS) {
+      const node = S.regions[id];
+      const ctrl = shipMajority(id);
+      if (ctrl !== node.owner && node.troops > 0) {
+        const lost = node.troops;
+        node.troops = 0;
+        if (node.general) loseGeneral(node, node.owner, ctrl);
+        log(`${menFull(lost)} men are lost at sea as the ${ctrl === "crown" ? "Royal Navy" : "French fleet"} seizes the ${def(id).name}.`, node.owner === "patriot" ? "l-bad" : "l-good");
+      }
+      node.owner = ctrl;
+    }
+  }
+  // A port is blockaded when the sea node it sits on is held by the enemy navy.
+  function isBlockaded(portId) {
+    const owner = S.regions[portId] && S.regions[portId].owner;
     if (owner !== "patriot" && owner !== "crown") return false;
-    return seaNodesOf(cityId).some((z) => S.seaNavy[z] === enemyOf(owner));
+    const z = nodeOfPort(portId);
+    return z && S.regions[z].owner === enemyOf(owner);
   }
-  // Cities `side` can reach by sea from `fromId`, sailing through nodes its navy
-  // controls (city -> node -> linked node -> ... -> city).
-  function seaReach(fromId, side) {
-    const start = seaNodesOf(fromId).filter((z) => S.seaNavy[z] === side);
-    const seen = new Set(start);
-    const queue = [...start];
-    const cities = new Set();
+  // Ports `side` can reach by sea from a held port, sailing only through sea
+  // nodes `side` controls (used by the AI to pick amphibious targets).
+  function seaReachablePorts(fromPortId, side) {
+    const start = nodeOfPort(fromPortId);
+    if (!start || S.regions[start].owner !== side) return [];
+    const seen = new Set([start]); const queue = [start]; const ports = new Set();
     while (queue.length) {
       const z = queue.shift();
-      for (const c of SEA_ZONES[z].cities) if (c !== fromId) cities.add(c);
-      for (const n of SEA_ZONES[z].links) {
-        if (!seen.has(n) && S.seaNavy[n] === side) { seen.add(n); queue.push(n); }
-      }
+      for (const c of SEA_ZONES[z].cities) if (c !== fromPortId) ports.add(c);
+      for (const n of SEA_ZONES[z].links) if (!seen.has(n) && S.regions[n].owner === side) { seen.add(n); queue.push(n); }
     }
-    return [...cities];
+    return [...ports];
   }
 
   function incomeFor(owner) {
@@ -331,7 +375,7 @@
       landGroup.appendChild(svgEl("path", { d, class: "terrain" }));
     }
     for (const d of REGION_DEFS) {
-      if (MAPDATA.regions[d.id].point) continue; // cities have no territory shape
+      if (d.sea || MAPDATA.regions[d.id].point) continue; // sea nodes / cities have no territory shape
       landGroup.appendChild(svgEl("path", { d: MAPDATA.regions[d.id].path, class: "land-base" }));
     }
     map.appendChild(landGroup);
@@ -361,16 +405,16 @@
     }
 
     // Pass 1: territory polygons; Pass 2: city squares on top (so a neighbour's
-    // polygon never paints over a city marker).
-    for (const d of REGION_DEFS) if (!MAPDATA.regions[d.id].point) drawRegion(d);
-    for (const d of REGION_DEFS) if (MAPDATA.regions[d.id].point) drawRegion(d);
+    // polygon never paints over a city marker). Sea nodes are drawn separately.
+    for (const d of REGION_DEFS) if (!d.sea && !MAPDATA.regions[d.id].point) drawRegion(d);
+    for (const d of REGION_DEFS) if (!d.sea && MAPDATA.regions[d.id].point) drawRegion(d);
 
-    // Sea routes: node-to-node links, plus spokes from each node to its ports.
+    // Sea routes: node-to-node links + spokes to ports, coloured by controller.
     const seaPos = MAPDATA.seaZones || {};
-    for (const zid in SEA_ZONES) {
+    for (const zid of SEA_IDS) {
       const sea = seaPos[zid];
       if (!sea) continue;
-      const navy = S.seaNavy[zid];
+      const navy = S.regions[zid].owner;
       for (const n of SEA_ZONES[zid].links) {
         if (zid < n && seaPos[n]) map.appendChild(svgEl("line", { // draw each link once
           x1: sea.cx, y1: sea.cy, x2: seaPos[n].cx, y2: seaPos[n].cy, class: "sea-link sea-" + navy,
@@ -384,17 +428,38 @@
         }));
       }
     }
-    for (const zid in SEA_ZONES) {
-      const sea = (MAPDATA.seaZones || {})[zid];
+    // Sea node markers: clickable anchors showing ship strength + any fleet aboard.
+    for (const zid of SEA_IDS) {
+      const sea = seaPos[zid];
       if (!sea) continue;
-      const navy = S.seaNavy[zid];
+      const node = S.regions[zid];
+      const navy = node.owner;
+      const ring = svgEl("circle", {
+        cx: sea.cx, cy: sea.cy, r: 11, class: "sea-node region-shape sea-" + navy, "data-id": zid,
+      });
+      if (selected === zid) ring.classList.add("selected");
+      if (movable.move.includes(zid)) ring.classList.add("movable");
+      ring.addEventListener("click", () => onRegionClick(zid));
+      map.appendChild(ring);
+
       const g = svgEl("g", { class: "overlay", "pointer-events": "none" });
-      g.appendChild(svgEl("circle", { cx: sea.cx, cy: sea.cy, r: 9, class: "sea-node sea-" + navy }));
       const a = svgEl("text", { x: sea.cx, y: sea.cy + 4, class: "sea-anchor" });
       a.textContent = "⚓";
       g.appendChild(a);
-      const lbl = svgEl("text", { x: sea.cx, y: sea.cy + 22, class: "sea-label" });
-      lbl.textContent = (navy === "crown" ? "Royal Navy" : "French Fleet");
+      // Ship strength: crown vs patriot.
+      const sh = svgEl("text", { x: sea.cx, y: sea.cy - 15, class: "sea-ships" });
+      sh.textContent = "⛵ " + node.ships.crown + "–" + node.ships.patriot;
+      g.appendChild(sh);
+      // Embarked army badge.
+      if (node.troops > 0) {
+        g.appendChild(svgEl("circle", { cx: sea.cx + 13, cy: sea.cy + 12, r: 11, class: "troop-badge troop-" + navy }));
+        const tt = svgEl("text", { x: sea.cx + 13, y: sea.cy + 16, class: "troop-text" });
+        tt.textContent = menShort(node.troops);
+        g.appendChild(tt);
+        if (node.general) g.appendChild(svgEl("path", { d: starPath(sea.cx - 11, sea.cy + 12, 5, 2.2, 5), class: "general-star" }));
+      }
+      const lbl = svgEl("text", { x: sea.cx, y: sea.cy + 24, class: "sea-label" });
+      lbl.textContent = SEA_ZONES[zid].name;
       g.appendChild(lbl);
       map.appendChild(g);
     }
@@ -410,6 +475,7 @@
 
     // Overlays (labels, capitals, troop badges) drawn last so they sit on top.
     for (const d of REGION_DEFS) {
+      if (d.sea) continue; // sea nodes draw their own overlay above
       const r = S.regions[d.id];
       const geo = MAPDATA.regions[d.id];
       const g = svgEl("g", { class: "overlay", "pointer-events": "none" });
@@ -554,6 +620,31 @@
 
     const moves = legalMoves(selected);
 
+    // --- Sea node panel -------------------------------------------------------
+    if (d.sea) {
+      ownerEl.textContent = r.owner === "crown" ? "Royal Navy" : "French Fleet";
+      $("#ri-manpower").textContent = "—";
+      $("#ri-income").textContent = "—";
+      $("#ri-def").textContent = "—";
+      const ctrl = r.owner === "patriot" ? "French Fleet" : "Royal Navy";
+      const myShips = r.ships.patriot, foeShips = r.ships.crown;
+      // Redeploy the Patriot fleet to a linked node.
+      if (r.owner === "patriot" && myShips > 0 && !r.navalMoved) {
+        for (const n of SEA_ZONES[selected].links) {
+          const b = document.createElement("button");
+          b.className = "btn btn-small";
+          b.textContent = `Sail fleet to ${SEA_ZONES[n].name}`;
+          b.addEventListener("click", () => moveShips(selected, n));
+          actionsEl.appendChild(b);
+        }
+      }
+      hintEl.textContent = `Ships here — French ${myShips} vs Royal Navy ${foeShips}. `
+        + (r.owner === "patriot"
+          ? (r.troops > 0 ? "Click a highlighted port to land your army, or sail on." : "You command these waters; sail an army through from a port.")
+          : "The enemy commands these waters — out-build their ships to break through.");
+      return;
+    }
+
     if (r.owner === "patriot") {
       // Recruit — limited by gold and the region's musterable manpower.
       const regts = Math.min(CONFIG.recruitBatch, Math.floor(r.manpower / CONFIG.regiment), Math.floor(S.gold / CONFIG.recruitCost));
@@ -564,6 +655,17 @@
       recruitBtn.disabled = regts <= 0;
       recruitBtn.addEventListener("click", () => recruit(selected));
       actionsEl.appendChild(recruitBtn);
+
+      // Coastal ports can build warships for the sea node they sit on.
+      if (isHarbor(selected)) {
+        const shipBtn = document.createElement("button");
+        shipBtn.className = "btn";
+        shipBtn.textContent = `Build warship (${CONFIG.shipCost}g)`;
+        shipBtn.disabled = r.shipBuilt || S.gold < CONFIG.shipCost;
+        shipBtn.title = "Joins the " + def(nodeOfPort(selected)).name;
+        shipBtn.addEventListener("click", () => buildShip(selected));
+        actionsEl.appendChild(shipBtn);
+      }
 
       if (r.manpower < CONFIG.regiment) {
         hintEl.textContent = "This region's young men are spent — no one left to muster here.";
@@ -595,22 +697,23 @@
     const r = S.regions[id];
     const out = { move: [], attack: [], sea: [] };
     if (!r || r.owner !== "patriot" || r.acted || r.troops <= 0) return out;
-    for (const other of ADJACENCY[id]) {
-      if (S.regions[other].owner === "patriot") out.move.push(other);
-      else out.attack.push(other);
-    }
-    // Sea routes from a harbour, if the Patriot navy holds a linking zone.
-    for (const h of seaReach(id, "patriot")) {
-      if (out.move.includes(h) || out.attack.includes(h)) continue;
-      out.sea.push(h);
-      if (S.regions[h].owner === "patriot") out.move.push(h);
-      else out.attack.push(h);
+    for (const n of ADJACENCY[id]) {
+      const nOwner = S.regions[n].owner;
+      if (isSea(n)) {
+        // Sail into open water only where the Patriot navy holds the node;
+        // a sea node is never assaulted by land.
+        if (nOwner === "patriot") { out.move.push(n); out.sea.push(n); }
+      } else {
+        if (nOwner === "patriot") out.move.push(n);
+        else out.attack.push(n);
+        if (isSea(id)) out.sea.push(n); // disembarking / amphibious landing
+      }
     }
     return out;
   }
-  // True when reaching toId from fromId is only possible by sea.
+  // True when the move involves the open sea (embark, sail, or amphibious landing).
   function isSeaMove(fromId, toId) {
-    return !ADJACENCY[fromId].includes(toId);
+    return isSea(fromId) || isSea(toId);
   }
 
   /* ------------------------------ Interaction ----------------------------- */
@@ -664,6 +767,37 @@
     r.manpower -= men;
     r.troops += men;
     log(`Mustered ${menFull(men)} men in ${def(id).name}.`, "");
+    save();
+    renderAll();
+    return true;
+  }
+
+  /* -------------------------------- Navy ---------------------------------- */
+  // Build a warship at a Patriot port; it joins that port's sea node.
+  function buildShip(portId) {
+    const port = S.regions[portId];
+    const z = nodeOfPort(portId);
+    if (!z || port.owner !== "patriot" || port.shipBuilt || S.gold < CONFIG.shipCost) return false;
+    S.gold -= CONFIG.shipCost;
+    port.shipBuilt = true;
+    S.regions[z].ships.patriot += 1;
+    refreshSeaControl();
+    log(`A warship is launched at ${def(portId).name}, joining the ${def(z).name}.`, "");
+    save();
+    renderAll();
+    return true;
+  }
+  // Redeploy a fleet from one sea node to an adjacent one (once per turn).
+  function moveShips(fromNode, toNode) {
+    const f = S.regions[fromNode];
+    if (f.navalMoved || f.ships.patriot <= 0) return false;
+    if (!SEA_ZONES[fromNode].links.includes(toNode)) return false;
+    const n = f.ships.patriot;
+    f.ships.patriot = 0;
+    S.regions[toNode].ships.patriot += n;
+    f.navalMoved = true;
+    refreshSeaControl();
+    log(`${n} ship${n > 1 ? "s" : ""} sail from the ${def(fromNode).name} to the ${def(toNode).name}.`, "");
     save();
     renderAll();
     return true;
@@ -870,6 +1004,8 @@
     S.turn += 1;
     for (const r of Object.values(S.regions)) {
       r.acted = false;
+      r.shipBuilt = false;
+      r.navalMoved = false;
       // A fresh cohort comes of age each turn, up to the region's ceiling.
       const regen = Math.round((def(r.id).pop || 0) * CONFIG.manpowerRegen);
       r.manpower = Math.min(maxManpower(r.id), r.manpower + regen);
@@ -1005,15 +1141,26 @@
       }
     }
 
-    // 3) Naval power: mount up to two amphibious assaults on weakly-held Patriot
-    //    ports reachable by sea from a crown-held harbour (the Crown's reach).
+    // 3) Maintain the Royal Navy: build ships where the Patriots contest a node.
+    for (const z of SEA_IDS) {
+      const node = S.regions[z];
+      let guard = 0;
+      while (node.ships.crown <= node.ships.patriot && S.crownGold >= CONFIG.shipCost
+             && SEA_ZONES[z].cities.some((c) => S.regions[c].owner === "crown") && guard++ < 3) {
+        node.ships.crown += 1; S.crownGold -= CONFIG.shipCost;
+      }
+    }
+    refreshSeaControl();
+
+    // 4) Naval reach: up to two amphibious assaults on weakly-held Patriot ports
+    //    reachable through crown-controlled waters.
     let landings = 0;
     const crownPorts = ownedRegions("crown").map((r) => r.id).filter(isHarbor);
     for (const fromId of crownPorts) {
       if (landings >= 2) break;
       const from = S.regions[fromId];
       if (!from || acted.has(fromId) || from.troops < 2 * CONFIG.regiment) continue;
-      const target = seaReach(fromId, "crown")
+      const target = seaReachablePorts(fromId, "crown")
         .filter((h) => S.regions[h].owner === "patriot" &&
           from.troops - S.regions[h].troops * defenseBonus(h) > CONFIG.regiment)
         .sort((a, b) => S.regions[a].troops - S.regions[b].troops)[0];
@@ -1104,12 +1251,13 @@
     // French regulars land in a Patriot coastal city if available.
     const landing = ["philadelphia", "charleston", "boston", "va"].find((id) => S.regions[id].owner === "patriot");
     if (landing) S.regions[landing].troops += 7 * CONFIG.regiment;
-    // The French fleet wrests the central and southern seas from the Royal Navy,
-    // opening Patriot sea movement and blockading New York's reinforcement route.
-    S.seaNavy.mid = "patriot";
-    S.seaNavy.south = "patriot";
-    log("FRANCE ENTERS THE WAR! A French fleet seizes the seas off the mid-Atlantic and south, and regulars land.", "l-event");
-    showBanner("⚜  France joins — its fleet commands the coast!", 3800);
+    // A French battle fleet arrives in the mid-Atlantic and southern seas — enough
+    // ships to wrest those waters from the Royal Navy and open them to the Patriots.
+    S.regions.mid.ships.patriot += CONFIG.franceFleet;
+    S.regions.south.ships.patriot += CONFIG.franceFleet;
+    refreshSeaControl();
+    log("FRANCE ENTERS THE WAR! A French battle fleet sails into the mid-Atlantic and southern seas, and regulars land.", "l-event");
+    showBanner("⚜  France joins — a fleet contests the coast!", 3800);
   }
 
   /* ----------------------------- Win checking ----------------------------- */
@@ -1234,6 +1382,7 @@
     module.exports = {
       newState, resolveBattle, dist, incomeFor, checkWin, crownTurn, endTurn,
       doAttack, doMove, legalMoves, maybeFranceEvent, recruit, defenseBonus,
+      buildShip, moveShips,
       CONFIG, ADJACENCY, REGION_DEFS, MAPDATA, SEA_ZONES,
       getState: () => S,
       setState: (x) => { S = x; },
