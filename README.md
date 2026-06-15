@@ -90,9 +90,10 @@ and the District of Maine is its own Patriot territory reachable only via New
 Hampshire or from Quebec. A hand-built Quebec sits to the north, and distant
 states form neutral backdrop terrain.
 
-Beyond the colonies lie four **neutral / disputed frontier regions** held by
-local militia — Vermont (the New Hampshire Grants), the Ohio Country, Appalachia
-(the Kentucky/Tennessee backcountry), and East Florida. Either side can march in
+Beyond the colonies lie five **neutral / disputed frontier regions** held by
+local militia — Vermont (the New Hampshire Grants), the Ontario peninsula of
+British Canada, the Ohio Country, Appalachia (the Kentucky/Tennessee
+backcountry), and East Florida. Either side can march in
 and claim them for extra income and position. The British, despite their small
 holdings, receive periodic shiploads of regulars to offset the colonies'
 economic advantage.

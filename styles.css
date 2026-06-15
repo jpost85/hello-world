@@ -136,7 +136,7 @@ html, body {
   align-items: center;
   justify-content: center;
   padding: 10px;
-  background: #14333b;
+  background: #8fb4bf; /* ocean tone, so any letterboxing blends with the sea */
   overflow: hidden;
 }
 #map { width: 100%; height: 100%; max-height: calc(100vh - 70px); }

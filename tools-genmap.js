@@ -36,15 +36,16 @@ const PLAYABLE = {
   ga:    "Georgia",
   // Neutral / disputed lands
   vermont:    "Vermont",                 // New Hampshire Grants / Vermont Republic
+  ontario:    "Ontario",                 // the Ontario peninsula (British Canada)
   ohio:       "Ohio",                    // the Ohio Country / Northwest frontier
   appalachia: ["Kentucky", "Tennessee"], // trans-Appalachian backcountry
   florida:    "Florida",                 // East Florida (cropped to its north)
   quebec:     "Quebec",                  // Province of Quebec (cropped to its south)
 };
 // Regions kept out of the projection bounds so a long tail (Florida's
-// peninsula, Kentucky/Tennessee to the Mississippi, Quebec to the Arctic)
-// doesn't stretch the map; they crop at the frame edge instead.
-const NO_BOUNDS = new Set(["florida", "appalachia", "quebec"]);
+// peninsula, Kentucky/Tennessee to the Mississippi, Quebec/Ontario to the
+// Arctic) doesn't stretch the map; they crop at the frame edge instead.
+const NO_BOUNDS = new Set(["florida", "appalachia", "quebec", "ontario"]);
 
 function featByName(name) { return FEATURES.find((f) => f.properties.name === name); }
 function statesOf(v) { return Array.isArray(v) ? v : [v]; }
@@ -91,7 +92,8 @@ for (const id in PLAYABLE) {
 
 const PAD = 0.4; // degrees of margin
 minLon -= PAD; maxLon += PAD; minLat -= PAD; maxLat += PAD;
-minLon = Math.min(minLon, -88.0); // extend west to reveal the Kentucky/Tennessee backcountry
+minLon = Math.min(minLon, -94.0); // extend west: frontier land fills the left
+maxLon = Math.max(maxLon, -62.0); // extend east: Maritimes + Atlantic fill the right
 minLat = Math.min(minLat, 29.1);  // extend south to reveal north Florida
 maxLat = Math.max(maxLat, 48.8);  // extend north to frame Quebec / Canada
 const midLat = (minLat + maxLat) / 2;
@@ -140,7 +142,7 @@ const ANCHOR = {
   maine: [-69.2, 45.25], nh: [-71.45, 43.6], mass: [-71.8, 42.4], rhode: [-71.45, 41.55], conn: [-73.0, 41.4],
   vermont: [-72.9, 44.35], ny: [-75.3, 42.95], nj: [-74.5, 40.1], del: [-75.45, 39.05],
   md: [-77.2, 39.45], va: [-79.5, 38.3], quebec: [-71.5, 47.2],
-  ohio: [-82.7, 40.3], appalachia: [-85.8, 36.4], florida: [-83.0, 29.65],
+  ohio: [-82.7, 40.3], appalachia: [-85.8, 36.4], florida: [-83.0, 29.65], ontario: [-80.6, 43.6],
 };
 
 const regions = {};
