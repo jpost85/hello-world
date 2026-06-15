@@ -72,11 +72,14 @@ holds on unless the rebellion has the upper hand. Lose your last region, lose
 your capital with broken morale, or let your own Resolve hit zero, and the
 rebellion falls.
 
-The Crown is a hard opponent by design: it holds little territory but receives
-fresh regulars by sea throughout the war and concentrates them to drive on
-Philadelphia. You out-produce Britain, but reckless attacks bleed you dry —
-defend your capital, mass your forces, pick favourable fights, and time your
-push. Against a competent defence the campaign is roughly a one-in-three win.
+The Crown is a formidable opponent by design: it holds little territory but
+receives fresh regulars by sea throughout the war, commands the coast with the
+Royal Navy, and concentrates its forces to drive on Philadelphia. You
+out-produce Britain, but reckless attacks bleed you dry — defend your capital,
+mass your forces, pick favourable fights, blunt the blockade when France comes,
+and time your push. It is a genuinely hard war to win: the simple defensive AI
+used for tuning prevails only about one game in ten, so a thinking commander
+has real room to outplay it.
 
 ## Project layout
 
