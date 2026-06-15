@@ -765,29 +765,53 @@ function recomputeStars() {
 }
 
 // ---------- People dots (visual flavor) ----------
+// Horizontal span (in cells) actually occupied on a given floor, so pedestrians
+// stay inside the building's footprint instead of wandering into open sky.
+function floorExtent(row) {
+  let min = Infinity, max = -Infinity;
+  for (const u of state.units) {
+    if (u.row <= row && u.row + u.h - 1 >= row) {
+      if (u.col < min) min = u.col;
+      if (u.col + u.w - 1 > max) max = u.col + u.w - 1;
+    }
+  }
+  return min === Infinity ? null : { min, max };
+}
+
 function spawnPerson() {
   if (state.people.length > 60) return;
-  const homes = rentableUnits().filter(u => u.occupants > 0);
-  if (homes.length === 0) return;
-  const u = homes[Math.floor(Math.random() * homes.length)];
+  // Residents, workers and hotel guests stroll their own floors...
+  const pool = state.units.filter(u => {
+    const k = TYPES[u.type].kind;
+    return (k === "work" || k === "home" || k === "hotel") && u.occupants > 0;
+  });
+  // ...and once anyone lives/works here, the lobby sees foot traffic too.
+  if (state.pop > 0) {
+    for (const u of state.units) if (u.type === "lobby") pool.push(u);
+  }
+  if (pool.length === 0) return;
+  const u = pool[Math.floor(Math.random() * pool.length)];
+  const ext = floorExtent(u.row) || { min: u.col, max: u.col + u.w - 1 };
+  const startCol = u.col + Math.random() * Math.max(1, u.w);
   const el = document.createElement("div");
   el.className = "person";
   el.style.background = `hsl(${Math.floor(Math.random()*360)},60%,55%)`;
-  el.style.left = colLeft(u.col + Math.random() * u.w) + "px";
+  el.style.left = colLeft(startCol) + "px";
   el.style.top = (rowTop(u.row) + CELL_H - 12) + "px";
   world.appendChild(el);
-  const person = { el, col: u.col, row: u.row, life: 200 + Math.random()*200 };
-  state.people.push(person);
+  state.people.push({ el, col: startCol, row: u.row, life: 200 + Math.random()*200 });
 }
 
 function movepeople() {
   for (let i = state.people.length - 1; i >= 0; i--) {
     const p = state.people[i];
     p.life--;
+    const ext = floorExtent(p.row);
+    // If their floor was emptied (or they aged out), they leave.
+    if (!ext || p.life <= 0) { p.el.remove(); state.people.splice(i, 1); continue; }
     p.col += (Math.random() - 0.5) * 1.5;
-    p.col = Math.max(0, Math.min(COLS - 1, p.col));
+    p.col = Math.max(ext.min, Math.min(ext.max, p.col));
     p.el.style.left = colLeft(p.col) + "px";
-    if (p.life <= 0) { p.el.remove(); state.people.splice(i, 1); }
   }
 }
 
