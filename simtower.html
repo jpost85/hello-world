@@ -65,6 +65,10 @@
   .tool .swatch { width: 18px; height: 18px; border-radius: 3px; border: 1px solid #000; flex: 0 0 18px; }
   .tool .label { flex: 1; font-size: 13px; font-weight: 600; }
   .tool .cost { font-size: 11px; color: var(--muted); }
+  .tool-desc {
+    min-height: 28px; font-size: 11px; line-height: 1.35; color: var(--text);
+    background: #161d24; border: 1px solid #000; border-radius: 6px; padding: 6px 8px;
+  }
 
   .controls { display:flex; gap:6px; flex-wrap: wrap; }
   .btn {
@@ -397,6 +401,7 @@
 
     <div class="section-title">Build</div>
     <div class="tools" id="tools"></div>
+    <div class="tool-desc" id="toolDesc"></div>
 
     <div class="section-title">Speed</div>
     <div class="controls">
@@ -487,6 +492,22 @@ const BUILD_ORDER = ["pointer","floor","office","apartment","condo","hotel","sho
 const STAR_THRESHOLDS = [10, 40, 100, 200, 350];
 const SAVE_KEY = "microtower.save.v1";
 
+// One-line "what it does" blurbs shown as tooltips / in the info line.
+const TYPE_DESC = {
+  pointer:   "Inspect a room's stats, or sell it back for half its cost.",
+  floor:     "Structural slab. Lets people walk across a floor — earns nothing on its own.",
+  office:    "Workspace for up to 6 staff. Pays steady daily rent.",
+  apartment: "Home for up to 3 residents. Pays daily rent.",
+  condo:     "Premium home for 4 residents. Higher rent than an apartment.",
+  hotel:     "Guests check in each evening and pay a nightly rate per room.",
+  shop:      "Earns from foot traffic — the busier your tower, the bigger the sales.",
+  restaurant:"Like a shop, but draws larger crowds and earns more.",
+  cinema:    "Highest-draw venue. A big earner once your tower is busy.",
+  stair:     "Cheap transit. Rooms need a stair or elevator within 8 cells.",
+  elevator:  "Vertical transit. Stack several in a column to form a riding shaft.",
+  lobby:     "Ground-floor entrance. Free, pre-built, and can't be sold.",
+};
+
 // ---------- State ----------
 const state = {
   cash: START_CASH,
@@ -560,16 +581,22 @@ function buildBackground() {
 // ---------- Tools UI ----------
 function buildToolbar() {
   const tools = document.getElementById("tools");
+  const descEl = document.getElementById("toolDesc");
   BUILD_ORDER.forEach(key => {
     const t = TYPES[key];
+    const desc = TYPE_DESC[key] || "";
     const div = document.createElement("div");
     div.className = "tool" + (key === state.tool ? " selected" : "");
     div.dataset.tool = key;
+    div.title = desc; // native tooltip on hover (desktop)
     div.innerHTML = `
       <span class="swatch" style="background:${t.color === 'transparent' ? '#444' : t.color}"></span>
       <span class="label">${t.name}</span>
       <span class="cost">${t.cost ? "$" + t.cost.toLocaleString() : (key==='pointer'?'inspect':'free')}</span>`;
     div.addEventListener("click", () => selectTool(key));
+    // Hover previews the description in the info line; leaving restores the selected tool's.
+    div.addEventListener("mouseenter", () => { if (descEl) descEl.textContent = desc; });
+    div.addEventListener("mouseleave", () => { if (descEl) descEl.textContent = TYPE_DESC[state.tool] || ""; });
     tools.appendChild(div);
   });
 }
@@ -580,6 +607,8 @@ function selectTool(key) {
     el.classList.toggle("selected", el.dataset.tool === key));
   ghost.style.display = "none";
   if (typeof clearPending === "function") clearPending();
+  const descEl = document.getElementById("toolDesc");
+  if (descEl) descEl.textContent = TYPE_DESC[key] || "";
   // On phones, get the drawer out of the way so the tower is tappable.
   if (key !== "pointer" && typeof isMobile === "function" && isMobile()) {
     document.getElementById("app").classList.add("nav-closed");
