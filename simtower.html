@@ -1324,6 +1324,24 @@ function floorExtent(row) {
   return min === Infinity ? null : { min, max };
 }
 
+// The contiguous run of occupied cells on `row` that contains column `col`, so
+// sims can't walk across empty gaps (e.g. from a stairwell to a far elevator
+// with no rooms between). Returns null if `col` itself isn't occupied.
+function floorSegment(row, col) {
+  const c = Math.floor(col);
+  if (!state.grid[key(c, row)]) return null;
+  let lo = c, hi = c;
+  while (lo - 1 >= 0 && state.grid[key(lo - 1, row)]) lo--;
+  while (hi + 1 < COLS && state.grid[key(hi + 1, row)]) hi++;
+  return { min: lo, max: hi };
+}
+
+// Where a sim is allowed to roam on its current floor: the whole footprint on
+// the ground (it's solid ground), but only its own connected segment up high.
+function walkRange(p) {
+  return p.row === 0 ? floorExtent(p.row) : floorSegment(p.row, p.col);
+}
+
 function spawnPerson() {
   if (state.people.length > 60) return;
   // Residents, workers and hotel guests stroll their own floors...
@@ -1357,7 +1375,11 @@ function spawnPerson() {
 // If an elevator shaft covers the trip they'll wait to board its car; otherwise
 // they take the stairs (a direct climb).
 function maybeCommute(p) {
-  const runs = state.transitRuns.filter(r => r.lo <= p.row && p.row <= r.hi);
+  const seg = walkRange(p);
+  if (!seg) return;
+  // only transit the sim can actually reach without crossing empty space
+  const runs = state.transitRuns.filter(r =>
+    r.lo <= p.row && p.row <= r.hi && r.col >= seg.min && r.col <= seg.max);
   if (!runs.length) return;
   const r = runs[Math.floor(Math.random() * runs.length)];
   const choices = [];
@@ -1398,8 +1420,8 @@ function movepeople() {
       continue;
     }
 
-    const ext = floorExtent(p.row);
-    if (!ext) { if (p.mode === "walk") { p.el.remove(); state.people.splice(i, 1); } continue; }
+    const ext = walkRange(p);
+    if (!ext) { p.el.remove(); state.people.splice(i, 1); continue; }
     if (p.mode === "walk" && p.life <= 0) { p.el.remove(); state.people.splice(i, 1); continue; }
 
     if (p.mode === "approach") { // walking to the transit column
