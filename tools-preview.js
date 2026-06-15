@@ -20,6 +20,7 @@ const DEF = {};
 for (const d of game.REGION_DEFS) DEF[d.id] = d;
 game.setState(game.newState());
 const S = game.getState();
+function menShort(u) { const m = u * game.CONFIG.menPerUnit; if (m < 1000) return String(m); const k = m / 1000; return (Number.isInteger(k) ? k.toFixed(0) : k.toFixed(1)) + "k"; }
 
 const fill = { patriot: "rgba(31,78,121,0.74)", crown: "rgba(140,43,43,0.76)", neutral: "rgba(154,140,110,0.55)" };
 const cityFill = { patriot: "#1f4e79", crown: "#8c2b2b", neutral: "#9a8c6e" };
@@ -54,11 +55,11 @@ for (const id in MAP.regions) {
   s += `<text x="${lx}" y="${ly}" font-family="Georgia,serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#f7efd9" stroke="rgba(20,12,4,0.75)" stroke-width="2.6" paint-order="stroke">${label}</text>`;
   if (d.capital) s += star(g.cx, g.cy - (isCity ? 18 : 28), 6.5, 2.8, "#ffd24a");
   if (isCity) {
-    s += `<text x="${g.cx}" y="${g.cy+4.5}" font-family="Georgia,serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#f7f2e2" stroke="rgba(15,9,4,0.85)" stroke-width="3" paint-order="stroke">${r.troops}</text>`;
+    s += `<text x="${g.cx}" y="${g.cy+4.5}" font-family="Georgia,serif" font-size="10.5" font-weight="bold" text-anchor="middle" fill="#f7f2e2" stroke="rgba(15,9,4,0.85)" stroke-width="3" paint-order="stroke">${menShort(r.troops)}</text>`;
     if (r.general) s += star(g.cx-11, g.cy-11, 5, 2.2, "#fff3cf");
   } else {
     s += `<circle cx="${g.cx}" cy="${g.cy+6}" r="13" fill="#f7f2e2" stroke="${stroke[r.owner]}" stroke-width="2"/>`;
-    s += `<text x="${g.cx}" y="${g.cy+10.5}" font-family="Georgia,serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#2b2118">${r.troops}</text>`;
+    s += `<text x="${g.cx}" y="${g.cy+10.5}" font-family="Georgia,serif" font-size="10.5" font-weight="bold" text-anchor="middle" fill="#2b2118">${menShort(r.troops)}</text>`;
     if (r.general) s += star(g.cx+12, g.cy-4, 5.5, 2.4, "#fff3cf");
   }
 }

@@ -17,6 +17,7 @@
     recruitBatch: 3,        // soldiers mustered per Recruit press
     manpowerFraction: 0.05, // share of a region's population that is musterable
     manpowerRegen: 0.0015,  // fraction of population coming of age each turn
+    menPerUnit: 500,        // display only: soldiers represented by one unit
     cityDefenseBonus: 1.4,  // multiplier to defender strength in cities/capitals
     capitalDefenseBonus: 1.7,
     startMorale: 100,
@@ -183,6 +184,14 @@
   function maxManpower(id) {
     return Math.round((def(id).pop || 0) * CONFIG.manpowerFraction);
   }
+  // Display only: each abstract unit stands for ~CONFIG.menPerUnit soldiers.
+  function menFull(units) { return (units * CONFIG.menPerUnit).toLocaleString("en-US"); }
+  function menShort(units) {
+    const m = units * CONFIG.menPerUnit;
+    if (m < 1000) return String(m);
+    const k = m / 1000;
+    return (Number.isInteger(k) ? k.toFixed(0) : k.toFixed(1)) + "k";
+  }
   function defenseBonus(id) {
     const d = def(id);
     if (d.capital) return CONFIG.capitalDefenseBonus;
@@ -330,14 +339,14 @@
       if (isCity) {
         // The city marker itself carries the troop count.
         const tt = svgEl("text", { x: geo.cx, y: geo.cy + 4.5, class: "troop-text city-troop" });
-        tt.textContent = r.troops;
+        tt.textContent = menShort(r.troops);
         g.appendChild(tt);
         if (r.general) g.appendChild(svgEl("path", { d: starPath(geo.cx - 11, geo.cy - 11, 5, 2.2, 5), class: "general-star" }));
       } else {
         // Circular troop badge at the centroid.
         g.appendChild(svgEl("circle", { cx: geo.cx, cy: geo.cy + 6, r: 13, class: "troop-badge troop-" + r.owner }));
         const tt = svgEl("text", { x: geo.cx, y: geo.cy + 10.5, class: "troop-text" });
-        tt.textContent = r.troops;
+        tt.textContent = menShort(r.troops);
         g.appendChild(tt);
         if (r.general) g.appendChild(svgEl("path", { d: starPath(geo.cx + 12, geo.cy - 4, 5.5, 2.4, 5), class: "general-star" }));
       }
@@ -443,8 +452,8 @@
       genEl.textContent = "";
     }
 
-    $("#ri-troops").textContent = r.troops;
-    $("#ri-manpower").textContent = r.manpower + " / " + maxManpower(selected);
+    $("#ri-troops").textContent = menFull(r.troops);
+    $("#ri-manpower").textContent = menFull(r.manpower) + " / " + menFull(maxManpower(selected));
     $("#ri-income").textContent = regionIncome(selected);
     const bonus = defenseBonus(selected);
     $("#ri-def").textContent = bonus > 1 ? "+" + Math.round((bonus - 1) * 100) + "%" : "—";
@@ -457,7 +466,7 @@
       const cost = n * CONFIG.recruitCost;
       const recruitBtn = document.createElement("button");
       recruitBtn.className = "btn";
-      recruitBtn.textContent = n > 0 ? `Muster ${n} troops (${cost}g)` : "No men to muster";
+      recruitBtn.textContent = n > 0 ? `Muster ${menFull(n)} men (${cost}g)` : "No men to muster";
       recruitBtn.disabled = n <= 0 || S.gold < CONFIG.recruitCost;
       recruitBtn.addEventListener("click", () => recruit(selected));
       actionsEl.appendChild(recruitBtn);
@@ -547,7 +556,7 @@
     S.gold -= n * CONFIG.recruitCost;
     r.manpower -= n;
     r.troops += n;
-    log(`Mustered ${n} troops in ${def(id).name}.`, "");
+    log(`Mustered ${menFull(n)} men in ${def(id).name}.`, "");
     save();
     renderAll();
     return true;
@@ -565,20 +574,20 @@
     slider.min = 1;
     slider.max = max;
     slider.value = max;
-    $("#troop-count").textContent = max;
+    $("#troop-count").textContent = menFull(max);
 
     if (kind === "move") {
       $("#modal-title").textContent = "March to " + def(toId).name;
       $("#modal-text").textContent =
-        `Move how many of ${def(fromId).name}'s ${max} troops to reinforce ${def(toId).name}?`;
+        `Move how many of ${def(fromId).name}'s ${menFull(max)} men to reinforce ${def(toId).name}?`;
     } else {
       const enemy = S.regions[toId].troops;
       $("#modal-title").textContent = "Attack " + def(toId).name;
       $("#modal-text").textContent =
-        `${def(toId).name} is defended by ${enemy} troops` +
+        `${def(toId).name} is defended by ${menFull(enemy)} men` +
         (defenseBonus(toId) > 1 ? " behind fortifications" : "") +
         (S.regions[toId].general ? ` under ${S.regions[toId].general.name}` : "") +
-        `. Commit how many of your ${max}?`;
+        `. Commit how many of your ${menFull(max)}?`;
     }
 
     // Offer to send the general along, when the source has one.
@@ -622,7 +631,7 @@
       to.general = from.general;
       from.general = null;
     }
-    log(`${count} troops marched from ${def(fromId).name} to ${def(toId).name}.`, "");
+    log(`${menFull(count)} men marched from ${def(fromId).name} to ${def(toId).name}.`, "");
     selected = toId;
     save();
     renderAll();
@@ -686,11 +695,11 @@
       to.acted = true; // freshly captured army holds position
       if (attGen) { to.general = attGen; from.general = null; } // commander rides in
       if (wasNeutral) {
-        log(`${defName} won over to the cause (lost ${result.attLoss}, militia ${defenders}).`, "l-good");
+        log(`${defName} won over to the cause (lost ${menFull(result.attLoss)}, militia ${menFull(defenders)}).`, "l-good");
         showBanner("⚑  " + defName + " joins the Patriots!");
         adjustMorale("patriot", 3); // a frontier gain, not a blow to the enemy
       } else {
-        log(`Victory at ${defName}! ${defName} falls to the Patriots (lost ${result.attLoss}, enemy ${defenders}).`, "l-good");
+        log(`Victory at ${defName}! ${defName} falls to the Patriots (lost ${menFull(result.attLoss)}, enemy ${menFull(defenders)}).`, "l-good");
         showBanner("⚔  " + defName + " captured!");
         adjustMorale("patriot", def(toId).city ? 8 : 5);
         adjustMorale(loser, def(toId).city ? -8 : -5);
@@ -704,7 +713,7 @@
       const survivors = count - result.attLoss;
       from.troops += survivors;
       to.troops -= result.defLoss;
-      log(`Assault on ${defName} repelled. We lost ${result.attLoss}; the enemy lost ${result.defLoss}.`, "l-bad");
+      log(`Assault on ${defName} repelled. We lost ${menFull(result.attLoss)}; the enemy lost ${menFull(result.defLoss)}.`, "l-bad");
       showBanner("Assault on " + defName + " repelled");
       adjustMorale("patriot", -3);
       // A general leading a broken assault may be taken.
@@ -791,7 +800,7 @@
     }
     if (total > 0) {
       const harsh = severity > 0.14 ? "A brutal winter" : "Winter";
-      log(`${harsh} sets in — ${total} troops in the field lost to cold and disease.`, "l-event");
+      log(`${harsh} sets in — ${menFull(total)} men in the field lost to cold and disease.`, "l-event");
       showBanner("❄  " + harsh + " — armies in the open suffer", 3200);
     }
   }
@@ -809,7 +818,7 @@
       const wave = CONFIG.crownReinforceBase + Math.floor(S.turn / CONFIG.crownReinforceGrowth);
       landing.troops += wave;
       S.crownGold += 20;
-      log(`A British fleet lands ${wave} regulars at ${def(landing.id).name}.`, "l-bad");
+      log(`A British fleet lands ${menFull(wave)} regulars at ${def(landing.id).name}.`, "l-bad");
       showBanner("⚓  British regulars land at " + def(landing.id).name);
     }
 
@@ -829,7 +838,7 @@
         target.troops += recruits;
         target.manpower -= recruits;
         S.crownGold -= recruits * CONFIG.recruitCost;
-        log(`Loyalists muster at ${def(target.id).name} (+${recruits}).`, "l-bad");
+        log(`Loyalists muster at ${def(target.id).name} (+${menFull(recruits)}).`, "l-bad");
       }
     }
 
@@ -914,7 +923,7 @@
         showBanner("✗  " + def(toId).name + " seized by the Crown");
         adjustMorale("crown", 3);
       } else {
-        log(`The British storm ${def(toId).name}! It is lost (we had ${defenders}).`, "l-bad");
+        log(`The British storm ${def(toId).name}! It is lost (we had ${menFull(defenders)}).`, "l-bad");
         showBanner("✗  " + def(toId).name + " has fallen to the Crown");
         adjustMorale("crown", def(toId).city ? 8 : 5);
         adjustMorale("patriot", def(toId).city ? -8 : -5);
@@ -927,7 +936,7 @@
       const survivors = committed - result.attLoss;
       from.troops += survivors; // survivors retreat home
       to.troops -= result.defLoss;
-      log(`We repulsed a British attack on ${def(toId).name}! Enemy lost ${result.attLoss}.`, "l-good");
+      log(`We repulsed a British attack on ${def(toId).name}! Enemy lost ${menFull(result.attLoss)}.`, "l-good");
       adjustMorale("patriot", 4);
       adjustMorale("crown", -4);
       if (attGen && survivors <= 2 && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, "crown", "patriot");
@@ -1057,7 +1066,7 @@
     $("#modal-cancel").addEventListener("click", closeTroopDialog);
     $("#modal-confirm").addEventListener("click", confirmTroopDialog);
     $("#troop-slider").addEventListener("input", (e) => {
-      $("#troop-count").textContent = e.target.value;
+      $("#troop-count").textContent = menFull(parseInt(e.target.value, 10));
     });
     $("#go-restart").addEventListener("click", () => startGame(null));
 
