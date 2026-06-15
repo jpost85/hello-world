@@ -46,12 +46,16 @@ for (const id in MAP.regions) {
 }
 // sea zones: dashed routes + navy-coloured anchor nodes
 const seaStroke = { crown: "#b94b4b", patriot: "#3a6ea5" };
+const seaPos = MAP.seaZones || {};
 for (const zid in game.SEA_ZONES) {
-  const sea = (MAP.seaZones || {})[zid]; if (!sea) continue;
+  const sea = seaPos[zid]; if (!sea) continue;
   const navy = S.seaNavy[zid];
-  for (const h of game.SEA_ZONES[zid].harbors) {
-    const hg = MAP.regions[h]; if (!hg) continue;
-    s += `<line x1="${sea.cx}" y1="${sea.cy}" x2="${hg.cx}" y2="${hg.cy}" stroke="${seaStroke[navy]}" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.45"/>`;
+  for (const n of game.SEA_ZONES[zid].links) {
+    if (zid < n && seaPos[n]) s += `<line x1="${sea.cx}" y1="${sea.cy}" x2="${seaPos[n].cx}" y2="${seaPos[n].cy}" stroke="${seaStroke[navy]}" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.45"/>`;
+  }
+  for (const c of game.SEA_ZONES[zid].cities) {
+    const cg = MAP.regions[c]; if (!cg) continue;
+    s += `<line x1="${sea.cx}" y1="${sea.cy}" x2="${cg.cx}" y2="${cg.cy}" stroke="${seaStroke[navy]}" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.45"/>`;
   }
 }
 for (const zid in game.SEA_ZONES) {

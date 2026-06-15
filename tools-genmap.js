@@ -160,6 +160,7 @@ const CITY_POINTS = {
   nyc:          [-74.00, 40.71],
   philadelphia: [-75.16, 39.95],
   charleston:   [-79.93, 32.78],
+  savannah:     [-81.10, 32.08],
   halifax:      [-63.57, 44.65],
 };
 for (const id in CITY_POINTS) {
