@@ -262,15 +262,16 @@
       landGroup.appendChild(svgEl("path", { d, class: "terrain" }));
     }
     for (const d of REGION_DEFS) {
+      if (MAPDATA.regions[d.id].point) continue; // cities have no territory shape
       landGroup.appendChild(svgEl("path", { d: MAPDATA.regions[d.id].path, class: "land-base" }));
     }
     map.appendChild(landGroup);
 
     const movable = selected ? legalMoves(selected) : { move: [], attack: [] };
-
-    // Playable region territories (and city markers), tinted by owner.
     const CITY_R = 11;
-    for (const d of REGION_DEFS) {
+
+    // Draw a region's shape + (if patriot and acted) its dim overlay.
+    function drawRegion(d) {
       const r = S.regions[d.id];
       const geo = MAPDATA.regions[d.id];
       const shape = geo.point
@@ -282,8 +283,6 @@
       if (movable.attack.includes(d.id)) shape.classList.add("attackable");
       shape.addEventListener("click", () => onRegionClick(d.id));
       map.appendChild(shape);
-
-      // Dim a region whose army has already marched.
       if (r.acted && r.owner === "patriot") {
         const dim = geo.point
           ? svgEl("rect", { x: geo.cx - CITY_R, y: geo.cy - CITY_R, width: CITY_R * 2, height: CITY_R * 2, rx: 3, class: "acted-mark" })
@@ -291,6 +290,11 @@
         map.appendChild(dim);
       }
     }
+
+    // Pass 1: territory polygons; Pass 2: city squares on top (so a neighbour's
+    // polygon never paints over a city marker).
+    for (const d of REGION_DEFS) if (!MAPDATA.regions[d.id].point) drawRegion(d);
+    for (const d of REGION_DEFS) if (MAPDATA.regions[d.id].point) drawRegion(d);
 
     // Decorative cartography.
     map.appendChild(oceanLabel(vbW, vbH));
