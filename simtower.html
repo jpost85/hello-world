@@ -1350,10 +1350,12 @@ function spawnPerson() {
   el.style.animationDelay = (Math.random() * 0.5) + "s";
   world.appendChild(el);
   state.people.push({ el, col: startCol, row: u.row, life: 200 + Math.random()*200,
-    mode: "walk", goCol: null, targetRow: null, transitCol: 0, y: u.row });
+    mode: "walk", goCol: null, targetRow: null, transitCol: 0, y: u.row, shaft: null });
 }
 
 // Pick a transit run serving this person's floor and send them to another floor.
+// If an elevator shaft covers the trip they'll wait to board its car; otherwise
+// they take the stairs (a direct climb).
 function maybeCommute(p) {
   const runs = state.transitRuns.filter(r => r.lo <= p.row && p.row <= r.hi);
   if (!runs.length) return;
@@ -1361,8 +1363,12 @@ function maybeCommute(p) {
   const choices = [];
   for (let f = r.lo; f <= r.hi; f++) if (f !== p.row && floorExtent(f)) choices.push(f);
   if (!choices.length) return;
-  p.targetRow = choices[Math.floor(Math.random() * choices.length)];
+  const target = choices[Math.floor(Math.random() * choices.length)];
+  const lo = Math.min(p.row, target), hi = Math.max(p.row, target);
+  p.targetRow = target;
   p.goCol = r.col;
+  p.shaft = state.shafts.find(s => s.col === r.col && s.lo <= lo && s.hi >= hi) || null;
+  p.mode = "approach";
 }
 
 function movepeople() {
@@ -1370,31 +1376,43 @@ function movepeople() {
     const p = state.people[i];
     p.life--;
 
-    if (p.mode === "ride") {
-      // Travelling vertically along a stair/elevator column to the target floor.
+    if (p.mode === "ride") continue; // hidden aboard a car; the elevator controls them
+
+    if (p.mode === "wait") { // standing at the shaft doors for the car
+      if (--p.patience <= 0) { p.mode = "walk"; p.shaft = null; p.goCol = null; } // give up, wander off
+      else {
+        p.el.style.left = colLeft(p.transitCol) + "px";
+        p.el.style.top = (rowTop(p.row) + CELL_H - 12) + "px";
+        continue;
+      }
+    }
+
+    if (p.mode === "climb") { // taking the stairs: move vertically along the column
       const dir = p.targetRow >= p.y ? 1 : -1;
       p.y += dir * 0.14;
       if ((dir > 0 && p.y >= p.targetRow) || (dir < 0 && p.y <= p.targetRow)) {
-        p.y = p.targetRow; p.row = p.targetRow; p.col = p.transitCol;
-        p.mode = "walk"; p.goCol = null;
+        p.y = p.targetRow; p.row = p.targetRow; p.col = p.transitCol; p.mode = "walk"; p.goCol = null;
       }
       p.el.style.left = (colLeft(p.transitCol) + CELL_W / 2 - 2.5) + "px";
       p.el.style.top = (rowTop(p.y) + CELL_H - 12) + "px";
-      continue; // riders don't expire mid-trip
+      continue;
     }
 
     const ext = floorExtent(p.row);
-    if (!ext || p.life <= 0) { p.el.remove(); state.people.splice(i, 1); continue; }
+    if (!ext) { if (p.mode === "walk") { p.el.remove(); state.people.splice(i, 1); } continue; }
+    if (p.mode === "walk" && p.life <= 0) { p.el.remove(); state.people.splice(i, 1); continue; }
 
-    if (p.goCol != null) {
-      // Heading to a transit column to board.
+    if (p.mode === "approach") { // walking to the transit column
       const d = p.goCol - p.col;
-      if (Math.abs(d) <= 0.4) { p.mode = "ride"; p.transitCol = p.goCol; p.y = p.row; }
-      else p.col += Math.sign(d) * 0.6;
-    } else {
+      if (Math.abs(d) <= 0.4) {
+        p.transitCol = p.goCol;
+        if (p.shaft) { p.mode = "wait"; p.patience = 90 + Math.random() * 90; }
+        else { p.mode = "climb"; p.y = p.row; }
+      } else p.col += Math.sign(d) * 0.6;
+    } else { // walk: wander, occasionally decide to commute
       p.col += (Math.random() - 0.5) * 1.5;
       p.col = Math.max(ext.min, Math.min(ext.max, p.col));
-      if (Math.random() < 0.012) maybeCommute(p);
+      if (Math.random() < 0.005) maybeCommute(p);
     }
     p.el.style.left = colLeft(p.col) + "px";
     p.el.style.top = (rowTop(p.row) + CELL_H - 12) + "px";
@@ -1429,6 +1447,10 @@ function rebuildShafts() {
   state.transitRuns = [];
   eachVerticalRun(u => u.type === "stair" || u.type === "elevator",
     (col, lo, hi) => state.transitRuns.push({ col, lo, hi }));
+  // Any sim mid-commute references shafts/columns that may be gone now: reset them.
+  state.people.forEach(p => {
+    if (p.mode !== "walk") { p.el.style.display = ""; p.mode = "walk"; p.shaft = null; p.goCol = null; }
+  });
 }
 
 function addShaft(col, lo, hi) {
@@ -1437,18 +1459,62 @@ function addShaft(col, lo, hi) {
   carEl.style.left = (colLeft(col) + 3) + "px";
   carEl.style.width = (CELL_W - 6) + "px";
   carEl.style.height = (CELL_H - 6) + "px";
-  carEl.innerHTML = "<i></i><i></i>";
   world.appendChild(carEl);
-  state.shafts.push({ col, lo, hi, carEl, pos: lo, dir: 1 });
+  state.shafts.push({ col, lo, hi, carEl, pos: lo, dir: 1, riders: [], shownRiders: -1 });
+}
+
+// A simple call-answering elevator: it heads to floors that waiting sims or
+// onboard riders want, picking up and dropping off as it arrives.
+function elevatorStep(s) {
+  const waits = state.people.filter(p => p.mode === "wait" && p.shaft === s);
+  const targets = new Set();
+  waits.forEach(p => targets.add(p.row));
+  s.riders.forEach(p => targets.add(p.targetRow));
+
+  if (targets.size) {
+    const above = [...targets].some(f => f > s.pos + 0.05);
+    const below = [...targets].some(f => f < s.pos - 0.05);
+    if (s.dir > 0 && !above) s.dir = below ? -1 : 1;
+    else if (s.dir < 0 && !below) s.dir = above ? 1 : -1;
+    let goal = null;
+    targets.forEach(f => {
+      if (s.dir > 0 && f >= s.pos - 0.05) { if (goal === null || f < goal) goal = f; }
+      else if (s.dir < 0 && f <= s.pos + 0.05) { if (goal === null || f > goal) goal = f; }
+    });
+    if (goal === null) targets.forEach(f => { if (goal === null || Math.abs(f - s.pos) < Math.abs(goal - s.pos)) goal = f; });
+    const dist = goal - s.pos, step = 0.12;
+    if (Math.abs(dist) <= step) { s.pos = goal; serveFloor(s, goal, waits); }
+    else s.pos += Math.sign(dist) * step;
+  }
+
+  if (s.shownRiders !== s.riders.length) {
+    s.shownRiders = s.riders.length;
+    s.carEl.innerHTML = "<i></i>".repeat(Math.min(s.riders.length, 4));
+  }
+  s.carEl.style.top = (rowTop(s.pos) + 3) + "px";
+}
+
+function serveFloor(s, floor, waits) {
+  // Drop off anyone whose stop this is.
+  for (let i = s.riders.length - 1; i >= 0; i--) {
+    const p = s.riders[i];
+    if (p.targetRow === floor) {
+      s.riders.splice(i, 1);
+      p.el.style.display = ""; p.mode = "walk"; p.row = floor; p.col = s.col; p.shaft = null; p.goCol = null;
+      p.el.style.left = colLeft(s.col) + "px";
+      p.el.style.top = (rowTop(floor) + CELL_H - 12) + "px";
+    }
+  }
+  // Board waiting sims at this floor, up to a small capacity.
+  for (const p of waits) {
+    if (p.row === floor && p.mode === "wait" && s.riders.length < 4) {
+      p.mode = "ride"; p.el.style.display = "none"; s.riders.push(p);
+    }
+  }
 }
 
 function moveShafts() {
-  state.shafts.forEach(s => {
-    s.pos += s.dir * 0.16;
-    if (s.pos >= s.hi) { s.pos = s.hi; s.dir = -1; }
-    if (s.pos <= s.lo) { s.pos = s.lo; s.dir = 1; }
-    s.carEl.style.top = (rowTop(s.pos) + 3) + "px";
-  });
+  state.shafts.forEach(elevatorStep);
 }
 
 // ---------- Time loop ----------
