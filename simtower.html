@@ -69,6 +69,19 @@
     min-height: 28px; font-size: 11px; line-height: 1.35; color: var(--text);
     background: #161d24; border: 1px solid #000; border-radius: 6px; padding: 6px 8px;
   }
+  .tool-group { display: flex; flex-direction: column; }
+  .group-head {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none; -webkit-user-select: none;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); padding: 5px 2px 3px;
+  }
+  .group-head:hover { color: var(--text); }
+  .group-head .chev { display: inline-block; font-size: 9px; margin-right: 5px; transition: transform .15s; }
+  .tool-group.collapsed .group-head .chev { transform: rotate(-90deg); }
+  .group-head .count { font-weight: 700; opacity: .6; }
+  .group-body { display: flex; flex-direction: column; gap: 6px; }
+  .tool-group.collapsed .group-body { display: none; }
 
   .controls { display:flex; gap:6px; flex-wrap: wrap; }
   .btn {
@@ -573,7 +586,20 @@ const TYPES = {
   floor:     { name: "Floor Slab",  cost: 8000,  w: 1, h: 1, color: "#b8bfc7", kind: "structure" },
 };
 
-const BUILD_ORDER = ["pointer","floor","office","apartment","condo","hotel","shop","restaurant","cinema","terrace","garden","pool","playground","skybar","gym","spa","conference","stair","elevator"];
+// Build menu, organized into collapsible sections (the Pointer is shown above them).
+const TOOL_GROUPS = [
+  { title: "Rooms",     keys: ["office","apartment","condo","hotel","shop","restaurant","cinema"] },
+  { title: "Amenities", keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference"] },
+  { title: "Transit",   keys: ["floor","stair","elevator"] },
+];
+const UI_KEY = "microtower.ui.v1";
+// Which sections start collapsed (Amenities is the longest, so it's tucked away).
+let uiCollapsed = { Rooms: false, Amenities: true, Transit: false };
+try {
+  const rawUi = localStorage.getItem(UI_KEY);
+  if (rawUi) uiCollapsed = Object.assign(uiCollapsed, JSON.parse(rawUi));
+} catch (e) {}
+function saveUi() { try { localStorage.setItem(UI_KEY, JSON.stringify(uiCollapsed)); } catch (e) {} }
 const STAR_THRESHOLDS = [10, 40, 100, 200, 350];
 const SAVE_KEY = "microtower.save.v1";
 
@@ -675,7 +701,9 @@ function buildBackground() {
 function buildToolbar() {
   const tools = document.getElementById("tools");
   const descEl = document.getElementById("toolDesc");
-  BUILD_ORDER.forEach(key => {
+  tools.innerHTML = "";
+
+  const makeTool = (key) => {
     const t = TYPES[key];
     const desc = TYPE_DESC[key] || "";
     const div = document.createElement("div");
@@ -690,7 +718,32 @@ function buildToolbar() {
     // Hover previews the description in the info line; leaving restores the selected tool's.
     div.addEventListener("mouseenter", () => { if (descEl) descEl.textContent = desc; });
     div.addEventListener("mouseleave", () => { if (descEl) descEl.textContent = TYPE_DESC[state.tool] || ""; });
-    tools.appendChild(div);
+    return div;
+  };
+
+  // Pointer (inspect / sell) sits above the sections, always visible.
+  tools.appendChild(makeTool("pointer"));
+
+  TOOL_GROUPS.forEach(g => {
+    const group = document.createElement("div");
+    group.className = "tool-group" + (uiCollapsed[g.title] ? " collapsed" : "");
+
+    const head = document.createElement("div");
+    head.className = "group-head";
+    head.innerHTML = `<span><span class="chev">▾</span>${g.title}</span><span class="count">${g.keys.length}</span>`;
+    head.addEventListener("click", () => {
+      group.classList.toggle("collapsed");
+      uiCollapsed[g.title] = group.classList.contains("collapsed");
+      saveUi();
+    });
+
+    const body = document.createElement("div");
+    body.className = "group-body";
+    g.keys.forEach(k => body.appendChild(makeTool(k)));
+
+    group.appendChild(head);
+    group.appendChild(body);
+    tools.appendChild(group);
   });
 }
 
@@ -1009,9 +1062,6 @@ function rentableUnits() {
     const k = TYPES[u.type].kind;
     return k === "work" || k === "home";
   });
-}
-function shopUnits() {
-  return state.units.filter(u => TYPES[u.type].kind === "shop");
 }
 function hotelUnits() {
   return state.units.filter(u => TYPES[u.type].kind === "hotel");
