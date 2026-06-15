@@ -258,11 +258,13 @@
   kbd { background:#000; border-radius:3px; padding:0 4px; font-size:10px; }
 
   /* ---------- Unit interiors ---------- */
-  /* Window facade shared by residential / office / hotel */
+  /* Window facade shared by residential / office / hotel: a solid wall with a
+     band of windows; panes are separated by the wall colour, not stud lines. */
   .win .u-face {
     background:
-      linear-gradient(180deg, var(--wall) 0 5px, transparent 5px calc(100% - 6px), var(--wall) calc(100% - 6px) 100%),
-      repeating-linear-gradient(90deg, var(--frame, #5a6b7a) 0 2px, var(--glass) 2px 11px);
+      linear-gradient(180deg, var(--wall) 0 6px, transparent 6px calc(100% - 7px), var(--wall) calc(100% - 7px) 100%),
+      repeating-linear-gradient(90deg, var(--glass) 0 14px, var(--wall) 14px 19px),
+      var(--wall);
   }
   .win.lit { --glass: #ffe7a6; }            /* warm light spills from windows at night */
 
