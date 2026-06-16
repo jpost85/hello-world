@@ -205,7 +205,12 @@
     border-right: 1px solid rgba(0,0,0,.08);
     border-bottom: 1px solid rgba(0,0,0,.08);
   }
-  .ground { background: #5a8a3c; transition: filter .8s ease; }
+  .ground {
+    background:
+      linear-gradient(180deg, #74b347 0 5px, #5a8a3c 5px 13px, #46692c 13px 16px, #6b4f33 16px);
+    box-shadow: 0 1px 2px rgba(0,0,0,.25);
+    transition: filter .8s ease;
+  }
   .empty-buildable { background: rgba(255,255,255,.03); }
   .empty-buildable:hover { background: rgba(255,207,77,.25); cursor: pointer; }
 
@@ -443,7 +448,7 @@
   .unit-spire .u-tag { color:#6b531c; }
 
   /* Underground: earth fill, transparent basement cells, metro & parking */
-  .earth { background: linear-gradient(180deg, #4a3826 0 6px, #3a2c1d 6px, #281d12); }
+  .earth { background: linear-gradient(180deg, #5a4632 0 6px, #46341f 6px, #33260f); }
   .empty-buildable.underground { background: transparent; }
   .empty-buildable.underground:hover { background: rgba(255,207,77,.18); }
   .unit-parking { --wall:#565b62; }
@@ -883,21 +888,21 @@ function colLeft(col) { return col * CELL_W; }
 // ---------- Build the static background grid ----------
 function buildBackground() {
   const surface = rowTop(-1); // street level = bottom of the ground floor
-  // earth fill behind the basements
+  // earth fill behind the basements (starts below the grass)
   const earth = document.createElement("div");
   earth.className = "earth";
   earth.style.left = "0px";
-  earth.style.top = surface + "px";
+  earth.style.top = (surface + 14) + "px";
   earth.style.width = worldWidth + "px";
-  earth.style.height = (worldHeight - surface) + "px";
+  earth.style.height = (worldHeight - surface - 14) + "px";
   world.appendChild(earth);
-  // grass surface strip at street level
+  // green grass band at street level (the ground)
   const ground = document.createElement("div");
   ground.className = "ground";
   ground.style.left = "0px";
-  ground.style.top = (surface - 1) + "px";
+  ground.style.top = surface + "px";
   ground.style.width = worldWidth + "px";
-  ground.style.height = "6px";
+  ground.style.height = "18px";
   world.appendChild(ground);
 
   // buildable empty cells (basements through the top), one element per (col,row)
