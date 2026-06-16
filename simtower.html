@@ -442,6 +442,26 @@
   }
   .unit-spire .u-tag { color:#6b531c; }
 
+  /* Underground: earth fill, transparent basement cells, metro & parking */
+  .earth { background: linear-gradient(180deg, #4a3826 0 6px, #3a2c1d 6px, #281d12); }
+  .empty-buildable.underground { background: transparent; }
+  .empty-buildable.underground:hover { background: rgba(255,207,77,.18); }
+  .unit-parking { --wall:#565b62; }
+  .unit-parking .u-face {
+    background:
+      radial-gradient(6px 3px at 24% 62%, #d06a5a 0 96%, transparent),
+      radial-gradient(6px 3px at 58% 62%, #5a8fd0 0 96%, transparent),
+      repeating-linear-gradient(90deg, transparent 0 14px, #6e747c 14px 15px),
+      linear-gradient(180deg, #565b62 0 calc(100% - 4px), #3a3e44 calc(100% - 4px));
+  }
+  .unit-metro { --wall:#2c3645; }
+  .unit-metro .u-face {
+    background:
+      radial-gradient(circle at 50% 32%, #fff 0 3px, #e23b3b 3.4px 6px, transparent 6.6px), /* M roundel */
+      linear-gradient(180deg, #2c3645 0 calc(100% - 6px), #182430 calc(100% - 6px) calc(100% - 4px), #0c1620 calc(100% - 4px)); /* platform + track */
+  }
+  .unit-metro .u-tag, .unit-parking .u-tag { color: rgba(255,255,255,.8); top:auto; bottom:4px; text-shadow:0 1px 1px rgba(0,0,0,.6); }
+
   /* Lobby — columns, ceiling trim, marble floor */
   .unit-lobby { --wall:#e7d8ad; }
   .unit-lobby .u-face {
@@ -729,6 +749,8 @@ const TYPES = {
   spa:       { name: "Spa",         cost: 40000, w: 3, h: 1, color: "#86b8b0", income: 0,    cap: 0,  kind: "amenity", appeal: 18, favors: "hotel" },
   conference:{ name: "Conf. Room",  cost: 34000, w: 3, h: 1, color: "#b0a48c", income: 0,    cap: 0,  kind: "amenity", appeal: 16, favors: "work" },
   spire:     { name: "Sky Spire",   cost: 250000,w: 3, h: 1, color: "#e9cf86", income: 0,    cap: 0,  kind: "landmark", appeal: 30 },
+  parking:   { name: "Parking",     cost: 18000, w: 3, h: 1, color: "#5a5f66", income: 0,    cap: 0,  kind: "infra", infra: 0.006 },
+  metro:     { name: "Metro Station",cost: 90000,w: 4, h: 1, color: "#3a4656", income: 0,    cap: 0,  kind: "infra", infra: 0.022 },
   stair:     { name: "Stairs",      cost: 5000,  w: 1, h: 1, color: "#8d99ae", kind: "transit" },
   elevator:  { name: "Elevator",    cost: 18000, w: 1, h: 1, color: "#5c6b7a", kind: "transit" },
   floor:     { name: "Floor Slab",  cost: 8000,  w: 1, h: 1, color: "#b8bfc7", kind: "structure" },
@@ -736,19 +758,20 @@ const TYPES = {
 
 // Star tier at which each build type unlocks (anything unlisted is available from the start).
 const UNLOCK_STAR = {
-  elevator: 1, restaurant: 1, terrace: 1,
+  elevator: 1, restaurant: 1, terrace: 1, parking: 1,
   condo: 2, hotel: 2, gym: 2,
-  cinema: 3, garden: 3, conference: 3, playground: 3,
+  cinema: 3, garden: 3, conference: 3, playground: 3, metro: 3,
   pool: 4, spa: 4, skybar: 4,
   spire: 5,
 };
 
 // Build menu, organized into collapsible sections (the Pointer is shown above them).
 const TOOL_GROUPS = [
-  { title: "Rooms",     keys: ["office","apartment","condo","hotel","shop","restaurant","cinema"] },
-  { title: "Amenities", keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference"] },
-  { title: "Transit",   keys: ["floor","stair","elevator"] },
-  { title: "Landmark",  keys: ["spire"] },
+  { title: "Rooms",       keys: ["office","apartment","condo","hotel","shop","restaurant","cinema"] },
+  { title: "Amenities",   keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference"] },
+  { title: "Transit",     keys: ["floor","stair","elevator"] },
+  { title: "Underground", keys: ["parking","metro"] },
+  { title: "Landmark",    keys: ["spire"] },
 ];
 const UI_KEY = "microtower.ui.v1";
 // Which sections start collapsed (Amenities is the longest, so it's tucked away).
@@ -781,6 +804,8 @@ const TYPE_DESC = {
   spa:       "Indoor spa. Especially delights nearby hotel guests.",
   conference:"Indoor meeting space. Especially boosts nearby offices.",
   spire:     "The crowning landmark. Build it to complete your TOWER and win.",
+  parking:   "Basement parking — a modest boost to move-ins tower-wide. Underground only.",
+  metro:     "Underground station that brings commuters — a big move-in boost tower-wide. Underground only.",
   stair:     "Cheap transit. Rooms need a stair or elevator within 8 cells.",
   elevator:  "Vertical transit. Stack several in a column to form a riding shaft.",
   lobby:     "Ground-floor entrance. Free, pre-built, and can't be sold.",
@@ -821,9 +846,10 @@ const moonEl = document.getElementById("moon");
 const starsEl = document.getElementById("stars");
 const cloudsEl = document.getElementById("clouds");
 
+const MIN_ROW = -BASEMENT_FLOORS;     // deepest buildable basement row
 const worldWidth = COLS * CELL_W;
-const totalRows = MAX_FLOORS + 1; // ground + above
-const worldHeight = totalRows * CELL_H + 40; // +ground strip
+const totalRows = MAX_FLOORS - MIN_ROW + 1;
+const worldHeight = totalRows * CELL_H;
 world.style.width = worldWidth + "px";
 world.style.height = worldHeight + "px";
 
@@ -836,20 +862,29 @@ function colLeft(col) { return col * CELL_W; }
 
 // ---------- Build the static background grid ----------
 function buildBackground() {
-  // ground strip
+  const surface = rowTop(-1); // street level = bottom of the ground floor
+  // earth fill behind the basements
+  const earth = document.createElement("div");
+  earth.className = "earth";
+  earth.style.left = "0px";
+  earth.style.top = surface + "px";
+  earth.style.width = worldWidth + "px";
+  earth.style.height = (worldHeight - surface) + "px";
+  world.appendChild(earth);
+  // grass surface strip at street level
   const ground = document.createElement("div");
-  ground.className = "cell ground";
+  ground.className = "ground";
   ground.style.left = "0px";
-  ground.style.top = rowTop(0) + CELL_H + "px";
+  ground.style.top = (surface - 1) + "px";
   ground.style.width = worldWidth + "px";
-  ground.style.height = "40px";
+  ground.style.height = "6px";
   world.appendChild(ground);
 
-  // buildable empty cells, one element per (col,row)
-  for (let row = 0; row <= MAX_FLOORS; row++) {
+  // buildable empty cells (basements through the top), one element per (col,row)
+  for (let row = MIN_ROW; row <= MAX_FLOORS; row++) {
     for (let col = 0; col < COLS; col++) {
       const c = document.createElement("div");
-      c.className = "cell empty-buildable";
+      c.className = "cell empty-buildable" + (row < 0 ? " underground" : "");
       c.style.left = colLeft(col) + "px";
       c.style.top = rowTop(row) + "px";
       c.style.width = CELL_W + "px";
@@ -938,7 +973,7 @@ function key(col, row) { return col + "," + row; }
 
 function cellsFree(col, row, w, h) {
   if (col < 0 || col + w > COLS) return false;
-  if (row < 0 || row + h - 1 > MAX_FLOORS) return false;
+  if (row < MIN_ROW || row + h - 1 > MAX_FLOORS) return false;
   for (let dr = 0; dr < h; dr++)
     for (let dc = 0; dc < w; dc++)
       if (state.grid[key(col + dc, row + dr)]) return false;
@@ -952,15 +987,17 @@ function hasOpenSkyAbove(col, row, w) {
   return true;
 }
 
-// Structural support: anything above the ground floor must rest on the floor
-// directly below it, overhanging that support by at most one cell on each side.
+// Structural support: above ground a unit rests on the floor below; below ground
+// (basements) it hangs from the floor above (toward the surface). Either way it
+// may overhang its support by at most one cell on each side.
 function isSupported(col, row, w) {
-  if (row === 0) return true; // ground floor sits on the ground
+  if (row === 0) return true; // ground floor sits on the surface
+  const support = row > 0 ? row - 1 : row + 1; // floor below (up) or above (down)
   let first = -1, last = -1;
   for (let dc = 0; dc < w; dc++) {
-    if (state.grid[key(col + dc, row - 1)]) { if (first === -1) first = dc; last = dc; }
+    if (state.grid[key(col + dc, support)]) { if (first === -1) first = dc; last = dc; }
   }
-  if (first === -1) return false;            // nothing underneath at all -> floating
+  if (first === -1) return false;            // nothing supporting it -> floating
   return first <= 1 && (w - 1 - last) <= 1;  // overhang at most one cell each side
 }
 
@@ -1002,7 +1039,9 @@ function tryBuild(col, row, key_) {
     return;
   }
   if (state.cash < t.cost) { toast("Not enough cash."); sfx("error"); flash(false); return; }
-  if ((t.kind === "work" || t.kind === "home" || t.kind === "shop" || t.kind === "hotel" || t.kind === "outdoor" || t.kind === "amenity") && !hasTransitAccess(col, row, t.w)) {
+  if (t.kind === "infra" && row >= 0) { toast("Build this underground, in a basement."); sfx("error"); return; }
+  if (t.kind === "outdoor" && row < 0) { toast("Outdoor spaces must be above ground."); sfx("error"); return; }
+  if ((t.kind === "work" || t.kind === "home" || t.kind === "shop" || t.kind === "hotel" || t.kind === "outdoor" || t.kind === "amenity" || t.kind === "infra") && !hasTransitAccess(col, row, t.w)) {
     toast("Needs stairs or an elevator within 8 cells on this floor."); sfx("error");
     return;
   }
@@ -1076,7 +1115,8 @@ function unitInnerHTML(type) {
 function shortLabel(type) {
   return ({office:"OFF", apartment:"APT", condo:"CONDO", hotel:"🛏", shop:"SHOP", restaurant:"REST",
            cinema:"🎬", terrace:"⛱", garden:"🌳", pool:"POOL", playground:"PLAY", skybar:"BAR",
-           gym:"GYM", spa:"SPA", conference:"CONF", spire:"♛", stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
+           gym:"GYM", spa:"SPA", conference:"CONF", spire:"♛", parking:"🅿", metro:"Ⓜ",
+           stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
 }
 
 function onUnitClick(unit) {
@@ -1198,7 +1238,7 @@ scroller.addEventListener("mousemove", (e) => {
   const t = TYPES[state.tool];
   if (!t || t.tool || state.tool === "pointer") { ghost.style.display = "none"; return; }
   const { col, row } = pointFromEvent(e);
-  if (row < 0 || row > MAX_FLOORS) { ghost.style.display = "none"; return; }
+  if (row < MIN_ROW || row > MAX_FLOORS) { ghost.style.display = "none"; return; }
   showGhostAt(col, row, t);
 });
 
@@ -1256,7 +1296,7 @@ document.getElementById("placeCancel").addEventListener("click", clearPending);
 world.addEventListener("click", (e) => {
   if (state.tool === "pointer" || TYPES[state.tool].tool) return;
   const { col, row } = pointFromEvent(e);
-  if (row < 0 || row > MAX_FLOORS) return;
+  if (row < MIN_ROW || row > MAX_FLOORS) return;
   if (IS_TOUCH) setPending(col, row);
   else tryBuild(col, row, state.tool);
 });
@@ -1321,15 +1361,23 @@ function amenityBonus(u) {
 }
 
 // Tenants move in over time if there is transit access and demand
+// Underground infrastructure (metro/parking) lifts move-in demand tower-wide.
+function infrastructureBonus() {
+  let b = 0;
+  for (const u of state.units) b += (TYPES[u.type].infra || 0);
+  return Math.min(0.1, b);
+}
+
 function simTenants() {
   // Long elevator waits (frustration) suppress demand and tenant happiness.
   const frustHit = Math.min(40, state.frustration * 1.6);
+  const infra = infrastructureBonus();
   rentableUnits().forEach(u => {
     const t = TYPES[u.type];
     const amen = amenityBonus(u);
     if (u.occupants < t.cap) {
-      // chance to gain a tenant scales with tower appeal + nearby amenities, minus frustration
-      const appeal = (0.02 + state.stars * 0.01 + amen * 0.0009) * (1 - Math.min(0.7, state.frustration * 0.03));
+      // chance to gain a tenant scales with tower appeal + amenities + infrastructure, minus frustration
+      const appeal = (0.02 + state.stars * 0.01 + amen * 0.0009 + infra) * (1 - Math.min(0.7, state.frustration * 0.03));
       if (Math.random() < appeal) {
         u.occupants++;
         state.pop++;
@@ -1512,11 +1560,11 @@ function spawnPerson() {
     const k = TYPES[u.type].kind;
     return (k === "work" || k === "home" || k === "hotel") && u.occupants > 0;
   });
-  // ...and once anyone lives/works here, the lobby and amenities see visitors too.
+  // ...and once anyone lives/works here, the lobby, amenities and underground see visitors too.
   if (state.pop > 0) {
     for (const u of state.units) {
       const k = TYPES[u.type].kind;
-      if (u.type === "lobby" || k === "outdoor" || k === "amenity") pool.push(u);
+      if (u.type === "lobby" || k === "outdoor" || k === "amenity" || k === "infra") pool.push(u);
     }
   }
   if (pool.length === 0) return;
@@ -1732,7 +1780,7 @@ function rebuildFacade() {
   for (const u of state.units) {
     if (!u.el) continue;
     const fk = TYPES[u.type].kind;
-    if (fk === "outdoor" || fk === "landmark") {
+    if (fk === "outdoor" || fk === "landmark" || u.row < 0) { // open-air or underground: no exterior shell
       u.el.classList.remove("edge-top", "edge-left", "edge-right", "edge-base");
       continue;
     }
