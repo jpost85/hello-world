@@ -1104,7 +1104,8 @@ function updateSky(force) {
   // Sun rides 6:00 → 18:00; moon rides 18:00 → 6:00.
   if (placeArc(sunEl, (h - 6) / 12)) sunEl.style.opacity = String(clamp01(bright * 1.4));
   const moonH = h < 6 ? h + 24 : h;
-  if (placeArc(moonEl, (moonH - 18) / 12)) moonEl.style.opacity = String(clamp01((1 - bright) - 0.15));
+  // The moon only fades in once the dusk warmth is gone (i.e. it's actually dark).
+  if (placeArc(moonEl, (moonH - 18) / 12)) moonEl.style.opacity = String(clamp01(1 - bright - duskAmt * 1.6 - 0.05));
   starsEl.style.opacity = String(clamp01(1 - bright * 2.4));
   cloudsEl.style.opacity = String(0.06 + bright * 0.7);
 
