@@ -11,11 +11,15 @@ const dist = "dist";
 const assets = join(dist, "assets");
 
 const files = readdirSync(assets);
-const jsFile = files.find((f) => f.endsWith(".js"));
+const jsFiles = files.filter((f) => f.endsWith(".js"));
 const cssFile = files.find((f) => f.endsWith(".css"));
-if (!jsFile || !cssFile) {
-  throw new Error("Could not find built JS/CSS in dist/assets — run `vite build` first.");
+if (jsFiles.length !== 1 || !cssFile) {
+  throw new Error(
+    `Expected exactly one JS chunk and one CSS file in dist/assets (found ${jsFiles.length} JS). ` +
+      "Build with SINGLE_FILE=1 (npm run build:single) so dynamic imports are inlined.",
+  );
 }
+const jsFile = jsFiles[0];
 
 const js = readFileSync(join(assets, jsFile), "utf8");
 const css = readFileSync(join(assets, cssFile), "utf8");

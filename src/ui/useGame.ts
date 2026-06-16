@@ -13,7 +13,6 @@ import {
   playAITurn,
   areAdjacent,
   connectedByOwnership,
-  worldMap,
   DEFAULT_FACTIONS,
 } from "../engine/index.ts";
 import { loadGame, saveGame } from "./persistence.ts";
@@ -21,6 +20,7 @@ import type {
   AttackResult,
   AttackStyle,
   DefenseStyle,
+  GameMap,
   GameState,
   PlayerConfig,
 } from "../engine/index.ts";
@@ -41,7 +41,7 @@ export interface UseGame {
   setDefenseStyle: (s: DefenseStyle) => void;
   setFortifyCount: (n: number) => void;
   setSelectedGeneralId: (id: string | null) => void;
-  start: (players: PlayerConfig[], seed?: number) => void;
+  start: (map: GameMap, players: PlayerConfig[], seed?: number) => void;
   /** Resume a previously saved game; returns false if there was none. */
   resume: () => boolean;
   clickTerritory: (id: string) => void;
@@ -74,9 +74,9 @@ export function useGame(): UseGame {
     }
   }, []);
 
-  const start = useCallback((players: PlayerConfig[], seed?: number) => {
+  const start = useCallback((map: GameMap, players: PlayerConfig[], seed?: number) => {
     const game = createGame({
-      map: worldMap,
+      map,
       factions: DEFAULT_FACTIONS,
       players,
       seed,

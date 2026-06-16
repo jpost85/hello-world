@@ -1,6 +1,12 @@
 import { useState } from "react";
-import { DEFAULT_FACTIONS, currentPlayer } from "../engine/index.ts";
-import type { PlayerConfig } from "../engine/index.ts";
+import {
+  DEFAULT_FACTIONS,
+  DEFAULT_MAP_ID,
+  MAP_REGISTRY,
+  currentPlayer,
+  mapInfo,
+} from "../engine/index.ts";
+import type { GameMap, PlayerConfig } from "../engine/index.ts";
 import { useGame } from "./useGame.ts";
 import { hasSavedGame } from "./persistence.ts";
 import { MapView } from "./components/MapView.tsx";
@@ -56,10 +62,12 @@ function Setup({
   onStart,
   onResume,
 }: {
-  onStart: (players: PlayerConfig[], seed?: number) => void;
+  onStart: (map: GameMap, players: PlayerConfig[], seed?: number) => void;
   onResume: () => boolean;
 }) {
   const [count, setCount] = useState(3);
+  const [mapId, setMapId] = useState(DEFAULT_MAP_ID);
+  const [loadingMap, setLoadingMap] = useState(false);
   const [names, setNames] = useState<string[]>([
     "You",
     "Player 2",
@@ -78,6 +86,17 @@ function Setup({
     isAI: ai[i],
   }));
 
+  // Loads the chosen map (lazily for non-default maps) before starting.
+  const begin = async (seed?: number) => {
+    setLoadingMap(true);
+    try {
+      const map = await mapInfo(mapId).load();
+      onStart(map, players, seed);
+    } finally {
+      setLoadingMap(false);
+    }
+  };
+
   return (
     <div className="setup">
       <h1>Dominion: Balance of Power</h1>
@@ -93,6 +112,20 @@ function Setup({
           </button>
         </div>
       )}
+
+      <label>Map</label>
+      <div className="row">
+        <select value={mapId} onChange={(e) => setMapId(e.target.value)}>
+          {MAP_REGISTRY.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
+        <span className="hint" style={{ flex: 1 }}>
+          {mapInfo(mapId).description}
+        </span>
+      </div>
 
       <label>Number of players</label>
       <div className="row">
@@ -132,10 +165,12 @@ function Setup({
       ))}
 
       <div className="row" style={{ marginTop: 20 }}>
-        <button className="primary" onClick={() => onStart(players, Date.now() >>> 0)}>
-          New game
+        <button className="primary" disabled={loadingMap} onClick={() => begin(Date.now() >>> 0)}>
+          {loadingMap ? "Loading map…" : "New game"}
         </button>
-        <button onClick={() => onStart(players, 12345)}>New game (fixed seed)</button>
+        <button disabled={loadingMap} onClick={() => begin(12345)}>
+          New game (fixed seed)
+        </button>
       </div>
     </div>
   );

@@ -78,8 +78,8 @@ src/
     map.ts           Queries: adjacency, ownership, region bonuses, connectivity
     game.ts          State machine: setup + every turn action (immutable updates)
     ai.ts            Baseline opponent — drives the game via the same actions
-    maps/            classicWorld.ts (abstract) + worldMap.ts (generated geometry)
-    __tests__/       Vitest suites incl. the headless simulation harness (49 tests)
+    maps/            registry (lazy loaders) + classicWorld + generated worldMap
+    __tests__/       Vitest suites incl. the headless simulation harness (50 tests)
   ui/                React layer that renders state and dispatches engine actions
     useGame.ts       Hook bridging engine actions to state/selection; AI + autosave
     persistence.ts   localStorage save/load/continue
@@ -102,6 +102,26 @@ The real-world board is generated, not hand-placed. `tools/genmap.mjs`
 4. **Derives each continent's bonus from the graph** — `round((territories +
    2 × border-territories) / 3)` — so bonuses reward both size and the defensive
    burden of a continent's chokepoints, and stay balanced if the map changes.
+5. **Compresses geometry** — Douglas-Peucker simplification plus integer
+   coordinates, ~66% smaller paths with no visible change at world zoom.
+   (Adjacency is computed on the full-resolution data, so it is unaffected.)
+
+## Performance & file size
+
+Maps are designed to scale to many boards without bloating the initial load:
+
+- **Lazy-loaded maps.** `src/engine/maps/registry.ts` lists each map with a
+  loader; the default (World) is bundled for instant boot, and every other map
+  is a dynamic `import()` that Vite code-splits into its own chunk, fetched only
+  when selected. Adding maps grows the on-demand chunks, not the main bundle.
+- **Compressed geometry** keeps each map small (the World map's paths are ~41 KB,
+  ~14 KB gzipped).
+- **Single-file build** (`npm run build:single`) inlines everything — including
+  the lazy chunks — into one `dist/dominion.html` (~225 KB) that runs offline by
+  double-clicking. The hosted build (`npm run build`) keeps the maps split.
+- **Graphics guidance for future art:** prefer vector/SVG; keep raster assets
+  external, lazy-loaded, and compressed (WebP/AVIF, sprite atlases); never
+  base64-inline large images.
 
 Regenerate anytime with `node tools/genmap.mjs`. The output
 (`src/engine/maps/worldMap.ts`) is committed; the source GeoJSON is re-fetched
@@ -148,11 +168,13 @@ line still shows a notable first-player advantage — a known item to balance.)
 - [x] Computer opponents (baseline AI).
 - [x] Autosave / continue.
 - [x] Headless balance harness.
-- [x] Real-world map generated from Natural Earth geometry (60 territories).
+- [x] Real-world map generated from Natural Earth geometry (55 territories).
 - [x] Continent bonuses derived from map structure and validated with the harness.
+- [x] Antarctica as a non-playable decorative landmass.
+- [x] Geometry compression + lazy-loaded maps (scales to many boards).
+- [x] Map picker (World / Classic) that lazy-loads the chosen board.
 - [ ] Tune first-player advantage (e.g. scaling setup or reinforcement curves).
-- [ ] Map-selection screen (classic vs. world; the engine is already map-agnostic).
-- [ ] Higher-detail (1:50m) and additional regional maps.
+- [ ] More maps (regional theatres, higher-detail 1:50m) — just add registry entries.
 - [ ] Faction traits/bonuses (the `Faction` type is the hook).
 - [ ] Smarter AI difficulty levels.
 - [ ] Conquest cards / set trade-ins for escalating reinforcements.

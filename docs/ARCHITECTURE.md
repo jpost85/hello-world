@@ -74,7 +74,7 @@ misuse, which the UI surfaces to the player.
 
 | Roadmap item | Where it plugs in |
 | --- | --- |
-| New maps | Add a `GameMap` under `src/engine/maps/`. The engine is data-driven; no logic changes needed. A unit test should assert adjacency symmetry. |
+| New maps | Add a `GameMap` under `src/engine/maps/` (hand-written or via `tools/genmap.mjs`), then a `registry.ts` entry with a dynamic `import()` so it lazy-loads into its own chunk. The engine is data-driven; no logic changes needed. A unit test should assert adjacency symmetry and connectivity. |
 | Faction traits | The `Faction` type already exists. Add trait fields and read them in `combat.ts` / reinforcement math. |
 | AI opponents | Write a pure function `chooseActions(state) => actions[]` that calls the same engine actions the UI does. Determinism makes it testable. |
 | Conquest cards | Add card state to `GameState` and a trade-in action that boosts reinforcements; tie award to `conqueredThisTurn`. |

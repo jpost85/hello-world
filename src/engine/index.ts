@@ -8,5 +8,8 @@ export * from "./game.ts";
 export { CONFIG } from "./config.ts";
 export { playAITurn } from "./ai.ts";
 export { DEFAULT_FACTIONS } from "./factions.ts";
-export { classicWorld } from "./maps/classicWorld.ts";
+// Note: classicWorld is intentionally NOT re-exported here so it stays a
+// lazily-loaded chunk (see registry.ts). Import it directly in tests.
 export { worldMap } from "./maps/worldMap.ts";
+export { MAP_REGISTRY, DEFAULT_MAP_ID, mapInfo } from "./maps/registry.ts";
+export type { MapInfo } from "./maps/registry.ts";

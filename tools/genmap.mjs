@@ -213,7 +213,66 @@ const project = ([lng, lat]) => [
   ((90 - lat) / 180) * HEIGHT,
 ];
 
-const round = (n) => Math.round(n * 10) / 10;
+const round = (n) => Math.round(n);
+
+/** Perpendicular distance from point p to the line segment a-b. */
+function perpDist(p, a, b) {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+  const t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2;
+  const cx = a[0] + t * dx;
+  const cy = a[1] + t * dy;
+  return Math.hypot(p[0] - cx, p[1] - cy);
+}
+
+/**
+ * Douglas-Peucker simplification: drop vertices that lie within `eps` pixels of
+ * the line they sit on. Endpoints are always kept, so closed rings stay closed.
+ */
+function simplify(points, eps) {
+  if (points.length < 4) return points;
+  const keep = new Array(points.length).fill(false);
+  keep[0] = keep[points.length - 1] = true;
+  const stack = [[0, points.length - 1]];
+  while (stack.length) {
+    const [s, e] = stack.pop();
+    let maxD = 0;
+    let idx = -1;
+    for (let i = s + 1; i < e; i++) {
+      const d = perpDist(points[i], points[s], points[e]);
+      if (d > maxD) {
+        maxD = d;
+        idx = i;
+      }
+    }
+    if (maxD > eps && idx !== -1) {
+      keep[idx] = true;
+      stack.push([s, idx], [idx, e]);
+    }
+  }
+  return points.filter((_, i) => keep[i]);
+}
+
+/** Build an SVG path from projected rings: simplify, integer-round, M/L/Z. */
+function buildPath(projectedRings, eps) {
+  let best = null;
+  const d = projectedRings
+    .map((pts) => {
+      const simplified = simplify(pts, eps);
+      const ring = simplified.length >= 3 ? simplified : pts;
+      const c = ringCentroid(ring);
+      if (!best || c.area > best.area) best = c;
+      return "M" + ring.map(([x, y]) => `${round(x)} ${round(y)}`).join("L") + "Z";
+    })
+    .join("");
+  return { d, centroid: best };
+}
+
+/** Territory borders need finer detail than the decorative backdrop. */
+const SIMPLIFY_TERRITORY = 0.7;
+const SIMPLIFY_DECOR = 1.5;
 
 /** Area-weighted centroid + signed area of a projected ring. */
 function ringCentroid(points) {
@@ -272,15 +331,8 @@ for (const spec of SPEC) {
     continue;
   }
 
-  // Path string + largest-ring centroid for the unit badge.
-  let best = null;
-  const path = projectedRings
-    .map((pts) => {
-      const c = ringCentroid(pts);
-      if (!best || c.area > best.area) best = c;
-      return "M" + pts.map(([x, y]) => `${round(x)} ${round(y)}`).join("L") + "Z";
-    })
-    .join("");
+  // Simplified path string + largest-ring centroid for the unit badge.
+  const { d: path, centroid: best } = buildPath(projectedRings, SIMPLIFY_TERRITORY);
 
   territories.push({
     id: spec.id,
@@ -363,14 +415,7 @@ for (const d of DECOR) {
     .map((r) => r.map(project))
     .filter((r) => r.length >= 3);
   if (!projectedRings.length) continue;
-  let best = null;
-  const path = projectedRings
-    .map((pts) => {
-      const c = ringCentroid(pts);
-      if (!best || c.area > best.area) best = c;
-      return "M" + pts.map(([x, y]) => `${round(x)} ${round(y)}`).join("L") + "Z";
-    })
-    .join("");
+  const { d: path, centroid: best } = buildPath(projectedRings, SIMPLIFY_DECOR);
   decorations.push({ name: d.name, fill: d.fill, path, position: { x: round(best.cx), y: round(best.cy) } });
 }
 
