@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MicroTower — a tiny Sim Tower riff</title>
+<title>MicroTower</title>
 <style>
   :root {
     --sky-top: #6db3e8;
@@ -714,7 +714,7 @@
 <div id="app">
   <aside id="sidebar">
     <div class="side-head">
-      <h1>MicroTower <small>a tiny Sim Tower riff</small></h1>
+      <h1>MicroTower <small>build &amp; manage your tower</small></h1>
       <button id="closeNav" title="Hide menu">✕</button>
     </div>
 
@@ -1738,7 +1738,7 @@ function maybeEvent() {
 }
 
 function recomputeStars() {
-  // star rating by population thresholds (à la SimTower)
+  // star rating by population thresholds
   let s = 0;
   for (let i = 0; i < STAR_THRESHOLDS.length; i++)
     if (state.pop >= STAR_THRESHOLDS[i]) s = i + 1;
