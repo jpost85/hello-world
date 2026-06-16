@@ -66,13 +66,43 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
     return m;
   }, [state.generals]);
 
+  // Sea routes drawn as dashed connecting lines. Long Pacific crossings (e.g.
+  // Alaska↔Far East Russia) are split into two stubs that run off opposite edges.
+  const [vbW] = useMemo(() => {
+    const parts = viewBox.split(/\s+/).map(Number);
+    return [parts[2] || NORM_W, parts[3] || NORM_H];
+  }, [viewBox]);
+
+  const seaLines = useMemo(() => {
+    const links = state.map.connectors ?? [];
+    const segs: { x1: number; y1: number; x2: number; y2: number }[] = [];
+    for (const [a, b] of links) {
+      const pa = pos.get(a);
+      const pb = pos.get(b);
+      if (!pa || !pb) continue;
+      if (Math.abs(pa.x - pb.x) > vbW / 2) {
+        const left = pa.x < pb.x ? pa : pb;
+        const right = pa.x < pb.x ? pb : pa;
+        segs.push({ x1: left.x, y1: left.y, x2: 0, y2: left.y });
+        segs.push({ x1: right.x, y1: right.y, x2: vbW, y2: right.y });
+      } else {
+        segs.push({ x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y });
+      }
+    }
+    return segs;
+  }, [state.map.connectors, pos, vbW]);
+
   const badgeScale = isGeo ? 0.55 : 1;
 
   return (
     <div className="board">
       <svg viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
+        {isGeo && <rect className="ocean" x={0} y={0} width="100%" height="100%" />}
         {edges.map((e, i) => (
           <line key={i} className="edge" x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} />
+        ))}
+        {seaLines.map((e, i) => (
+          <line key={`sea-${i}`} className="sea-link" x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} />
         ))}
         {state.map.territories.map((t) => {
           const p = pos.get(t.id)!;

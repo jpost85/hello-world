@@ -50,25 +50,25 @@ const SPEC = [
 
   // South America
   { id: "venezuela", name: "Venezuela", region: "south-america", countries: ["Venezuela", "Guyana", "Suriname"] },
-  { id: "colombia", name: "Colombia", region: "south-america", countries: ["Colombia", "Ecuador"] },
+  { id: "colombia", name: "Colombia", region: "south-america", countries: ["Colombia", "Ecuador"], keepBounds: { lngMin: -82, lngMax: -66, latMin: -6, latMax: 13 } },
   { id: "brazil", name: "Brazil", region: "south-america", countries: ["Brazil"] },
   { id: "peru", name: "Peru", region: "south-america", countries: ["Peru", "Bolivia"] },
   { id: "argentina", name: "Argentina", region: "south-america", countries: ["Argentina", "Paraguay", "Uruguay"] },
-  { id: "chile", name: "Chile", region: "south-america", countries: ["Chile"] },
+  { id: "chile", name: "Chile", region: "south-america", countries: ["Chile"], keepBounds: { lngMin: -77, lngMax: -66, latMin: -56, latMax: -17 } },
 
   // Western Europe
   { id: "iceland", name: "Iceland", region: "western-europe", countries: ["Iceland"] },
   { id: "united-kingdom", name: "United Kingdom", region: "western-europe", countries: ["United Kingdom"] },
   { id: "ireland", name: "Ireland", region: "western-europe", countries: ["Ireland"] },
-  { id: "france", name: "France", region: "western-europe", countries: ["France"] },
-  { id: "iberia", name: "Iberia", region: "western-europe", countries: ["Spain", "Portugal"] },
+  { id: "france", name: "France", region: "western-europe", countries: ["France"], keepBounds: { lngMin: -6, lngMax: 10, latMin: 41, latMax: 52 } },
+  { id: "iberia", name: "Iberia", region: "western-europe", countries: ["Spain", "Portugal"], keepBounds: { lngMin: -10, lngMax: 4, latMin: 35, latMax: 44 } },
   { id: "benelux", name: "Benelux", region: "western-europe", countries: ["Netherlands", "Belgium", "Luxembourg"] },
   { id: "germany", name: "Germany", region: "western-europe", countries: ["Germany", "Denmark"] },
   { id: "italy", name: "Italy", region: "western-europe", countries: ["Italy"] },
   { id: "central-europe", name: "Central Europe", region: "western-europe", countries: ["Switzerland", "Austria", "Czechia", "Slovakia", "Hungary", "Slovenia"] },
 
   // Eastern Europe
-  { id: "scandinavia", name: "Scandinavia", region: "eastern-europe", countries: ["Norway", "Sweden", "Finland"] },
+  { id: "scandinavia", name: "Scandinavia", region: "eastern-europe", countries: ["Norway", "Sweden", "Finland"], keepBounds: { lngMin: 4, lngMax: 32, latMin: 54, latMax: 72 } },
   { id: "poland", name: "Poland", region: "eastern-europe", countries: ["Poland"] },
   { id: "baltics", name: "Baltics", region: "eastern-europe", countries: ["Estonia", "Latvia", "Lithuania"] },
   { id: "belarus", name: "Belarus", region: "eastern-europe", countries: ["Belarus"] },
@@ -149,6 +149,7 @@ const SEA_LINKS = [
   ["caribbean", "eastern-us"],
   ["caribbean", "mexico"],
   ["caribbean", "venezuela"],
+  ["brazil", "west-africa"],
   ["iberia", "maghreb"],
   ["italy", "maghreb"],
   ["italy", "balkans"],
@@ -200,6 +201,19 @@ function clipHalf(ring, c, keepGreater) {
     }
   }
   return out;
+}
+
+/** True if a ring's average position lies within the given lng/lat bounds. */
+function ringInBounds(ring, b) {
+  let lng = 0;
+  let lat = 0;
+  for (const p of ring) {
+    lng += p[0];
+    lat += p[1];
+  }
+  lng /= ring.length;
+  lat /= ring.length;
+  return lng >= b.lngMin && lng <= b.lngMax && lat >= b.latMin && lat <= b.latMax;
 }
 
 function clipRing(ring, clip) {
@@ -257,6 +271,9 @@ for (const spec of SPEC) {
       continue;
     }
     for (let ring of ringsOf(feature.geometry)) {
+      // Drop far-flung overseas rings (e.g. French Guiana, Canary Islands) that
+      // would otherwise create spurious adjacency or stray dots in the ocean.
+      if (spec.keepBounds && !ringInBounds(ring, spec.keepBounds)) continue;
       if (spec.normalizeRussia) ring = ring.map(([lng, lat]) => [lng < -100 ? lng + 360 : lng, lat]);
       if (spec.clip) ring = clipRing(ring, spec.clip);
       if (ring.length < 3) continue;
@@ -328,6 +345,11 @@ for (const [a, b] of SEA_LINKS) link(a, b);
 
 for (const t of territories) t.adjacentTo = [...adj.get(t.id)].sort();
 
+// Sea routes are drawn as explicit connecting lines (land borders are visible
+// where shapes touch). Keep only links whose endpoints both exist.
+const haveId = new Set(territories.map((t) => t.id));
+const connectors = SEA_LINKS.filter(([a, b]) => haveId.has(a) && haveId.has(b));
+
 // --- Connectivity check (BFS) ---------------------------------------------
 
 const seen = new Set([ids[0]]);
@@ -361,6 +383,7 @@ export const worldMap: GameMap = ${JSON.stringify(
     viewBox: `0 0 ${WIDTH} ${HEIGHT}`,
     regions: regionsOut,
     territories,
+    connectors,
   },
   null,
   0,

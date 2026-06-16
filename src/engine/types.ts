@@ -45,6 +45,8 @@ export interface GameMap {
   regions: Region[];
   /** SVG viewBox for path-based maps; when absent, positions are normalised. */
   viewBox?: string;
+  /** Sea/strait routes to draw as connecting lines (land borders are implicit). */
+  connectors?: [string, string][];
 }
 
 // ---------------------------------------------------------------------------
