@@ -1,9 +1,10 @@
 # Liberty's Call
 
 A browser-based, turn-based strategy game set in the American Revolution,
-inspired by the classic Koei title *Liberty or Death*. You command the
-Continental Army across a map of the thirteen colonies and fight the British
-Crown for independence.
+inspired by the classic Koei title *Liberty or Death*. **Play either side** —
+fight for independence as the Patriots, or wield the Royal Navy and an army of
+regulars as the British Crown to crush the rebellion — with the AI commanding
+your opponent across a map of the thirteen colonies.
 
 No build step, no dependencies — it's plain HTML, CSS, and JavaScript.
 

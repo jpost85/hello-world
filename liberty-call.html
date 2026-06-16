@@ -84,6 +84,9 @@ html, body {
 .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 .btn-primary { background: var(--patriot); color: #f4ead2; border-color: #14385a; }
 .btn-primary:hover { background: var(--patriot-light); }
+.btn-crown { background: var(--crown); color: #f4ead2; border-color: #5e1d1d; }
+.btn-crown:hover { background: var(--crown-light); }
+.choose { color: var(--ink-soft); margin: 0 0 8px; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
 .btn-small { padding: 6px 12px; font-size: 14px; }
 
 /* ---------- How to play ---------- */
@@ -304,8 +307,10 @@ html, body {
         <h1>Liberty's Call</h1>
         <p class="subtitle">A turn-based strategy of the American Revolution<br />
           inspired by <em>Liberty or Death</em></p>
+        <p class="choose">Choose your side:</p>
         <div class="title-buttons">
-          <button id="btn-new-game" class="btn btn-primary">New Campaign</button>
+          <button id="btn-play-patriot" class="btn btn-primary">Play the Patriots</button>
+          <button id="btn-play-crown" class="btn btn-crown">Play the British Crown</button>
           <button id="btn-continue" class="btn">Continue</button>
           <button id="btn-how-to" class="btn">How to Play</button>
         </div>
@@ -317,7 +322,7 @@ html, body {
     <section id="howto-screen" class="screen hidden">
       <div class="panel howto">
         <h2>How to Play</h2>
-        <p>You command the <strong>Continental Army (Patriots)</strong> against the <strong>British Crown</strong> across the thirteen colonies. Win the war for independence.</p>
+        <p>Choose a side and take command across the thirteen colonies. As the <strong>Patriots</strong> you fight for independence against a stronger foe; as the <strong>British Crown</strong> you wield the Royal Navy and an army of regulars to crush the rebellion before France and attrition turn the tide. The other side is played by the AI. (The rules below are written from the Patriot view; reverse them when you play the Crown.)</p>
         <ul>
           <li><strong>Treasury (gold)</strong> — earned each turn from the regions you hold. Spend it to recruit troops.</li>
           <li><strong>Resolve (morale)</strong> — the national will to fight. Win battles to raise it, lose ground to drain it. If your Resolve hits zero, the cause collapses.</li>
@@ -443,7 +448,8 @@ html, body {
     regiment: 500,          // men per regiment (the recruiting/reinforcement increment)
     startGold: 120,
     crownStartGold: 95,
-    crownRecruitCap: 1500,  // most men the AI can muster locally per turn
+    crownRecruitCap: 1500,  // most men a Crown AI can muster locally per turn
+    aiPatriotRecruitCap: 3000, // most men a Patriot AI can muster per turn
     crownReinforceEvery: 3, // British regulars arrive by sea every N turns
     crownReinforceBase: 2150, // men per wave (grows over the war) — Britain's main force
     crownReinforceGrowth: 4,// +1 regiment per this many turns
@@ -688,6 +694,13 @@ html, body {
 
   /* ------------------------------- Naval ---------------------------------- */
   const enemyOf = (side) => (side === "patriot" ? "crown" : "patriot");
+  const sideName = (side) => (side === "patriot" ? "Patriots" : side === "crown" ? "British" : "militia");
+  // Log colour from the human player's point of view (green = good for me).
+  const goodFor = (side) => (side === (S.playerSide || "patriot") ? "l-good" : "l-bad");
+  // Treasury is kept per faction; the player spends from their own faction's.
+  const goldOf = (side) => (side === "crown" ? S.crownGold : S.gold);
+  const addGold = (side, amt) => { if (side === "crown") S.crownGold += amt; else S.gold += amt; };
+  const playerSide = () => S.playerSide || "patriot";
   const isSea = (id) => !!(def(id) && def(id).sea);
   const isHarbor = (portId) => nodeOfPort(portId) !== null;
   // Control of a sea node goes to whichever side has more ships; on a tie the
@@ -998,9 +1011,10 @@ html, body {
   }
 
   function renderTopbar() {
+    const me = playerSide();
     $("#stat-date").textContent = dateLabel(S.turn);
-    $("#stat-gold").textContent = S.gold;
-    $("#stat-income").textContent = "+" + incomeFor("patriot");
+    $("#stat-gold").textContent = goldOf(me);
+    $("#stat-income").textContent = "+" + incomeFor(me);
     $("#bar-patriot").style.width = (S.morale.patriot / CONFIG.maxMorale * 100) + "%";
     $("#bar-crown").style.width = (S.morale.crown / CONFIG.maxMorale * 100) + "%";
   }
@@ -1051,16 +1065,16 @@ html, body {
 
     const moves = legalMoves(selected);
 
+    const me = playerSide();
     // --- Sea node panel -------------------------------------------------------
     if (d.sea) {
-      ownerEl.textContent = r.owner === "crown" ? "Royal Navy" : "French Fleet";
+      ownerEl.textContent = (r.owner === "crown" ? "Royal Navy" : "French Fleet") + " controls these waters";
       $("#ri-manpower").textContent = "—";
       $("#ri-income").textContent = "—";
       $("#ri-def").textContent = "—";
-      const ctrl = r.owner === "patriot" ? "French Fleet" : "Royal Navy";
-      const myShips = r.ships.patriot, foeShips = r.ships.crown;
-      // Redeploy the Patriot fleet to a linked node.
-      if (r.owner === "patriot" && myShips > 0 && !r.navalMoved) {
+      const myShips = r.ships[me], foeShips = r.ships[enemyOf(me)];
+      // Redeploy your fleet to a linked node.
+      if (r.owner === me && myShips > 0 && !r.navalMoved) {
         for (const n of SEA_ZONES[selected].links) {
           const b = document.createElement("button");
           b.className = "btn btn-small";
@@ -1069,16 +1083,16 @@ html, body {
           actionsEl.appendChild(b);
         }
       }
-      hintEl.textContent = `Ships here — French ${myShips} vs Royal Navy ${foeShips}. `
-        + (r.owner === "patriot"
+      hintEl.textContent = `Ships here — yours ${myShips} vs enemy ${foeShips}. `
+        + (r.owner === me
           ? (r.troops > 0 ? "Click a highlighted port to land your army, or sail on." : "You command these waters; sail an army through from a port.")
           : "The enemy commands these waters — out-build their ships to break through.");
       return;
     }
 
-    if (r.owner === "patriot") {
+    if (r.owner === me) {
       // Recruit — limited by gold and the region's musterable manpower.
-      const regts = Math.min(CONFIG.recruitBatch, Math.floor(r.manpower / CONFIG.regiment), Math.floor(S.gold / CONFIG.recruitCost));
+      const regts = Math.min(CONFIG.recruitBatch, Math.floor(r.manpower / CONFIG.regiment), Math.floor(goldOf(me) / CONFIG.recruitCost));
       const men = regts * CONFIG.regiment;
       const recruitBtn = document.createElement("button");
       recruitBtn.className = "btn";
@@ -1092,7 +1106,7 @@ html, body {
         const shipBtn = document.createElement("button");
         shipBtn.className = "btn";
         shipBtn.textContent = `Build warship (${CONFIG.shipCost}g)`;
-        shipBtn.disabled = r.shipBuilt || S.gold < CONFIG.shipCost;
+        shipBtn.disabled = r.shipBuilt || goldOf(me) < CONFIG.shipCost;
         shipBtn.title = "Joins the " + def(nodeOfPort(selected)).name;
         shipBtn.addEventListener("click", () => buildShip(selected));
         actionsEl.appendChild(shipBtn);
@@ -1125,17 +1139,18 @@ html, body {
 
   /* ----------------------------- Move legality ---------------------------- */
   function legalMoves(id) {
+    const me = playerSide();
     const r = S.regions[id];
     const out = { move: [], attack: [], sea: [] };
-    if (!r || r.owner !== "patriot" || r.acted || r.troops <= 0) return out;
+    if (!r || r.owner !== me || r.acted || r.troops <= 0) return out;
     for (const n of ADJACENCY[id]) {
       const nOwner = S.regions[n].owner;
       if (isSea(n)) {
-        // Sail into open water only where the Patriot navy holds the node;
-        // a sea node is never assaulted by land.
-        if (nOwner === "patriot") { out.move.push(n); out.sea.push(n); }
+        // Sail into open water only where your navy holds the node; a sea node
+        // is never assaulted by land.
+        if (nOwner === me) { out.move.push(n); out.sea.push(n); }
       } else {
-        if (nOwner === "patriot") out.move.push(n);
+        if (nOwner === me) out.move.push(n);
         else out.attack.push(n);
         if (isSea(id)) out.sea.push(n); // disembarking / amphibious landing
       }
@@ -1187,14 +1202,15 @@ html, body {
   // manpower. Returns true if at least one regiment was raised.
   function recruit(id) {
     const r = S.regions[id];
+    const side = r.owner;
     const regts = Math.min(
       CONFIG.recruitBatch,
       Math.floor(r.manpower / CONFIG.regiment),
-      Math.floor(S.gold / CONFIG.recruitCost)
+      Math.floor(goldOf(side) / CONFIG.recruitCost)
     );
     if (regts <= 0) return false;
     const men = regts * CONFIG.regiment;
-    S.gold -= regts * CONFIG.recruitCost;
+    addGold(side, -regts * CONFIG.recruitCost);
     r.manpower -= men;
     r.troops += men;
     log(`Mustered ${menFull(men)} men in ${def(id).name}.`, "");
@@ -1204,14 +1220,15 @@ html, body {
   }
 
   /* -------------------------------- Navy ---------------------------------- */
-  // Build a warship at a Patriot port; it joins that port's sea node.
+  // Build a warship at one of the player's ports; it joins that port's sea node.
   function buildShip(portId) {
     const port = S.regions[portId];
+    const side = port.owner;
     const z = nodeOfPort(portId);
-    if (!z || port.owner !== "patriot" || port.shipBuilt || S.gold < CONFIG.shipCost) return false;
-    S.gold -= CONFIG.shipCost;
+    if (!z || (side !== "patriot" && side !== "crown") || port.shipBuilt || goldOf(side) < CONFIG.shipCost) return false;
+    addGold(side, -CONFIG.shipCost);
     port.shipBuilt = true;
-    S.regions[z].ships.patriot += 1;
+    S.regions[z].ships[side] += 1;
     refreshSeaControl();
     log(`A warship is launched at ${def(portId).name}, joining the ${def(z).name}.`, "");
     save();
@@ -1221,11 +1238,12 @@ html, body {
   // Redeploy a fleet from one sea node to an adjacent one (once per turn).
   function moveShips(fromNode, toNode) {
     const f = S.regions[fromNode];
-    if (f.navalMoved || f.ships.patriot <= 0) return false;
+    const side = playerSide();
+    if (f.navalMoved || f.ships[side] <= 0) return false;
     if (!SEA_ZONES[fromNode].links.includes(toNode)) return false;
-    const n = f.ships.patriot;
-    f.ships.patriot = 0;
-    S.regions[toNode].ships.patriot += n;
+    const n = f.ships[side];
+    f.ships[side] = 0;
+    S.regions[toNode].ships[side] += n;
     f.navalMoved = true;
     refreshSeaControl();
     log(`${n} ship${n > 1 ? "s" : ""} sail from the ${def(fromNode).name} to the ${def(toNode).name}.`, "");
@@ -1345,6 +1363,7 @@ html, body {
   function doAttack(fromId, toId, count, withGeneral) {
     const from = S.regions[fromId];
     const to = S.regions[toId];
+    const attSide = from.owner;        // whoever owns the attacking army
     count = clamp(count, 1, from.troops);
     const defenders = to.troops;
     const defGen = to.general;
@@ -1363,41 +1382,52 @@ html, body {
       const wasCapital = def(toId).capital === to.owner;
       const loser = to.owner;
       const wasNeutral = loser === "neutral";
-      if (defGen) loseGeneral(to, loser, "patriot"); // enemy commander taken
-      to.owner = "patriot";
+      if (defGen) loseGeneral(to, loser, attSide); // enemy commander taken
+      to.owner = attSide;
       to.troops = survivors;
       to.acted = true; // freshly captured army holds position
       if (attGen) { to.general = attGen; from.general = null; } // commander rides in
       if (wasNeutral) {
-        log(`${defName} won over to the cause (lost ${menFull(result.attLoss)}, militia ${menFull(defenders)}).`, "l-good");
-        showBanner("⚑  " + defName + " joins the Patriots!");
-        adjustMorale("patriot", 3); // a frontier gain, not a blow to the enemy
+        log(`${defName} won over to the ${sideName(attSide)} (lost ${menFull(result.attLoss)}, militia ${menFull(defenders)}).`, goodFor(attSide));
+        showBanner("⚑  " + defName + " seized!");
+        adjustMorale(attSide, 3); // a frontier gain, not a blow to the enemy
       } else {
-        log(`Victory at ${defName}! ${defName} falls to the Patriots (lost ${menFull(result.attLoss)}, enemy ${menFull(defenders)}).`, "l-good");
+        log(`${defName} falls to the ${sideName(attSide)} (lost ${menFull(result.attLoss)}, enemy ${menFull(defenders)}).`, goodFor(attSide));
         showBanner("⚔  " + defName + " captured!");
-        adjustMorale("patriot", def(toId).city ? 8 : 5);
+        adjustMorale(attSide, def(toId).city ? 8 : 5);
         adjustMorale(loser, def(toId).city ? -8 : -5);
       }
       if (wasCapital) {
         adjustMorale(loser, -30);
-        log(`The enemy capital at ${defName} has fallen! A grievous blow to the Crown.`, "l-event");
+        log(`The ${sideName(loser)}' capital at ${defName} has fallen! A grievous blow.`, "l-event");
       }
     } else {
       // Assault repelled; survivors retreat home.
       const survivors = count - result.attLoss;
       from.troops += survivors;
       to.troops -= result.defLoss;
-      log(`Assault on ${defName} repelled. We lost ${menFull(result.attLoss)}; the enemy lost ${menFull(result.defLoss)}.`, "l-bad");
-      showBanner("Assault on " + defName + " repelled");
-      adjustMorale("patriot", -3);
+      log(`Assault on ${defName} repelled — attacker lost ${menFull(result.attLoss)}, defender ${menFull(result.defLoss)}.`, goodFor(to.owner));
+      adjustMorale(attSide, -3);
       // A general leading a broken assault may be taken.
-      if (attGen && survivors <= 2 * CONFIG.regiment && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, "patriot", "crown");
+      if (attGen && survivors <= 2 * CONFIG.regiment && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, attSide, to.owner);
     }
 
-    selected = result.win ? toId : fromId;
+    if (attSide === (S.playerSide || "patriot")) { selected = result.win ? toId : fromId; }
     save();
     renderAll();
     checkWin();
+  }
+
+  // Size and launch an AI assault from `fromId` against `toId` (keeps a reserve
+  // when comfortably superior), then resolve it through the shared doAttack.
+  function aiAttack(fromId, toId) {
+    const from = S.regions[fromId], to = S.regions[toId];
+    const defGen = to.general;
+    const defMult = defenseBonus(toId) * (defGen ? defGen.def : 1);
+    const need = to.troops * defMult;
+    let committed = from.troops;
+    if (from.troops > need * 1.7) committed = Math.min(from.troops, Math.ceil(need * 1.4) + 2 * CONFIG.regiment);
+    doAttack(fromId, toId, committed, true);
   }
 
   // Remove the general in `region`, applying morale to loser/captor sides.
@@ -1421,14 +1451,19 @@ html, body {
   function endTurn() {
     if (S.over) return;
     selected = null;
+    const me = playerSide(), foe = enemyOf(me);
 
-    // Collect income.
-    const income = incomeFor("patriot");
-    S.gold += income;
-    log(`Treasury collects ${income} gold from the colonies.`, "");
+    // Collect the player's income.
+    const income = incomeFor(me);
+    addGold(me, income);
+    log(`Treasury collects ${income} gold.`, "");
 
-    // AI takes its turn.
-    crownTurn();
+    // The Crown's overseas reinforcements (a faction advantage, either side).
+    crownReinforcement();
+    if (S.over) return;
+
+    // The AI faction takes its turn.
+    aiTurn(foe);
     if (S.over) return;
 
     // Advance turn & reset action flags.
@@ -1442,8 +1477,8 @@ html, body {
       r.manpower = Math.min(maxManpower(r.id), r.manpower + regen);
     }
 
-    // Crown income (internal economy for AI recruiting).
-    S.crownGold += incomeFor("crown");
+    // The AI faction's income (its internal economy).
+    addGold(foe, incomeFor(foe));
 
     maybeFranceEvent();
     applyWinter();
@@ -1481,177 +1516,106 @@ html, body {
     }
   }
 
-  /* ------------------------------- Crown AI ------------------------------- */
-  function crownTurn() {
+  /* --------------------------------- AI ----------------------------------- */
+  // The Crown's overseas reinforcements — a faction advantage that arrives every
+  // few turns whoever is controlling the British.
+  function crownReinforcement() {
+    if (S.turn % CONFIG.crownReinforceEvery !== 0) return;
     const crownRegions = ownedRegions("crown");
-    if (crownRegions.length === 0) return;
+    if (!crownRegions.length) return;
+    const openPorts = crownRegions.filter((r) => isHarbor(r.id) && !isBlockaded(r.id));
+    const landing = (S.regions.nyc.owner === "crown" && !isBlockaded("nyc")) ? S.regions.nyc
+      : (openPorts[0] || crownRegions[0]);
+    if (!landing) return;
+    const wave = CONFIG.crownReinforceBase + Math.floor(S.turn / CONFIG.crownReinforceGrowth) * CONFIG.regiment;
+    landing.troops += wave;
+    S.crownGold += 20;
+    log(`A British fleet lands ${menFull(wave)} regulars at ${def(landing.id).name}.`, goodFor("crown"));
+    showBanner("⚓  British regulars land at " + def(landing.id).name);
+  }
 
-    // 0) Periodic British regulars arrive by sea at a held, un-blockaded port.
-    if (S.turn % CONFIG.crownReinforceEvery === 0) {
-      // Prefer New York City, then any held port the Royal Navy can still reach.
-      const openPorts = crownRegions.filter((r) => isHarbor(r.id) && !isBlockaded(r.id));
-      const landing = (S.regions.nyc.owner === "crown" && !isBlockaded("nyc")) ? S.regions.nyc
-        : (openPorts[0] || crownRegions[0]);
-      if (landing) {
-        const wave = CONFIG.crownReinforceBase + Math.floor(S.turn / CONFIG.crownReinforceGrowth) * CONFIG.regiment;
-        landing.troops += wave;
-        S.crownGold += 20;
-        log(`A British fleet lands ${menFull(wave)} regulars at ${def(landing.id).name}.`, "l-bad");
-        showBanner("⚓  British regulars land at " + def(landing.id).name);
-      }
-    }
+  // Generic AI for whichever side the human is not playing.
+  function aiTurn(side) {
+    const foe = enemyOf(side);
+    const enemyCap = side === "crown" ? "philadelphia" : "nyc";
+    const recruitCap = side === "crown" ? CONFIG.crownRecruitCap : CONFIG.aiPatriotRecruitCap;
+    if (ownedRegions(side).length === 0) return;
 
-    // 1) Muster local Loyalists (in whole regiments) at a front-line city —
-    //    limited by manpower; the regulars from overseas are the main force.
-    if (crownRegions.length) {
-      // Prefer a city adjacent to a patriot region (the front).
-      const front = crownRegions.filter((r) =>
-        ADJACENCY[r.id].some((n) => S.regions[n].owner === "patriot"));
-      const pool = front.length ? front : crownRegions;
-      const target = pool.reduce((best, r) =>
-        (def(r.id).city ? 1 : 0) - (best && def(best.id).city ? 1 : 0) >= 0 ? r : best, pool[0]);
+    // 1) Muster at a front-line city, limited by gold and manpower.
+    const myRegions = ownedRegions(side).filter((r) => !isSea(r.id));
+    const front = myRegions.filter((r) => ADJACENCY[r.id].some((n) => S.regions[n].owner === foe));
+    const pool = front.length ? front : myRegions;
+    const target = pool.length ? pool.reduce((best, r) =>
+      (def(r.id).city ? 1 : 0) - (best && def(best.id).city ? 1 : 0) >= 0 ? r : best, pool[0]) : null;
+    if (target) {
       const regts = Math.min(
-        Math.floor(CONFIG.crownRecruitCap / CONFIG.regiment),
-        Math.floor(S.crownGold / CONFIG.recruitCost),
+        Math.floor(recruitCap / CONFIG.regiment),
+        Math.floor(goldOf(side) / CONFIG.recruitCost),
         Math.floor(target.manpower / CONFIG.regiment));
       if (regts > 0) {
         const men = regts * CONFIG.regiment;
-        target.troops += men;
-        target.manpower -= men;
-        S.crownGold -= regts * CONFIG.recruitCost;
-        log(`Loyalists muster at ${def(target.id).name} (+${menFull(men)}).`, "l-bad");
+        target.troops += men; target.manpower -= men; addGold(side, -regts * CONFIG.recruitCost);
+        log(`${sideName(side)} muster ${menFull(men)} at ${def(target.id).name}.`, goodFor(side));
       }
     }
 
-    // 2) Each Crown army acts once: attack a beatable neighbour, else mass toward Philadelphia.
+    // 2) Each army acts once: attack toward the enemy capital, grab neutral land,
+    //    or mass forward.
     const acted = new Set();
-    // Re-evaluate ownership dynamically as battles change the map.
-    const armies = ownedRegions("crown").map((r) => r.id);
-    for (const id of armies) {
+    for (const id of ownedRegions(side).map((r) => r.id)) {
       const r = S.regions[id];
-      if (!r || r.owner !== "crown" || acted.has(id) || r.troops < CONFIG.regiment) continue;
-
-      // Strike the rebels: among neighbours we can beat, drive on the one
-      // nearest Philadelphia (the war aim), not merely the weakest.
+      if (!r || r.owner !== side || acted.has(id) || r.troops < CONFIG.regiment || isSea(id)) continue;
       const beatable = ADJACENCY[id]
-        .filter((n) => S.regions[n].owner === "patriot" &&
+        .filter((n) => !isSea(n) && S.regions[n].owner === foe &&
           r.troops - S.regions[n].troops * defenseBonus(n) > CONFIG.regiment)
-        .sort((a, b) => dist(a, "philadelphia") - dist(b, "philadelphia"));
+        .sort((a, b) => dist(a, enemyCap) - dist(b, enemyCap));
       const bestAtk = beatable[0] || null;
-
-      // Otherwise, grab adjacent neutral frontier if clearly winnable.
       let neutralGrab = null;
       if (!bestAtk) {
-        for (const t of ADJACENCY[id].filter((n) => S.regions[n].owner === "neutral")) {
+        for (const t of ADJACENCY[id].filter((n) => !isSea(n) && S.regions[n].owner === "neutral")) {
           if (r.troops - S.regions[t].troops * defenseBonus(t) > 2 * CONFIG.regiment) { neutralGrab = t; break; }
         }
       }
-
-      if (bestAtk) {
-        crownAttack(id, bestAtk);
-        acted.add(id);
-        acted.add(bestAtk); // captured/contested region shouldn't act again
-      } else if (neutralGrab) {
-        crownAttack(id, neutralGrab);
-        acted.add(id);
-        acted.add(neutralGrab);
-      } else {
-        // Reinforce toward the front: shift troops to a crown neighbour closer to penn.
+      if (bestAtk) { aiAttack(id, bestAtk); acted.add(id); acted.add(bestAtk); }
+      else if (neutralGrab) { aiAttack(id, neutralGrab); acted.add(id); acted.add(neutralGrab); }
+      else {
         const reinforceTo = ADJACENCY[id]
-          .filter((n) => S.regions[n].owner === "crown")
-          .sort((a, b) => dist(a, "philadelphia") - dist(b, "philadelphia"))[0];
-        if (reinforceTo && dist(reinforceTo, "philadelphia") < dist(id, "philadelphia") && r.troops > 2 * CONFIG.regiment) {
+          .filter((n) => !isSea(n) && S.regions[n].owner === side)
+          .sort((a, b) => dist(a, enemyCap) - dist(b, enemyCap))[0];
+        if (reinforceTo && dist(reinforceTo, enemyCap) < dist(id, enemyCap) && r.troops > 2 * CONFIG.regiment) {
           const move = Math.floor(r.troops / 2);
-          r.troops -= move;
-          S.regions[reinforceTo].troops += move;
-          if (r.general && !S.regions[reinforceTo].general) {
-            S.regions[reinforceTo].general = r.general; r.general = null;
-          }
+          r.troops -= move; S.regions[reinforceTo].troops += move;
+          if (r.general && !S.regions[reinforceTo].general) { S.regions[reinforceTo].general = r.general; r.general = null; }
           acted.add(id);
         }
       }
     }
 
-    // 3) Maintain the Royal Navy: build ships where the Patriots contest a node.
+    // 3) Contest the seas: build ships where the foe matches or leads.
     for (const z of SEA_IDS) {
-      const node = S.regions[z];
-      let guard = 0;
-      while (node.ships.crown <= node.ships.patriot && S.crownGold >= CONFIG.shipCost
-             && SEA_ZONES[z].cities.some((c) => S.regions[c].owner === "crown") && guard++ < 3) {
-        node.ships.crown += 1; S.crownGold -= CONFIG.shipCost;
+      const node = S.regions[z]; let guard = 0;
+      while (node.ships[side] <= node.ships[foe] && goldOf(side) >= CONFIG.shipCost
+             && SEA_ZONES[z].cities.some((c) => S.regions[c].owner === side) && guard++ < 3) {
+        node.ships[side] += 1; addGold(side, -CONFIG.shipCost);
       }
     }
     refreshSeaControl();
 
-    // 4) Naval reach: up to two amphibious assaults on weakly-held Patriot ports
-    //    reachable through crown-controlled waters.
+    // 4) Up to two amphibious assaults on weak enemy ports reachable by sea.
     let landings = 0;
-    const crownPorts = ownedRegions("crown").map((r) => r.id).filter(isHarbor);
-    for (const fromId of crownPorts) {
+    for (const fromId of ownedRegions(side).map((r) => r.id).filter(isHarbor)) {
       if (landings >= 2) break;
       const from = S.regions[fromId];
       if (!from || acted.has(fromId) || from.troops < 2 * CONFIG.regiment) continue;
-      const target = seaReachablePorts(fromId, "crown")
-        .filter((h) => S.regions[h].owner === "patriot" &&
+      const tgt = seaReachablePorts(fromId, side)
+        .filter((h) => S.regions[h].owner === foe &&
           from.troops - S.regions[h].troops * defenseBonus(h) > CONFIG.regiment)
         .sort((a, b) => S.regions[a].troops - S.regions[b].troops)[0];
-      if (target) {
-        crownAttack(fromId, target);
-        acted.add(fromId); acted.add(target);
-        landings++;
-      }
+      if (tgt) { aiAttack(fromId, tgt); acted.add(fromId); acted.add(tgt); landings++; }
     }
 
     renderAll();
     checkWin();
-  }
-
-  function crownAttack(fromId, toId) {
-    const from = S.regions[fromId];
-    const to = S.regions[toId];
-    const defGen = to.general;
-    const attGen = from.general;
-    const defMult = defenseBonus(toId) * (defGen ? defGen.def : 1);
-    // Commit enough to win with margin; keep a reserve when comfortably superior.
-    const need = to.troops * defMult;
-    let committed = from.troops;
-    if (from.troops > need * 1.7) committed = Math.min(from.troops, Math.ceil(need * 1.4) + 2 * CONFIG.regiment);
-    const result = resolveBattle(committed, to.troops, defMult, attGen ? attGen.atk : 1);
-    tuneCasualties(result, committed, to.troops, attGen, defGen);
-    const defenders = to.troops;
-    from.troops -= committed;
-
-    if (result.win) {
-      const survivors = committed - result.attLoss;
-      const wasCapital = def(toId).capital === to.owner;
-      const wasNeutral = to.owner === "neutral";
-      if (defGen) loseGeneral(to, to.owner, "crown"); // rebel commander taken
-      to.owner = "crown";
-      to.troops = survivors;
-      if (attGen) { to.general = attGen; from.general = null; } // commander rides in
-      if (wasNeutral) {
-        log(`The British seize the frontier of ${def(toId).name}.`, "l-bad");
-        showBanner("✗  " + def(toId).name + " seized by the Crown");
-        adjustMorale("crown", 3);
-      } else {
-        log(`The British storm ${def(toId).name}! It is lost (we had ${menFull(defenders)}).`, "l-bad");
-        showBanner("✗  " + def(toId).name + " has fallen to the Crown");
-        adjustMorale("crown", def(toId).city ? 8 : 5);
-        adjustMorale("patriot", def(toId).city ? -8 : -5);
-      }
-      if (wasCapital) {
-        adjustMorale("patriot", -30);
-        log(`Our capital at ${def(toId).name} is taken! The cause teeters.`, "l-event");
-      }
-    } else {
-      const survivors = committed - result.attLoss;
-      from.troops += survivors; // survivors retreat home
-      to.troops -= result.defLoss;
-      log(`We repulsed a British attack on ${def(toId).name}! Enemy lost ${menFull(result.attLoss)}.`, "l-good");
-      adjustMorale("patriot", 4);
-      adjustMorale("crown", -4);
-      if (attGen && survivors <= 2 * CONFIG.regiment && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, "crown", "patriot");
-    }
   }
 
   // BFS distance between regions (in hops).
@@ -1728,13 +1692,15 @@ html, body {
     }
   }
 
+  // `winnerSide` is the faction that won; the screen reads from the player's view.
   function gameOver(patriotWon, text) {
     S.over = true;
     S.winner = patriotWon ? "patriot" : "crown";
     save();
     renderAll();
-    $("#go-title").textContent = patriotWon ? "Independence!" : "The Cause is Lost";
-    $("#go-title").style.color = patriotWon ? "var(--patriot)" : "var(--crown)";
+    const playerWon = S.winner === playerSide();
+    $("#go-title").textContent = playerWon ? "Victory!" : "Defeat";
+    $("#go-title").style.color = playerWon ? "var(--patriot)" : "var(--crown)";
     $("#go-text").textContent = text;
     $("#gameover").classList.remove("hidden");
   }
@@ -1757,19 +1723,27 @@ html, body {
     $("#" + screenId).classList.remove("hidden");
   }
 
-  function startGame(state) {
+  function startGame(state, side) {
     S = state || newState();
+    if (!state) S.playerSide = side || "patriot";
+    if (!S.playerSide) S.playerSide = "patriot"; // legacy saves
     selected = null;
     $("#gameover").classList.add("hidden");
     show("game-screen");
     renderLog();
     renderAll();
-    if (!state) log(`The war for independence begins — ${dateLabel(1)}.`, "l-event");
+    if (!state) {
+      const intro = S.playerSide === "crown"
+        ? "You take command of His Majesty's forces — crush the rebellion."
+        : "The war for independence begins.";
+      log(`${intro} — ${dateLabel(1)}.`, "l-event");
+    }
   }
 
   /* ------------------------------- Wiring --------------------------------- */
   function init() {
-    $("#btn-new-game").addEventListener("click", () => startGame(null));
+    $("#btn-play-patriot").addEventListener("click", () => startGame(null, "patriot"));
+    $("#btn-play-crown").addEventListener("click", () => startGame(null, "crown"));
     $("#btn-continue").addEventListener("click", () => {
       const s = load();
       if (s) startGame(s); else showBanner("No saved campaign found");
@@ -1811,7 +1785,7 @@ html, body {
   // Test hook: expose core logic for headless simulation (no effect in browser).
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
-      newState, resolveBattle, dist, incomeFor, checkWin, crownTurn, endTurn,
+      newState, resolveBattle, dist, incomeFor, checkWin, aiTurn, endTurn,
       doAttack, doMove, legalMoves, maybeFranceEvent, recruit, defenseBonus,
       buildShip, moveShips,
       CONFIG, ADJACENCY, REGION_DEFS, MAPDATA, SEA_ZONES,

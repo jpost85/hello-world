@@ -77,6 +77,9 @@ html, body {
 .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 .btn-primary { background: var(--patriot); color: #f4ead2; border-color: #14385a; }
 .btn-primary:hover { background: var(--patriot-light); }
+.btn-crown { background: var(--crown); color: #f4ead2; border-color: #5e1d1d; }
+.btn-crown:hover { background: var(--crown-light); }
+.choose { color: var(--ink-soft); margin: 0 0 8px; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
 .btn-small { padding: 6px 12px; font-size: 14px; }
 
 /* ---------- How to play ---------- */
