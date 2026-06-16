@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>MicroTower</title>
 <style>
   :root {
@@ -23,7 +24,7 @@
     background: #0e1419; color: var(--text);
     overflow: hidden;
   }
-  #app { position: relative; height: 100vh; width: 100vw; overflow: hidden; }
+  #app { position: relative; height: 100vh; height: 100dvh; width: 100vw; overflow: hidden; }
 
   /* Sidebar — slides in/out as a drawer */
   #sidebar {
@@ -123,7 +124,10 @@
     position: absolute; top: 42px; left: 0; right: 0; bottom: 0; z-index: 1;
     overflow: auto; -webkit-overflow-scrolling: touch;
   }
-  #world { position: relative; }
+  #worldWrap { position: relative; }
+  #world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  /* Zoom buttons (mobile only) */
+  #zoomCtl { display: none; }
 
   /* Top HUD — always visible, holds the drawer toggle + key stats */
   #hud {
@@ -672,13 +676,14 @@
   /* ---------- Mobile-only UI (hidden on desktop) ---------- */
   #hotbar, #edgeHandle { display: none; }   /* desktop: never shown */
   @media (max-width: 700px) {
-    /* leave room for the bottom build bar */
-    #scroller { bottom: 54px; }
-    #placeBar { bottom: 62px; }
+    /* leave room for the bottom build bar (+ the iOS home-indicator safe area) */
+    #scroller { bottom: calc(54px + env(safe-area-inset-bottom)); }
+    #placeBar { bottom: calc(62px + env(safe-area-inset-bottom)); }
     /* bottom build hotbar: build without opening the drawer */
     #hotbar {
-      position: absolute; left: 0; right: 0; bottom: 0; height: 54px; z-index: 16;
-      display: flex; align-items: center; gap: 6px; padding: 0 6px;
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 16; box-sizing: border-box;
+      height: calc(54px + env(safe-area-inset-bottom)); padding: 0 6px env(safe-area-inset-bottom);
+      display: flex; align-items: center; gap: 6px;
       background: rgba(20,28,36,.97); border-top: 2px solid #000;
     }
     #hotbarMenu {
@@ -707,6 +712,18 @@
       box-shadow: 1px 0 5px rgba(0,0,0,.45);
     }
     #app:not(.nav-closed) #edgeHandle { display: none; }
+    /* zoom controls, above the hotbar on the right */
+    #zoomCtl {
+      position: absolute; right: 8px; z-index: 17;
+      bottom: calc(62px + env(safe-area-inset-bottom));
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    #zoomCtl button {
+      width: 40px; height: 40px; border: 2px solid #000; border-radius: 9px;
+      background: rgba(20,28,36,.92); color: var(--text); font-size: 22px; line-height: 1;
+      cursor: pointer;
+    }
+    #zoomCtl button:active { transform: translateY(1px); }
   }
 </style>
 </head>
@@ -787,9 +804,15 @@
       <button id="soundToggle" title="Sound on/off">🔊</button>
     </div>
     <div id="scroller">
-      <div id="world">
-        <div id="ghost"></div>
+      <div id="worldWrap">
+        <div id="world">
+          <div id="ghost"></div>
+        </div>
       </div>
+    </div>
+    <div id="zoomCtl">
+      <button id="zoomIn" title="Zoom in">+</button>
+      <button id="zoomOut" title="Zoom out">−</button>
     </div>
     <div id="placeBar">
       <span id="placeInfo"></span>
@@ -952,6 +975,7 @@ const ROLE_COLOR = { work: "#5b8def", home: "#56c271", hotel: "#d9b36b", visitor
 
 // ---------- DOM ----------
 const world = document.getElementById("world");
+const worldWrap = document.getElementById("worldWrap");
 const stage = document.getElementById("stage");
 const scroller = document.getElementById("scroller");
 const ghost = document.getElementById("ghost");
@@ -968,8 +992,53 @@ let worldWidth = COLS * CELL_W;
 let earthEl = null, groundEl = null;  // background refs, widened on resize
 const totalRows = MAX_FLOORS - MIN_ROW + 1;
 const worldHeight = totalRows * CELL_H;
+let zoom = 1;  // tower view scale (pinch / buttons)
 world.style.width = worldWidth + "px";
 world.style.height = worldHeight + "px";
+
+// Scale the world and size its wrapper so the scroller scrolls the scaled area.
+function applyZoom() {
+  world.style.transform = "scale(" + zoom + ")";
+  worldWrap.style.width = (worldWidth * zoom) + "px";
+  worldWrap.style.height = (worldHeight * zoom) + "px";
+}
+// Set zoom, keeping the screen point (cx,cy) anchored over the same tower spot.
+function setZoom(z, cx, cy) {
+  const old = zoom;
+  zoom = Math.max(0.45, Math.min(2, z));
+  if (zoom === old) return;
+  const r = scroller.getBoundingClientRect();
+  cx = (cx == null ? r.width / 2 : cx - r.left);
+  cy = (cy == null ? r.height / 2 : cy - r.top);
+  const k = zoom / old;
+  applyZoom();
+  scroller.scrollLeft = (scroller.scrollLeft + cx) * k - cx;
+  scroller.scrollTop = (scroller.scrollTop + cy) * k - cy;
+}
+applyZoom(); // size the wrapper from the start
+
+// Zoom buttons + pinch gesture (touch). Pinch suppresses native page zoom.
+function touchDist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+document.getElementById("zoomIn").addEventListener("click", () => setZoom(zoom * 1.25));
+document.getElementById("zoomOut").addEventListener("click", () => setZoom(zoom / 1.25));
+let _pinchDist = 0, _pinchZoom = 1;
+scroller.addEventListener("touchstart", (e) => {
+  if (e.touches.length === 2) { _pinchDist = touchDist(e.touches); _pinchZoom = zoom; }
+}, { passive: true });
+scroller.addEventListener("touchmove", (e) => {
+  if (e.touches.length === 2 && _pinchDist > 0) {
+    e.preventDefault();
+    const d = touchDist(e.touches);
+    const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    setZoom(_pinchZoom * (d / _pinchDist), mx, my);
+  }
+}, { passive: false });
+scroller.addEventListener("touchend", (e) => { if (e.touches.length < 2) _pinchDist = 0; }, { passive: true });
+// On touch devices, stop iOS' own page pinch-zoom so our world zoom is the one that fires.
+const _isTouchDev = (typeof window !== "undefined") &&
+  (("ontouchstart" in window) || (typeof navigator !== "undefined" && navigator.maxTouchPoints > 0));
+if (_isTouchDev) document.addEventListener("gesturestart", (e) => e.preventDefault());
 
 // Convert logical row (0=ground, positive=up) to a pixel top.
 // Higher floors are visually higher => smaller top value.
@@ -1035,6 +1104,7 @@ function growWorld(newCols) {
   if (groundEl) groundEl.style.width = worldWidth + "px";
   for (let row = MIN_ROW; row <= MAX_FLOORS; row++)
     for (let col = oldCols; col < COLS; col++) addEmptyCell(col, row);
+  applyZoom(); // wrapper must track the new world width
 }
 
 // ---------- Tools UI ----------
@@ -1401,9 +1471,9 @@ function buildStars() {
 
 // ---------- Mouse: ghost preview & building ----------
 function pointFromEvent(e) {
-  const rect = world.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const rect = world.getBoundingClientRect();   // already reflects the zoom scale
+  const x = (e.clientX - rect.left) / zoom;
+  const y = (e.clientY - rect.top) / zoom;
   const col = Math.floor(x / CELL_W);
   const row = MAX_FLOORS - Math.floor(y / CELL_H);
   return { col, row };
