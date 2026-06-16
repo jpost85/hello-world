@@ -348,6 +348,32 @@ console.log(`territories: ${territories.length}, regions: ${REGIONS.length}`);
 console.log(`graph connected: ${isolated.length === 0}${isolated.length ? " — isolated: " + isolated.join(", ") : ""}`);
 console.log("degree<=1:", ids.filter((id) => adj.get(id).size <= 1).join(", ") || "none");
 
+// --- Decorative (non-playable) landmasses ----------------------------------
+// Rendered for realism but never part of the game: no ownership, adjacency, or
+// bonus. Antarctica fills the southern edge of the map.
+const DECOR = [{ name: "Antarctica", country: "Antarctica", fill: "#eef4fa" }];
+const decorations = [];
+for (const d of DECOR) {
+  const feature = byName.get(d.country);
+  if (!feature) {
+    console.warn(`!! missing decoration country: ${d.country}`);
+    continue;
+  }
+  const projectedRings = ringsOf(feature.geometry)
+    .map((r) => r.map(project))
+    .filter((r) => r.length >= 3);
+  if (!projectedRings.length) continue;
+  let best = null;
+  const path = projectedRings
+    .map((pts) => {
+      const c = ringCentroid(pts);
+      if (!best || c.area > best.area) best = c;
+      return "M" + pts.map(([x, y]) => `${round(x)} ${round(y)}`).join("L") + "Z";
+    })
+    .join("");
+  decorations.push({ name: d.name, fill: d.fill, path, position: { x: round(best.cx), y: round(best.cy) } });
+}
+
 // --- Emit worldMap.ts ------------------------------------------------------
 
 const regionOf = new Map(territories.map((t) => [t.id, t.regionId]));
@@ -390,6 +416,7 @@ export const worldMap: GameMap = ${JSON.stringify(
     regions: regionsOut,
     territories,
     connectors,
+    decorations,
   },
   null,
   0,

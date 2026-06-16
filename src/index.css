@@ -108,6 +108,22 @@ select {
   fill: #5b7fa6;
   fill-opacity: 0.4;
 }
+/* Non-playable decorative landmasses (e.g. Antarctica). */
+.decoration {
+  pointer-events: none;
+}
+.decoration path {
+  stroke: rgba(150, 172, 196, 0.5);
+  stroke-width: 0.5;
+}
+.decor-label {
+  fill: rgba(90, 110, 132, 0.7);
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-anchor: middle;
+  text-transform: uppercase;
+  pointer-events: none;
+}
 /* Dashed connecting lines for sea/strait routes. */
 .sea-link {
   stroke: rgba(220, 232, 245, 0.55);

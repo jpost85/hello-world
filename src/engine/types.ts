@@ -47,6 +47,16 @@ export interface GameMap {
   viewBox?: string;
   /** Sea/strait routes to draw as connecting lines (land borders are implicit). */
   connectors?: [string, string][];
+  /** Non-playable landmasses drawn for realism (e.g. Antarctica) — not territories. */
+  decorations?: MapDecoration[];
+}
+
+/** A purely cosmetic landmass: rendered, but never owned or fought over. */
+export interface MapDecoration {
+  name: string;
+  fill: string;
+  path: string;
+  position: { x: number; y: number };
 }
 
 // ---------------------------------------------------------------------------

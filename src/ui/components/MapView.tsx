@@ -98,6 +98,14 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
     <div className="board">
       <svg viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
         {isGeo && <rect className="ocean" x={0} y={0} width="100%" height="100%" />}
+        {state.map.decorations?.map((d, i) => (
+          <g key={`decor-${i}`} className="decoration">
+            <path d={d.path} fill={d.fill} />
+            <text className="decor-label" x={d.position.x} y={d.position.y}>
+              {d.name}
+            </text>
+          </g>
+        ))}
         {edges.map((e, i) => (
           <line key={i} className="edge" x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} />
         ))}
