@@ -756,7 +756,7 @@ const TYPES = {
   lobby:     { name: "Lobby",       cost: 0,     w: 1, h: 1, color: "#d9c79a", income: 0,    cap: 0,  kind: "transit" },
   office:    { name: "Office",      cost: 40000, w: 3, h: 1, color: "#9ec9e8", income: 0,    cap: 6,  kind: "work",  rent: 9000 },
   apartment: { name: "Apartment",   cost: 30000, w: 2, h: 1, color: "#f6c177", income: 0,    cap: 3,  kind: "home",  rent: 5000 },
-  condo:     { name: "Condo",       cost: 60000, w: 3, h: 1, color: "#f2a65a", income: 0,    cap: 4,  kind: "home",  rent: 11000 },
+  condo:     { name: "Condo",       cost: 60000, w: 3, h: 1, color: "#f2a65a", income: 0,    cap: 4,  kind: "home",  sale: true, salePrice: 20000 },
   hotel:     { name: "Hotel Room",  cost: 28000, w: 3, h: 1, color: "#7fd1c4", income: 0,    cap: 5,  kind: "hotel", rent: 2200 },
   shop:      { name: "Retail Shop", cost: 25000, w: 2, h: 1, color: "#c3a6e0", income: 0,    cap: 0,  kind: "shop", draw: 1 },
   restaurant:{ name: "Restaurant",  cost: 35000, w: 3, h: 1, color: "#f08c8c", income: 0,    cap: 0,  kind: "shop", draw: 1.3 },
@@ -813,7 +813,7 @@ const TYPE_DESC = {
   floor:     "Structural slab. Lets people walk across a floor — earns nothing on its own.",
   office:    "Workspace for up to 6 staff. Pays steady daily rent.",
   apartment: "Home for up to 3 residents. Pays daily rent.",
-  condo:     "Premium home for 4 residents. Higher rent than an apartment.",
+  condo:     "Premium home for 4 residents. Each unit sells once for a lump sum — no ongoing rent.",
   hotel:     "Guests check in each evening and pay a nightly rate per room.",
   shop:      "Earns from foot traffic — the busier your tower, the bigger the sales.",
   restaurant:"Like a shop, but draws larger crowds and earns more.",
@@ -1412,14 +1412,20 @@ function simTenants() {
         u.occupants++;
         state.pop++;
         updateUnitVisual(u);
-        if (u.occupants === t.cap) log(`${t.name} on floor ${u.row} fully leased!`, "good");
+        if (t.sale) { // condos sell each unit once, for a lump sum
+          state.cash += t.salePrice;
+          log(`${t.name} on floor ${u.row} sold a unit: +$${t.salePrice.toLocaleString()}`, "good");
+          sfx("cash");
+        }
+        if (u.occupants === t.cap) log(`${t.name} on floor ${u.row} fully ${t.sale ? "sold out" : "leased"}!`, "good");
       }
     }
     // satisfaction drifts toward a target set by transit access, amenities, and service quality
     const access = hasTransitAccess(u.col, u.row, u.w);
     const target = Math.max(0, Math.min(100, (access ? 85 : 40) + amen - frustHit));
     u.satisfaction += (target - u.satisfaction) * 0.05;
-    if (u.satisfaction < 30 && u.occupants > 0 && Math.random() < 0.1) {
+    // owners (sold condos) stay put; renters can leave when unhappy
+    if (!t.sale && u.satisfaction < 30 && u.occupants > 0 && Math.random() < 0.1) {
       u.occupants--; state.pop--; updateUnitVisual(u);
       log(`A tenant left ${t.name} on floor ${u.row}.`, "bad");
     }
