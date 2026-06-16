@@ -9,6 +9,7 @@
  */
 
 import { resolveRound } from "./combat.ts";
+import { CONFIG } from "./config.ts";
 import {
   baseReinforcements,
   connectedByOwnership,
@@ -31,19 +32,13 @@ import type {
 } from "./types.ts";
 
 /** Armies each player starts with, by player count (classic Risk values). */
-const STARTING_ARMIES: Record<number, number> = {
-  2: 40,
-  3: 35,
-  4: 30,
-  5: 25,
-  6: 20,
-};
+const STARTING_ARMIES = CONFIG.startingArmies;
 
 /** Armies removed from a territory's garrison to raise a fortress. */
-export const FORTRESS_BUILD_COST = 2;
+export const FORTRESS_BUILD_COST = CONFIG.fortress.buildCost;
 
 /** Combat bonus each starting general provides. */
-export const DEFAULT_GENERAL_BONUS = 1;
+export const DEFAULT_GENERAL_BONUS = CONFIG.generals.combatBonus;
 
 export interface PlayerConfig {
   name: string;
@@ -268,6 +263,21 @@ export function attack(
       conqueredThisTurn: true,
     };
     next = { ...next, events: log(next, `${attacker.name} captured ${territoryName(state, opts.to)}`) };
+
+    // A general caught in an overrun territory is captured and leaves the board.
+    const fallen = next.generals.find(
+      (g) => g.territoryId === opts.to && g.ownerId === toTs.ownerId,
+    );
+    if (fallen) {
+      next = {
+        ...next,
+        generals: next.generals.map((g) =>
+          g.id === fallen.id ? { ...g, territoryId: null } : g,
+        ),
+        events: log(next, `${fallen.name} was captured at ${territoryName(state, opts.to)}`),
+      };
+    }
+
     next = checkElimination(next, toTs.ownerId!);
     next = checkVictory(next);
   } else {

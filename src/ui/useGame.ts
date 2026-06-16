@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   attack,
   buildFortress,
@@ -10,11 +10,13 @@ import {
   fortify,
   moveGeneral,
   placeReinforcements,
+  playAITurn,
   areAdjacent,
   connectedByOwnership,
   classicWorld,
   DEFAULT_FACTIONS,
 } from "../engine/index.ts";
+import { loadGame, saveGame } from "./persistence.ts";
 import type {
   AttackResult,
   AttackStyle,
@@ -33,11 +35,15 @@ export interface UseGame {
   defenseStyle: DefenseStyle;
   fortifyCount: number;
   selectedGeneralId: string | null;
+  /** True while a computer player is taking its turn (UI should lock input). */
+  isAITurn: boolean;
   setAttackStyle: (s: AttackStyle) => void;
   setDefenseStyle: (s: DefenseStyle) => void;
   setFortifyCount: (n: number) => void;
   setSelectedGeneralId: (id: string | null) => void;
   start: (players: PlayerConfig[], seed?: number) => void;
+  /** Resume a previously saved game; returns false if there was none. */
+  resume: () => boolean;
   clickTerritory: (id: string) => void;
   doAttack: () => void;
   doFortify: () => void;
@@ -82,6 +88,34 @@ export function useGame(): UseGame {
     setError(null);
   }, []);
 
+  const resume = useCallback((): boolean => {
+    const saved = loadGame();
+    if (!saved) return false;
+    setState(saved);
+    setFrom(null);
+    setTo(null);
+    setLastResult(null);
+    setError(null);
+    return true;
+  }, []);
+
+  const isAITurn =
+    !!state && state.phase !== "gameover" && currentPlayer(state).isAI;
+
+  // Autosave after every state change so a refresh resumes mid-game.
+  useEffect(() => {
+    if (state) saveGame(state);
+  }, [state]);
+
+  // Let computer players take their turns automatically, paced for visibility.
+  useEffect(() => {
+    if (!isAITurn || !state) return;
+    const timer = setTimeout(() => {
+      setState((prev) => (prev ? playAITurn(prev) : prev));
+    }, 650);
+    return () => clearTimeout(timer);
+  }, [isAITurn, state]);
+
   const selectable = useMemo<Set<string>>(() => {
     const set = new Set<string>();
     if (!state || state.phase === "gameover") return set;
@@ -112,7 +146,7 @@ export function useGame(): UseGame {
 
   const clickTerritory = useCallback(
     (id: string) => {
-      if (!state || state.phase === "gameover") return;
+      if (!state || state.phase === "gameover" || currentPlayer(state).isAI) return;
       setError(null);
       const me = currentPlayer(state).id;
       const owner = state.territories[id]?.ownerId;
@@ -204,11 +238,13 @@ export function useGame(): UseGame {
     defenseStyle,
     fortifyCount,
     selectedGeneralId,
+    isAITurn,
     setAttackStyle,
     setDefenseStyle,
     setFortifyCount,
     setSelectedGeneralId,
     start,
+    resume,
     clickTerritory,
     doAttack,
     doFortify,

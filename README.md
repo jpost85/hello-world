@@ -3,10 +3,17 @@
 A web-based remake of the 1996 PC game *Risk: The Game of Global Domination*,
 built with React + TypeScript + Vite.
 
-This first milestone delivers a **fully tested, deterministic game engine** plus
-a **playable hot-seat UI** on the classic 42-territory world map. It is the
-foundation for the larger feature set (more maps, factions, AI opponents, online
-multiplayer) described in the roadmap below.
+This milestone delivers a **fully tested, deterministic game engine**, a
+**computer opponent**, and a **playable UI** (single-player vs. AI or hot-seat)
+on the classic 42-territory world map. It is the foundation for the larger
+feature set (more maps, factions, online multiplayer) described in the roadmap.
+
+> **Sibling to "Liberty's Call".** This project is built as a separate codebase
+> from our Revolutionary-War game, but borrows its best habits: a centralised
+> `CONFIG` balance layer, an AI that drives the game through the same actions a
+> human uses, a headless full-game balance harness, and `localStorage` autosave.
+> We keep React + TypeScript for scalability, and improve on Liberty's Call with
+> dice-based combat and a **seeded, reproducible** RNG (Liberty's Call has none).
 
 ## Features in this build
 
@@ -20,13 +27,18 @@ multiplayer) described in the roadmap below.
   - _Cautious_ — commit fewer dice for slower but safer exchanges.
 - **Generals** — mobile hero units that add +1 to their side's highest die while
   stationed in a territory. They can be moved and reassigned across your
-  connected land.
+  connected land, and are **captured** (removed) if their territory is overrun.
 - **Fortresses** — defensive structures that grant the defender an extra die.
   Captured fortresses are razed.
+- **Computer opponents** — any seat can be a baseline AI that masses forces,
+  presses winning attacks, and rails reserves to the front. Mix humans and AIs.
 - **Classic world map** — all 42 territories and 6 continents with authentic
   adjacency and region bonuses.
 - **Reinforce → Attack → Fortify** turn structure, region-control bonuses,
   player elimination, and a victory condition.
+- **Autosave** — every move is persisted to the browser; reload and **Continue**.
+- **Centralised balance config** and a **headless simulation harness** that
+  plays hundreds of AI-vs-AI games to tune balance and guard against regressions.
 
 ## Getting started
 
@@ -56,18 +68,21 @@ The codebase deliberately separates a **pure game engine** from the **UI**:
 src/
   engine/            Pure TypeScript — no React, no DOM. Deterministic & tested.
     types.ts         Domain model (territories, players, generals, state…)
+    config.ts        Central CONFIG: every tunable balance number in one place
     rng.ts           Seedable PRNG; RNG state lives in GameState for replayability
     combat.ts        Dice resolution, style tables, general/fortress modifiers
     map.ts           Queries: adjacency, ownership, region bonuses, connectivity
     game.ts          State machine: setup + every turn action (immutable updates)
+    ai.ts            Baseline opponent — drives the game via the same actions
     maps/            Static board data (classic world map)
-    __tests__/       Vitest suites (38 tests)
+    __tests__/       Vitest suites incl. the headless simulation harness (41 tests)
   ui/                React layer that renders state and dispatches engine actions
-    useGame.ts       Hook bridging engine actions to component state/selection
+    useGame.ts       Hook bridging engine actions to state/selection; AI + autosave
+    persistence.ts   localStorage save/load/continue
     components/      MapView (SVG board), ControlPanel, setup, dice, event log
 ```
 
-Key principles (carried over from prior projects):
+Key principles (shared with our sister project "Liberty's Call"):
 
 - **Engine purity.** Nothing in `src/engine` imports from `src/ui`. The engine
   is a library you could run on a server or in tests without a browser.
@@ -76,18 +91,37 @@ Key principles (carried over from prior projects):
   game — which makes combat unit-testable and enables future replay/netcode.
 - **Immutability.** Engine actions return new state instead of mutating, so the
   UI can diff, undo, and reason about transitions cleanly.
-- **Data-driven balance.** Combat styles, dice caps, and structure bonuses live
-  in tables (`combat.ts`) so tuning never touches resolution logic.
+- **Data-driven balance.** All tunable numbers live in `config.ts` so tuning
+  never touches resolution logic.
+- **The AI plays by the rules.** `ai.ts` calls the same `attack`/`fortify`/… the
+  player does — it can't cheat, and the balance harness reuses it to play full
+  games headlessly.
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for a deeper tour and the
 extension points for the roadmap.
 
+## Balance harness
+
+`src/engine/__tests__/sim.test.ts` plays full AI-vs-AI games to completion and
+prints a balance line during `npm test`, e.g.:
+
+```
+[balance] 120 games · avg 17.2 turns · p1 85 / p2 35 wins
+```
+
+This is the dashboard for tuning `CONFIG`. (It currently shows a notable
+first-player advantage — a known item to balance, see roadmap.)
+
 ## Roadmap
 
+- [x] Computer opponents (baseline AI).
+- [x] Autosave / continue.
+- [x] Headless balance harness.
+- [ ] Tune first-player advantage (e.g. scaling setup or reinforcement curves).
 - [ ] Additional maps and a map-selection screen (the engine is already
       map-agnostic; only data is needed).
 - [ ] Faction traits/bonuses (the `Faction` type is the hook).
-- [ ] AI opponents (the engine's pure actions make a bot straightforward).
+- [ ] Smarter AI difficulty levels.
 - [ ] Risk cards / set trade-ins for escalating reinforcements.
 - [ ] Animations for dice and troop movement.
 - [ ] Online multiplayer (deterministic engine + serialisable state enable this).

@@ -53,6 +53,11 @@ export function ControlPanel(g: UseGame) {
             🏆 <b>{state.players.find((p) => p.id === state.winnerId)?.name}</b> conquered the world.
           </p>
         </section>
+      ) : g.isAITurn ? (
+        <section>
+          <h2>{phaseLabel(state.phase)}</h2>
+          <p className="hint">🤖 {player.name} (computer) is taking its turn…</p>
+        </section>
       ) : (
         <PhaseControls g={g} />
       )}
@@ -73,7 +78,7 @@ export function ControlPanel(g: UseGame) {
           </select>
           <button
             onClick={g.doMoveGeneral}
-            disabled={!g.selectedGeneralId || !g.from || (state.phase !== "reinforce" && state.phase !== "fortify")}
+            disabled={g.isAITurn || !g.selectedGeneralId || !g.from || (state.phase !== "reinforce" && state.phase !== "fortify")}
           >
             Move here
           </button>
@@ -81,7 +86,7 @@ export function ControlPanel(g: UseGame) {
         <div className="row">
           <button
             onClick={g.doBuildFortress}
-            disabled={!g.from || (state.phase !== "reinforce" && state.phase !== "fortify")}
+            disabled={g.isAITurn || !g.from || (state.phase !== "reinforce" && state.phase !== "fortify")}
           >
             🏰 Build fortress at {name(g.from)}
           </button>

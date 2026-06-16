@@ -14,6 +14,7 @@
  * the constants below, so they can be tuned without touching resolution logic.
  */
 
+import { CONFIG } from "./config.ts";
 import { rollDice } from "./rng.ts";
 import type {
   AttackStyle,
@@ -22,31 +23,22 @@ import type {
   StyleProfile,
 } from "./types.ts";
 
-/** Base maximum dice before style/structure modifiers. */
-export const BASE_MAX_ATTACK_DICE = 3;
-export const BASE_MAX_DEFENSE_DICE = 2;
-
-/** Extra defending die granted by a fortress. */
-export const FORTRESS_DEFENSE_DICE = 1;
-
 /**
- * Style tuning tables.
+ * Balance values are sourced from the central `CONFIG` table; these aliases keep
+ * the names stable for callers and tests.
  *
  * Standard reproduces classic Risk. Aggressive presses harder (wins ties, or
- * strikes harder) at the cost of committing more force; cautious commits fewer
- * dice — slower, but exposes fewer armies to loss in a round.
+ * strikes harder); cautious commits fewer dice — slower, but exposes fewer
+ * armies to loss in a round.
  */
-export const ATTACK_STYLES: Record<AttackStyle, StyleProfile> = {
-  standard: { diceModifier: 0, highRollBonus: 0, winsTies: false },
-  aggressive: { diceModifier: 0, highRollBonus: 0, winsTies: true },
-  cautious: { diceModifier: -1, highRollBonus: 0, winsTies: false },
-};
+export const BASE_MAX_ATTACK_DICE = CONFIG.combat.baseMaxAttackDice;
+export const BASE_MAX_DEFENSE_DICE = CONFIG.combat.baseMaxDefenseDice;
 
-export const DEFENSE_STYLES: Record<DefenseStyle, StyleProfile> = {
-  standard: { diceModifier: 0, highRollBonus: 0, winsTies: false },
-  aggressive: { diceModifier: 0, highRollBonus: 1, winsTies: false },
-  cautious: { diceModifier: -1, highRollBonus: 0, winsTies: false },
-};
+/** Extra defending die granted by a fortress. */
+export const FORTRESS_DEFENSE_DICE = CONFIG.fortress.defenseDice;
+
+export const ATTACK_STYLES: Record<AttackStyle, StyleProfile> = CONFIG.combat.attackStyles;
+export const DEFENSE_STYLES: Record<DefenseStyle, StyleProfile> = CONFIG.combat.defenseStyles;
 
 export interface CombatContext {
   attackerArmies: number;

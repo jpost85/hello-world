@@ -92,6 +92,26 @@ Vitest suites live in `src/engine/__tests__/`:
 - `game.test.ts` — setup invariants and the full action surface (reinforce,
   attack/capture, fortify, fortress, general movement, elimination, victory,
   turn rotation) on a controlled mini-map.
+- `sim.test.ts` — the **headless balance harness**: plays full AI-vs-AI games to
+  completion, asserts every game ends decisively and reproducibly, and prints a
+  win-rate / game-length report for tuning `config.ts`.
 
 Run with `npm test`. The UI layer is intentionally thin; game correctness is
 guaranteed at the engine level.
+
+## Balance configuration
+
+`src/engine/config.ts` holds a single `CONFIG` object with every tunable number
+(starting armies, reinforcement formula, dice caps, style profiles, general and
+fortress values). `combat.ts` and `game.ts` read from it, so re-balancing is a
+data edit in one file — and the simulation harness measures the effect.
+
+## The AI
+
+`src/engine/ai.ts` exposes `playAITurn(state)`, which plays a computer player's
+entire turn by calling the same public engine actions a human does. Because it
+cannot bypass the rules, the same function powers both single-player mode (the UI
+runs it automatically on AI seats) and the balance harness (which runs it for
+every seat). Its policy is a simple, competent baseline: mass reinforcements on
+the best springboard, press every clearly-winning attack, then rail interior
+reserves to the most-threatened front.
