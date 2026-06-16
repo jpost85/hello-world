@@ -769,7 +769,7 @@ const CELL_W = 32;          // px per grid column
 const CELL_H = 36;          // px per floor
 // Tower width in cells: wide enough to fill the screen (so the ground spans the
 // whole view) and to contain any saved tower; minimum 40.
-const COLS = (() => {
+let COLS = (() => {
   let need = 40;
   try {
     const raw = localStorage.getItem("microtower.save.v1");
@@ -919,7 +919,8 @@ const cloudsEl = document.getElementById("clouds");
 const skylineEl = document.getElementById("skyline");
 
 const MIN_ROW = -BASEMENT_FLOORS;     // deepest buildable basement row
-const worldWidth = COLS * CELL_W;
+let worldWidth = COLS * CELL_W;
+let earthEl = null, groundEl = null;  // background refs, widened on resize
 const totalRows = MAX_FLOORS - MIN_ROW + 1;
 const worldHeight = totalRows * CELL_H;
 world.style.width = worldWidth + "px";
@@ -933,39 +934,62 @@ function rowTop(row) {
 function colLeft(col) { return col * CELL_W; }
 
 // ---------- Build the static background grid ----------
+function addEmptyCell(col, row) {
+  const c = document.createElement("div");
+  c.className = "cell empty-buildable" + (row < 0 ? " underground" : "");
+  c.style.left = colLeft(col) + "px";
+  c.style.top = rowTop(row) + "px";
+  c.style.width = CELL_W + "px";
+  c.style.height = CELL_H + "px";
+  c.dataset.col = col;
+  c.dataset.row = row;
+  world.appendChild(c);
+}
+
 function buildBackground() {
   const surface = rowTop(-1); // street level = bottom of the ground floor
   // earth fill behind the basements (starts below the grass)
-  const earth = document.createElement("div");
-  earth.className = "earth";
-  earth.style.left = "0px";
-  earth.style.top = (surface + 14) + "px";
-  earth.style.width = worldWidth + "px";
-  earth.style.height = (worldHeight - surface - 14) + "px";
-  world.appendChild(earth);
+  earthEl = document.createElement("div");
+  earthEl.className = "earth";
+  earthEl.style.left = "0px";
+  earthEl.style.top = (surface + 14) + "px";
+  earthEl.style.width = worldWidth + "px";
+  earthEl.style.height = (worldHeight - surface - 14) + "px";
+  world.appendChild(earthEl);
   // green grass band at street level (the ground)
-  const ground = document.createElement("div");
-  ground.className = "ground";
-  ground.style.left = "0px";
-  ground.style.top = surface + "px";
-  ground.style.width = worldWidth + "px";
-  ground.style.height = "18px";
-  world.appendChild(ground);
+  groundEl = document.createElement("div");
+  groundEl.className = "ground";
+  groundEl.style.left = "0px";
+  groundEl.style.top = surface + "px";
+  groundEl.style.width = worldWidth + "px";
+  groundEl.style.height = "18px";
+  world.appendChild(groundEl);
 
   // buildable empty cells (basements through the top), one element per (col,row)
-  for (let row = MIN_ROW; row <= MAX_FLOORS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      const c = document.createElement("div");
-      c.className = "cell empty-buildable" + (row < 0 ? " underground" : "");
-      c.style.left = colLeft(col) + "px";
-      c.style.top = rowTop(row) + "px";
-      c.style.width = CELL_W + "px";
-      c.style.height = CELL_H + "px";
-      c.dataset.col = col;
-      c.dataset.row = row;
-      world.appendChild(c);
-    }
-  }
+  for (let row = MIN_ROW; row <= MAX_FLOORS; row++)
+    for (let col = 0; col < COLS; col++) addEmptyCell(col, row);
+}
+
+// How wide the world should be, given the current viewport and existing tower.
+function desiredCols() {
+  let need = 40;
+  for (const u of state.units) need = Math.max(need, u.col + u.w + 6);
+  const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
+  const byScreen = Math.min(120, Math.ceil(vw / CELL_W) + 2);
+  return Math.max(40, byScreen, need);
+}
+
+// Grow the grid (and ground) to a wider column count; never shrinks.
+function growWorld(newCols) {
+  if (newCols <= COLS) return;
+  const oldCols = COLS;
+  COLS = newCols;
+  worldWidth = COLS * CELL_W;
+  world.style.width = worldWidth + "px";
+  if (earthEl) earthEl.style.width = worldWidth + "px";
+  if (groundEl) groundEl.style.width = worldWidth + "px";
+  for (let row = MIN_ROW; row <= MAX_FLOORS; row++)
+    for (let col = oldCols; col < COLS; col++) addEmptyCell(col, row);
 }
 
 // ---------- Tools UI ----------
@@ -2429,6 +2453,15 @@ function init() {
   updateSoundBtn();
   if (isMobile()) app.classList.add("nav-closed");
   requestAnimationFrame((t) => { lastTs = t; requestAnimationFrame(tick); });
+}
+
+// Re-extend the grid if the window is resized wider (debounced; grow-only).
+if (typeof window !== "undefined" && window.addEventListener) {
+  let _resizeT;
+  window.addEventListener("resize", () => {
+    clearTimeout(_resizeT);
+    _resizeT = setTimeout(() => growWorld(desiredCols()), 200);
+  });
 }
 
 init();
