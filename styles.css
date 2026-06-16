@@ -221,7 +221,17 @@ html, body {
   background: #2a2012;
   overflow-y: auto;
 }
-#region-info h3 { margin: 0 0 4px; }
+#region-info { position: relative; }
+.ri-portrait { position: absolute; top: 14px; right: 16px; width: 60px; height: 60px; }
+.ri-portrait:empty { display: none; }
+.ri-portrait .portrait-svg, .ri-portrait .portrait-img {
+  width: 60px; height: 60px; display: block;
+}
+.ri-portrait .portrait-img {
+  border-radius: 50%; object-fit: cover; border: 3px solid var(--border);
+  background: var(--parchment);
+}
+#region-info h3 { margin: 0 0 4px; padding-right: 66px; }
 .ri-owner { margin: 0 0 10px; font-weight: bold; font-size: 14px; }
 .ri-owner.patriot { color: var(--patriot); }
 .ri-owner.crown { color: var(--crown); }

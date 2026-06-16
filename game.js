@@ -168,18 +168,25 @@
   //   capRisk  — multiplier on the chance of capture after a broken assault
   // A general leads marches/assaults and can be captured if overrun.
   const GENERAL_SETUP = {
-    philadelphia: { name: "Gen. Washington", chief: true, atk: 1.14, def: 1.26, own: 0.85, foe: 1.0,  capRisk: 0.5,
+    philadelphia: { name: "Gen. Washington", art: "washington", chief: true, atk: 1.14, def: 1.26, own: 0.85, foe: 1.0,  capRisk: 0.5,
             trait: "Fabian Strategy", desc: "A masterful defender who spends his men sparingly." },
-    va:   { name: "Gen. Greene",     atk: 1.18, def: 1.12, own: 0.80, foe: 1.0,  capRisk: 0.6,
+    va:   { name: "Gen. Greene",     art: "greene", atk: 1.18, def: 1.12, own: 0.80, foe: 1.0,  capRisk: 0.6,
             trait: "Fighting Retreat", desc: "Loses few men even in defeat; hard to pin down." },
-    mass: { name: "Gen. Gates",      atk: 1.05, def: 1.22, own: 1.0,  foe: 1.22, capRisk: 1.0,
+    mass: { name: "Gen. Gates",      art: "gates", atk: 1.05, def: 1.22, own: 1.0,  foe: 1.22, capRisk: 1.0,
             trait: "Entrenched", desc: "On the defensive, mauls any army that assaults him." },
-    nyc:  { name: "Gen. Howe",       chief: true, atk: 1.20, def: 1.24, own: 0.88, foe: 1.0,  capRisk: 0.8,
+    nyc:  { name: "Gen. Howe",       art: "howe", chief: true, atk: 1.20, def: 1.24, own: 0.88, foe: 1.0,  capRisk: 0.8,
             trait: "Methodical", desc: "Steady and capable in both attack and defense." },
-    ga:   { name: "Gen. Cornwallis", atk: 1.32, def: 1.16, own: 1.12, foe: 1.30, capRisk: 1.1,
+    ga:   { name: "Gen. Cornwallis", art: "cornwallis", atk: 1.32, def: 1.16, own: 1.12, foe: 1.30, capRisk: 1.1,
             trait: "Aggressive", desc: "Hits devastatingly hard, but bleeds his own army." },
-    quebec: { name: "Gen. Burgoyne", atk: 1.16, def: 1.14, own: 1.12, foe: 1.0,  capRisk: 2.0,
+    quebec: { name: "Gen. Burgoyne", art: "burgoyne", atk: 1.16, def: 1.14, own: 1.12, foe: 1.0,  capRisk: 2.0,
             trait: "Overconfident", desc: "Bold to a fault — and exposed to outright disaster." },
+  };
+
+  // Per-general portrait art. Keys match GENERAL_SETUP.art. Values are image
+  // URLs/data-URIs supplied by the project; missing entries fall back to a
+  // drawn officer emblem. Populate this as art is added (see assets/generals/).
+  const PORTRAITS = {
+    // washington: "assets/generals/washington.png", ...
   };
 
   /* ----------------- Generated geographic map data (see tools-genmap.js) -- */
@@ -451,12 +458,10 @@
       map.appendChild(ring);
 
       const g = svgEl("g", { class: "overlay", "pointer-events": "none" });
-      const a = svgEl("text", { x: sea.cx, y: sea.cy + 4, class: "sea-anchor" });
-      a.textContent = "⚓";
-      g.appendChild(a);
+      g.appendChild(tallShip(sea.cx, sea.cy));
       // Ship strength: crown vs patriot.
       const sh = svgEl("text", { x: sea.cx, y: sea.cy - 15, class: "sea-ships" });
-      sh.textContent = "⛵ " + node.ships.crown + "–" + node.ships.patriot;
+      sh.textContent = node.ships.crown + "–" + node.ships.patriot;
       g.appendChild(sh);
       // Embarked army badge.
       if (node.troops > 0) {
@@ -574,6 +579,32 @@
     return path + "Z";
   }
 
+  // A small tall-ship silhouette centred on (cx, cy), for sea nodes.
+  function tallShip(cx, cy) {
+    const ink = "#1a120a";
+    const g = svgEl("g", { "pointer-events": "none" });
+    g.appendChild(svgEl("path", { d: `M${cx - 8} ${cy + 3} L${cx + 8} ${cy + 3} Q${cx} ${cy + 8} ${cx - 8} ${cy + 3} Z`, fill: "#e9dcc0", stroke: ink, "stroke-width": 0.7 }));
+    g.appendChild(svgEl("line", { x1: cx - 3.5, y1: cy + 3, x2: cx - 3.5, y2: cy - 8, stroke: ink, "stroke-width": 0.7 }));
+    g.appendChild(svgEl("line", { x1: cx + 3.5, y1: cy + 3, x2: cx + 3.5, y2: cy - 6, stroke: ink, "stroke-width": 0.7 }));
+    g.appendChild(svgEl("path", { d: `M${cx - 3.5} ${cy - 7} Q${cx - 8} ${cy - 3} ${cx - 3.5} ${cy + 1} Z`, fill: "#f7efd9", stroke: ink, "stroke-width": 0.5 }));
+    g.appendChild(svgEl("path", { d: `M${cx + 3.5} ${cy - 5} Q${cx + 8} ${cy - 2} ${cx + 3.5} ${cy + 1} Z`, fill: "#f7efd9", stroke: ink, "stroke-width": 0.5 }));
+    return g;
+  }
+
+  // Portrait for a general's panel medallion: the project's art if present,
+  // else a drawn period-officer emblem tinted by side.
+  function portraitHTML(general, side) {
+    const src = general.art && PORTRAITS[general.art];
+    if (src) return `<img class="portrait-img" src="${src}" alt="${general.name}">`;
+    const accent = side === "crown" ? "#8c2b2b" : "#1f4e79";
+    return `<svg viewBox="0 0 60 60" class="portrait-svg" aria-hidden="true">
+      <circle cx="30" cy="31" r="27" fill="#efe3c8" stroke="${accent}" stroke-width="3"/>
+      <path d="M13 57 Q30 39 47 57 Z" fill="${accent}"/>
+      <circle cx="30" cy="30" r="8.5" fill="#cdab86" stroke="#3a2c1c" stroke-width="0.8"/>
+      <path d="M17 25 Q30 12 43 25 Q30 22 17 25 Z" fill="#1a120a"/>
+    </svg>`;
+  }
+
   function renderTopbar() {
     const me = playerSide();
     $("#stat-date").textContent = dateLabel(S.turn);
@@ -595,6 +626,7 @@
       ownerEl.textContent = "";
       ownerEl.className = "ri-owner";
       $("#ri-general").textContent = "";
+      $("#ri-portrait").innerHTML = "";
       $("#ri-troops").textContent = "—";
       $("#ri-manpower").textContent = "—";
       $("#ri-income").textContent = "—";
@@ -617,8 +649,10 @@
       genEl.textContent = "✦ " + gnl.name + " — " + gnl.trait +
         " (Atk " + pct(gnl.atk) + " · Def " + pct(gnl.def) + ")";
       genEl.title = gnl.desc || "";
+      $("#ri-portrait").innerHTML = portraitHTML(gnl, r.owner);
     } else {
       genEl.textContent = "";
+      $("#ri-portrait").innerHTML = "";
     }
 
     $("#ri-troops").textContent = menFull(r.troops);
