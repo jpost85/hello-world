@@ -226,10 +226,13 @@ html, body {
 .ri-portrait:empty { display: none; margin: 0; }
 .ri-portrait .portrait-svg, .ri-portrait .portrait-img {
   width: 76px; height: auto; display: block;
+}
+.ri-portrait .portrait-svg {
   border-radius: 3px; box-shadow: 0 1px 4px rgba(0,0,0,0.45);
 }
 .ri-portrait .portrait-img {
-  object-fit: contain; background: var(--parchment);
+  /* transparent around the card; shadow follows the card silhouette */
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.55));
 }
 #region-info h3 { margin: 0 0 4px; }
 .ri-owner { margin: 0 0 10px; font-weight: bold; font-size: 14px; }
