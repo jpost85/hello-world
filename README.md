@@ -94,11 +94,14 @@ The real-world board is generated, not hand-placed. `tools/genmap.mjs`
 (the Dominion analogue of Liberty's Call's `tools-genmap.js`):
 
 1. Downloads public-domain **Natural Earth** admin-0 country geometry (1:110m).
-2. Groups/splits countries into a curated `SPEC` of 67 territories in 9 regions
+2. Groups/splits countries into a curated `SPEC` of 60 territories in 9 regions
    (large nations are clipped along meridians via Sutherland-Hodgman).
 3. Projects everything to an equirectangular SVG, computes centroids for unit
    badges, derives land adjacency from shared borders, and adds curated sea
    routes — then verifies the graph is fully connected (so every game is winnable).
+4. **Derives each continent's bonus from the graph** — `round((territories +
+   2 × border-territories) / 3)` — so bonuses reward both size and the defensive
+   burden of a continent's chokepoints, and stay balanced if the map changes.
 
 Regenerate anytime with `node tools/genmap.mjs`. The output
 (`src/engine/maps/worldMap.ts`) is committed; the source GeoJSON is re-fetched
@@ -131,16 +134,23 @@ prints a balance line during `npm test`, e.g.:
 [balance] 120 games · avg 17.2 turns · p1 85 / p2 35 wins
 ```
 
-This is the dashboard for tuning `CONFIG`. (It currently shows a notable
-first-player advantage — a known item to balance, see roadmap.)
+`src/engine/__tests__/balance-continents.test.ts` complements it by playing
+6-player world games and reporting, per continent, how often it is secured and
+whether the first holder wins — the read used to confirm the derived continent
+bonuses produce a sensible value gradient (corners are footholds; large central
+masses are decisive) with no continent a guaranteed win.
+
+Together these are the dashboard for tuning `CONFIG` and the map. (The 2-player
+line still shows a notable first-player advantage — a known item to balance.)
 
 ## Roadmap
 
 - [x] Computer opponents (baseline AI).
 - [x] Autosave / continue.
 - [x] Headless balance harness.
-- [x] Real-world map generated from Natural Earth geometry (67 territories).
-- [ ] Tune first-player advantage and the new map's region bonuses via the harness.
+- [x] Real-world map generated from Natural Earth geometry (60 territories).
+- [x] Continent bonuses derived from map structure and validated with the harness.
+- [ ] Tune first-player advantage (e.g. scaling setup or reinforcement curves).
 - [ ] Map-selection screen (classic vs. world; the engine is already map-agnostic).
 - [ ] Higher-detail (1:50m) and additional regional maps.
 - [ ] Faction traits/bonuses (the `Faction` type is the hook).
