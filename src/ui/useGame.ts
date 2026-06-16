@@ -13,7 +13,7 @@ import {
   playAITurn,
   areAdjacent,
   connectedByOwnership,
-  classicWorld,
+  worldMap,
   DEFAULT_FACTIONS,
 } from "../engine/index.ts";
 import { loadGame, saveGame } from "./persistence.ts";
@@ -76,7 +76,7 @@ export function useGame(): UseGame {
 
   const start = useCallback((players: PlayerConfig[], seed?: number) => {
     const game = createGame({
-      map: classicWorld,
+      map: worldMap,
       factions: DEFAULT_FACTIONS,
       players,
       seed,

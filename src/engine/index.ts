@@ -9,3 +9,4 @@ export { CONFIG } from "./config.ts";
 export { playAITurn } from "./ai.ts";
 export { DEFAULT_FACTIONS } from "./factions.ts";
 export { classicWorld } from "./maps/classicWorld.ts";
+export { worldMap } from "./maps/worldMap.ts";

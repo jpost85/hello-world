@@ -107,33 +107,46 @@ select {
 .territory {
   cursor: pointer;
 }
-.territory circle {
+.territory circle,
+.territory path {
   stroke: #0a0d12;
-  stroke-width: 1.5;
-  transition: stroke 0.1s, stroke-width 0.1s;
+  stroke-width: 0.7;
+  transition: stroke 0.1s, stroke-width 0.1s, filter 0.1s;
 }
+.territory circle {
+  stroke-width: 1.5;
+}
+.territory:hover path {
+  filter: brightness(1.18);
+}
+.territory.selectable path,
 .territory.selectable circle {
   stroke: #ffffff;
+  stroke-width: 1.4;
 }
+.territory.selected path,
 .territory.selected circle {
   stroke: var(--accent);
-  stroke-width: 3;
+  stroke-width: 2.2;
+  filter: brightness(1.2);
 }
-.territory text {
-  fill: #0a0d12;
-  font-size: 11px;
+/* Army-count badge sits above the territory shape. */
+.badge-bg {
+  fill: rgba(10, 13, 18, 0.78);
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1;
+  pointer-events: none;
+}
+.badge-text {
+  fill: #fff;
+  font-size: 13px;
   font-weight: 700;
   text-anchor: middle;
   dominant-baseline: central;
   pointer-events: none;
 }
-.tname {
-  fill: var(--muted);
-  font-size: 8px;
-  font-weight: 500;
-}
 .marker {
-  font-size: 12px;
+  font-size: 13px;
   pointer-events: none;
 }
 .edge {

@@ -28,8 +28,13 @@ export interface Territory {
   regionId: string;
   /** Territories reachable for movement and attack. */
   adjacentTo: string[];
-  /** Normalised layout position in [0, 1] for rendering. */
+  /**
+   * Layout position for the unit badge. In maps with a `viewBox` these are
+   * absolute coordinates in that space; otherwise they are normalised to [0, 1].
+   */
   position: { x: number; y: number };
+  /** Optional SVG path (projected real geography) rendered as the territory shape. */
+  path?: string;
 }
 
 /** A complete, static board definition. */
@@ -38,6 +43,8 @@ export interface GameMap {
   name: string;
   territories: Territory[];
   regions: Region[];
+  /** SVG viewBox for path-based maps; when absent, positions are normalised. */
+  viewBox?: string;
 }
 
 // ---------------------------------------------------------------------------

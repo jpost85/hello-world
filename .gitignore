@@ -7,3 +7,6 @@ coverage
 *.log
 .vite
 *.tsbuildinfo
+
+# Natural Earth source data (re-downloaded by tools/genmap.mjs)
+tools/data/

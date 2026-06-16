@@ -5,8 +5,9 @@ built with React + TypeScript + Vite.
 
 This milestone delivers a **fully tested, deterministic game engine**, a
 **computer opponent**, and a **playable UI** (single-player vs. AI or hot-seat)
-on the classic 42-territory world map. It is the foundation for the larger
-feature set (more maps, factions, online multiplayer) described in the roadmap.
+on a **real-world map of 67 territories** drawn from actual geography. It is the
+foundation for the larger feature set (more maps, factions, online multiplayer)
+described in the roadmap.
 
 > **Sibling to "Liberty's Call".** This project is built as a separate codebase
 > from our Revolutionary-War game, but borrows its best habits: a centralised
@@ -32,8 +33,11 @@ feature set (more maps, factions, online multiplayer) described in the roadmap.
   Captured fortresses are razed.
 - **Computer opponents** — any seat can be a baseline AI that masses forces,
   presses winning attacks, and rails reserves to the front. Mix humans and AIs.
-- **Classic world map** — all 42 territories and 6 continents with authentic
-  adjacency and region bonuses.
+- **Real-world map** — 67 territories across 9 continents, projected from
+  public-domain **Natural Earth** country geometry (a few large nations split
+  along meridians, e.g. US East/West, Russia into three). Adjacency is derived
+  from shared borders plus curated sea routes (Bering Strait, Gibraltar, etc.).
+  The classic 42-territory board is also retained for tests.
 - **Reinforce → Attack → Fortify** turn structure, region-control bonuses,
   player elimination, and a victory condition.
 - **Autosave** — every move is persisted to the browser; reload and **Continue**.
@@ -74,13 +78,31 @@ src/
     map.ts           Queries: adjacency, ownership, region bonuses, connectivity
     game.ts          State machine: setup + every turn action (immutable updates)
     ai.ts            Baseline opponent — drives the game via the same actions
-    maps/            Static board data (classic world map)
-    __tests__/       Vitest suites incl. the headless simulation harness (41 tests)
+    maps/            classicWorld.ts (abstract) + worldMap.ts (generated geometry)
+    __tests__/       Vitest suites incl. the headless simulation harness (49 tests)
   ui/                React layer that renders state and dispatches engine actions
     useGame.ts       Hook bridging engine actions to state/selection; AI + autosave
     persistence.ts   localStorage save/load/continue
     components/      MapView (SVG board), ControlPanel, setup, dice, event log
+tools/
+    genmap.mjs       Projects Natural Earth GeoJSON into src/engine/maps/worldMap.ts
 ```
+
+## Map data pipeline
+
+The real-world board is generated, not hand-placed. `tools/genmap.mjs`
+(the Risk analogue of Liberty's Call's `tools-genmap.js`):
+
+1. Downloads public-domain **Natural Earth** admin-0 country geometry (1:110m).
+2. Groups/splits countries into a curated `SPEC` of 67 territories in 9 regions
+   (large nations are clipped along meridians via Sutherland-Hodgman).
+3. Projects everything to an equirectangular SVG, computes centroids for unit
+   badges, derives land adjacency from shared borders, and adds curated sea
+   routes — then verifies the graph is fully connected (so every game is winnable).
+
+Regenerate anytime with `node tools/genmap.mjs`. The output
+(`src/engine/maps/worldMap.ts`) is committed; the source GeoJSON is re-fetched
+on demand and git-ignored.
 
 Key principles (shared with our sister project "Liberty's Call"):
 
@@ -117,9 +139,10 @@ first-player advantage — a known item to balance, see roadmap.)
 - [x] Computer opponents (baseline AI).
 - [x] Autosave / continue.
 - [x] Headless balance harness.
-- [ ] Tune first-player advantage (e.g. scaling setup or reinforcement curves).
-- [ ] Additional maps and a map-selection screen (the engine is already
-      map-agnostic; only data is needed).
+- [x] Real-world map generated from Natural Earth geometry (67 territories).
+- [ ] Tune first-player advantage and the new map's region bonuses via the harness.
+- [ ] Map-selection screen (classic vs. world; the engine is already map-agnostic).
+- [ ] Higher-detail (1:50m) and additional regional maps.
 - [ ] Faction traits/bonuses (the `Faction` type is the hook).
 - [ ] Smarter AI difficulty levels.
 - [ ] Risk cards / set trade-ins for escalating reinforcements.

@@ -3,17 +3,18 @@ import { createGame } from "../game.ts";
 import { playAITurn } from "../ai.ts";
 import { territoriesOf } from "../map.ts";
 import { classicWorld } from "../maps/classicWorld.ts";
+import { worldMap } from "../maps/worldMap.ts";
 import { DEFAULT_FACTIONS } from "../factions.ts";
-import type { GameState } from "../types.ts";
+import type { GameMap, GameState } from "../types.ts";
 
 /** Play a full all-AI game to completion (or a turn cap) and report the result. */
-function playGame(seed: number, playerCount: number): {
+function playGame(seed: number, playerCount: number, map: GameMap = classicWorld): {
   state: GameState;
   turns: number;
   finished: boolean;
 } {
   let s = createGame({
-    map: classicWorld,
+    map,
     factions: DEFAULT_FACTIONS,
     players: Array.from({ length: playerCount }, (_, i) => ({
       name: `AI ${i + 1}`,
@@ -85,5 +86,21 @@ describe("balance report (2-player baseline)", () => {
     // everything — that would signal a broken/degenerate AI or rules.
     expect(p1).toBeGreaterThan(0);
     expect(p2).toBeGreaterThan(0);
+  });
+});
+
+describe("world map simulation", () => {
+  it("plays full 6-player games on the world map to a valid finish", () => {
+    let totalTurns = 0;
+    const GAMES = 12;
+    for (let seed = 1; seed <= GAMES; seed++) {
+      const { state, turns, finished } = playGame(seed, 6, worldMap);
+      expect(finished, `world seed ${seed} did not finish`).toBe(true);
+      expect(state.winnerId).not.toBeNull();
+      expect(territoriesOf(state, state.winnerId!)).toHaveLength(worldMap.territories.length);
+      totalTurns += turns;
+    }
+    // eslint-disable-next-line no-console
+    console.log(`[world] ${GAMES} 6-player games · avg ${(totalTurns / GAMES).toFixed(1)} turns`);
   });
 });
