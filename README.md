@@ -42,7 +42,8 @@ Click **New Campaign** to begin. Your progress autosaves to the browser, so
   army intact; Gates mauls whoever assaults him. Cornwallis hits devastatingly
   hard but bleeds his ranks; Burgoyne is bold but courts disaster; Howe is a
   steady all-rounder. Each has separate attack/defense ratings and traits
-  (casualties inflicted/avoided, risk of capture), shown in the region panel.
+  (casualties inflicted/avoided, risk of capture), shown — with a period
+  portrait — in the region panel.
   They ride with their army on a march or assault; a general whose region is
   overrun — or whose shattered assault is run down — is captured: a heavy morale
   blow with no replacement, so guard them.
@@ -89,7 +90,9 @@ has real room to outplay it.
 | `index.html` | Page structure and screens |
 | `styles.css` | Colonial/parchment theme and layout |
 | `game.js` | Game state, map, battles, AI, and persistence |
-| `liberty-call.html` | Single-file build (CSS + JS inlined) for easy sharing |
+| `assets/generals/` | General portrait art, keyed to each commander |
+| `liberty-call.html` | Single-file build (CSS + JS + portraits inlined) for easy sharing |
+| `build.js` | Builds `liberty-call.html`: inlines the CSS/JS and base64-embeds the portraits |
 | `tools-genmap.js` | Dev tool: projects a US-states GeoJSON into the SVG map paths in `game.js` |
 | `test-sim.js` | Headless smoke test (runtime errors, decisive endings) |
 | `test-balance.js` | Headless balance check (win rate, game length) |

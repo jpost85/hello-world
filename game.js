@@ -186,7 +186,12 @@
   // URLs/data-URIs supplied by the project; missing entries fall back to a
   // drawn officer emblem. Populate this as art is added (see assets/generals/).
   const PORTRAITS = {
-    // washington: "assets/generals/washington.png", ...
+    washington: "assets/generals/washington.png",
+    greene: "assets/generals/greene.png",
+    gates: "assets/generals/gates.png",
+    howe: "assets/generals/howe.png",
+    cornwallis: "assets/generals/cornwallis.png",
+    burgoyne: "assets/generals/burgoyne.png",
   };
 
   /* ----------------- Generated geographic map data (see tools-genmap.js) -- */

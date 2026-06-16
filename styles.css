@@ -222,23 +222,23 @@ html, body {
   overflow-y: auto;
 }
 #region-info { position: relative; }
-.ri-portrait { position: absolute; top: 12px; right: 14px; width: 78px; }
-.ri-portrait:empty { display: none; }
+.ri-portrait { float: right; width: 76px; margin: 2px 0 6px 12px; }
+.ri-portrait:empty { display: none; margin: 0; }
 .ri-portrait .portrait-svg, .ri-portrait .portrait-img {
-  width: 78px; height: auto; display: block;
+  width: 76px; height: auto; display: block;
   border-radius: 3px; box-shadow: 0 1px 4px rgba(0,0,0,0.45);
 }
 .ri-portrait .portrait-img {
   object-fit: contain; background: var(--parchment);
 }
-#region-info h3 { margin: 0 0 4px; padding-right: 90px; }
+#region-info h3 { margin: 0 0 4px; }
 .ri-owner { margin: 0 0 10px; font-weight: bold; font-size: 14px; }
 .ri-owner.patriot { color: var(--patriot); }
 .ri-owner.crown { color: var(--crown); }
 .ri-owner.neutral { color: var(--ink-soft); }
 .ri-general { margin: -6px 0 10px; font-size: 13px; font-weight: bold; color: #8a6a14; }
 .ri-general:empty { display: none; }
-.ri-stats { display: flex; gap: 8px; margin-bottom: 10px; }
+.ri-stats { display: flex; gap: 8px; margin-bottom: 10px; clear: both; }
 .ri-stats > div {
   flex: 1; text-align: center; background: var(--parchment-dark);
   border: 1px solid var(--border); border-radius: 4px; padding: 6px 4px;
