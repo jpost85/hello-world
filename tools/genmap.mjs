@@ -59,16 +59,14 @@ const SPEC = [
   // Western Europe
   { id: "iceland", name: "Iceland", region: "western-europe", countries: ["Iceland"] },
   { id: "united-kingdom", name: "British Isles", region: "western-europe", countries: ["United Kingdom", "Ireland"] },
-  { id: "france", name: "France", region: "western-europe", countries: ["France"], keepBounds: { lngMin: -6, lngMax: 10, latMin: 41, latMax: 52 } },
+  { id: "france", name: "France", region: "western-europe", countries: ["France", "Netherlands", "Belgium", "Luxembourg"], keepBounds: { lngMin: -6, lngMax: 10, latMin: 41, latMax: 54 } },
   { id: "iberia", name: "Iberia", region: "western-europe", countries: ["Spain", "Portugal"], keepBounds: { lngMin: -10, lngMax: 4, latMin: 35, latMax: 44 } },
-  { id: "benelux", name: "Benelux", region: "western-europe", countries: ["Netherlands", "Belgium", "Luxembourg"] },
-  { id: "germany", name: "Germany", region: "western-europe", countries: ["Germany", "Denmark"] },
+  { id: "germany", name: "Germany", region: "western-europe", countries: ["Germany", "Denmark", "Switzerland", "Austria", "Czechia", "Slovenia"], keepBounds: { lngMin: 5, lngMax: 20, latMin: 45, latMax: 58 } },
   { id: "italy", name: "Italy", region: "western-europe", countries: ["Italy"] },
-  { id: "central-europe", name: "Central Europe", region: "western-europe", countries: ["Switzerland", "Austria", "Czechia", "Slovakia", "Hungary", "Slovenia"] },
 
   // Eastern Europe
   { id: "scandinavia", name: "Scandinavia", region: "eastern-europe", countries: ["Norway", "Sweden", "Finland"], keepBounds: { lngMin: 4, lngMax: 32, latMin: 54, latMax: 72 } },
-  { id: "poland", name: "Poland & Baltics", region: "eastern-europe", countries: ["Poland", "Estonia", "Latvia", "Lithuania"] },
+  { id: "poland", name: "Poland & Baltics", region: "eastern-europe", countries: ["Poland", "Estonia", "Latvia", "Lithuania", "Slovakia", "Hungary"] },
   { id: "ukraine", name: "Ukraine & Belarus", region: "eastern-europe", countries: ["Ukraine", "Belarus", "Moldova"] },
   { id: "balkans", name: "Balkans", region: "eastern-europe", countries: ["Croatia", "Bosnia and Herzegovina", "Republic of Serbia", "Montenegro", "Kosovo", "North Macedonia", "Albania", "Romania", "Bulgaria", "Greece"] },
 
@@ -76,20 +74,17 @@ const SPEC = [
   { id: "western-russia", name: "Western Russia", region: "north-asia", countries: ["Russia"], clip: { lngMax: 60 }, normalizeRussia: true },
   { id: "siberia", name: "Siberia", region: "north-asia", countries: ["Russia"], clip: { lngMin: 60, lngMax: 115 }, normalizeRussia: true },
   { id: "far-east-russia", name: "Far East Russia", region: "north-asia", countries: ["Russia"], clip: { lngMin: 115, lngMax: 180 }, normalizeRussia: true },
-  { id: "kazakhstan", name: "Kazakhstan", region: "north-asia", countries: ["Kazakhstan"] },
-  { id: "central-asia", name: "Central Asia", region: "north-asia", countries: ["Uzbekistan", "Turkmenistan", "Tajikistan", "Kyrgyzstan"] },
-  { id: "mongolia", name: "Mongolia", region: "north-asia", countries: ["Mongolia"] },
+  { id: "central-asia", name: "Central Asia", region: "north-asia", countries: ["Kazakhstan", "Uzbekistan", "Turkmenistan", "Tajikistan", "Kyrgyzstan"] },
 
   // Middle East
   { id: "turkey", name: "Turkey", region: "middle-east", countries: ["Turkey", "Cyprus", "Northern Cyprus"] },
   { id: "caucasus", name: "Caucasus", region: "middle-east", countries: ["Georgia", "Armenia", "Azerbaijan"] },
-  { id: "levant", name: "Levant", region: "middle-east", countries: ["Syria", "Lebanon", "Jordan", "Israel", "Palestine"] },
-  { id: "iraq", name: "Iraq", region: "middle-east", countries: ["Iraq"] },
+  { id: "levant", name: "Levant & Iraq", region: "middle-east", countries: ["Syria", "Lebanon", "Jordan", "Israel", "Palestine", "Iraq"] },
   { id: "iran", name: "Iran", region: "middle-east", countries: ["Iran"] },
   { id: "arabia", name: "Arabia", region: "middle-east", countries: ["Saudi Arabia", "Yemen", "Oman", "United Arab Emirates", "Qatar", "Kuwait"] },
 
   // South & East Asia
-  { id: "china", name: "China", region: "asia", countries: ["China", "Taiwan"] },
+  { id: "china", name: "China", region: "asia", countries: ["China", "Taiwan", "Mongolia"] },
   { id: "korea", name: "Korea", region: "asia", countries: ["North Korea", "South Korea"] },
   { id: "japan", name: "Japan", region: "asia", countries: ["Japan"] },
   { id: "afghanistan-pakistan", name: "Afghanistan & Pakistan", region: "asia", countries: ["Afghanistan", "Pakistan"] },
@@ -138,7 +133,6 @@ const SEA_LINKS = [
   ["iceland", "united-kingdom"],
   ["iceland", "scandinavia"],
   ["united-kingdom", "france"],
-  ["united-kingdom", "benelux"],
   ["caribbean", "central-america"],
   ["caribbean", "eastern-us"],
   ["caribbean", "mexico"],

@@ -5,7 +5,7 @@ describe("world map (generated from Natural Earth)", () => {
   const ids = new Set(worldMap.territories.map((t) => t.id));
 
   it("has a curated set of territories across 9 continents", () => {
-    expect(worldMap.territories.length).toBeGreaterThanOrEqual(60);
+    expect(worldMap.territories.length).toBeGreaterThanOrEqual(50);
     expect(worldMap.territories.length).toBeLessThanOrEqual(90);
     expect(worldMap.regions).toHaveLength(9);
     expect(worldMap.viewBox).toBe("0 0 1000 500");
