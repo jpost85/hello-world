@@ -522,6 +522,21 @@
     display:flex; align-items:flex-end; justify-content:center; gap:1px; padding-bottom:1px;
   }
   .elev-car i { width:2px; height:4px; background:#33414f; border-radius:1px; display:inline-block; }
+  .elev-car.express { background: linear-gradient(180deg, #8fe0e8 0 2px, #5cc3cf 2px calc(100% - 3px), #2f8f99 calc(100% - 3px)); border-color:#1f5e66; }
+
+  /* Express elevator shaft (distinct teal) */
+  .unit-expresselevator { --wall:#1f4750; }
+  .unit-expresselevator .u-face {
+    background: linear-gradient(90deg, #10282d 0 3px, #2f6e78 3px calc(50% - 1px), #16383d calc(50% - 1px) calc(50% + 1px), #2f6e78 calc(50% + 1px) calc(100% - 3px), #10282d calc(100% - 3px));
+  }
+  /* Sky Lobby — a transfer hub: marble floor, columns, transit banner */
+  .unit-skylobby { --wall:#e3d3a6; }
+  .unit-skylobby .u-face {
+    background:
+      linear-gradient(180deg, #b9d0e0 0 4px, transparent 4px),                                   /* glazed top band */
+      linear-gradient(180deg, transparent 0 calc(100% - 6px), #b8a06a calc(100% - 6px)),         /* marble floor */
+      repeating-linear-gradient(90deg, #ddcc97 0 15px, #c6b079 15px 18px);                        /* columns */
+  }
 
   /* ---------- Building façade (outer shell on exposed edges) ---------- */
   .fe-top, .fe-left, .fe-right, .fe-base { position:absolute; display:none; pointer-events:none; z-index:5; }
@@ -753,6 +768,8 @@ const TYPES = {
   metro:     { name: "Metro Station",cost: 90000,w: 4, h: 1, color: "#3a4656", income: 0,    cap: 0,  kind: "infra", infra: 0.022 },
   stair:     { name: "Stairs",      cost: 5000,  w: 1, h: 1, color: "#8d99ae", kind: "transit" },
   elevator:  { name: "Elevator",    cost: 18000, w: 1, h: 1, color: "#5c6b7a", kind: "transit" },
+  expresselevator: { name: "Express Elev.", cost: 35000, w: 1, h: 1, color: "#3f7d86", kind: "transit", express: true },
+  skylobby:  { name: "Sky Lobby",   cost: 60000, w: 6, h: 1, color: "#cdbb8e", kind: "transit" },
   floor:     { name: "Floor Slab",  cost: 8000,  w: 1, h: 1, color: "#b8bfc7", kind: "structure" },
 };
 
@@ -760,8 +777,8 @@ const TYPES = {
 const UNLOCK_STAR = {
   elevator: 1, restaurant: 1, terrace: 1, parking: 1,
   condo: 2, hotel: 2, gym: 2,
-  cinema: 3, garden: 3, conference: 3, playground: 3, metro: 3,
-  pool: 4, spa: 4, skybar: 4,
+  cinema: 3, garden: 3, conference: 3, playground: 3, metro: 3, skylobby: 3,
+  pool: 4, spa: 4, skybar: 4, expresselevator: 4,
   spire: 5,
 };
 
@@ -769,7 +786,7 @@ const UNLOCK_STAR = {
 const TOOL_GROUPS = [
   { title: "Rooms",       keys: ["office","apartment","condo","hotel","shop","restaurant","cinema"] },
   { title: "Amenities",   keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference"] },
-  { title: "Transit",     keys: ["floor","stair","elevator"] },
+  { title: "Transit",     keys: ["floor","stair","elevator","expresselevator","skylobby"] },
   { title: "Underground", keys: ["parking","metro"] },
   { title: "Landmark",    keys: ["spire"] },
 ];
@@ -806,6 +823,8 @@ const TYPE_DESC = {
   spire:     "The crowning landmark. Build it to complete your TOWER and win.",
   parking:   "Basement parking — a modest boost to move-ins tower-wide. Underground only.",
   metro:     "Underground station that brings commuters — a big move-in boost tower-wide. Underground only.",
+  expresselevator: "Fast elevator that only stops at Sky Lobbies and the ground. Stack it for tall towers.",
+  skylobby:  "A transfer hub at height — gives nearby transit access and is a stop for express elevators.",
   stair:     "Cheap transit. Rooms need a stair or elevator within 8 cells.",
   elevator:  "Vertical transit. Stack several in a column to form a riding shaft.",
   lobby:     "Ground-floor entrance. Free, pre-built, and can't be sold.",
@@ -825,6 +844,7 @@ const state = {
   people: [],
   shafts: [],
   transitRuns: [],
+  expressRuns: [],
   stars: 0,
   isNight: false,
   pending: null,
@@ -1017,7 +1037,8 @@ function coversOutdoor(col, row, w) {
 function hasTransitAccess(col, row, w) {
   if (row === 0) return true;
   for (const u of state.units) {
-    if ((u.type === "stair" || u.type === "elevator") &&
+    // stairs, local elevators and sky lobbies provide floor access (express does not)
+    if ((u.type === "stair" || u.type === "elevator" || u.type === "skylobby") &&
         u.row <= row && u.row + u.h - 1 >= row) {
       const gap = Math.max(u.col - (col + w), col - (u.col + u.w), 0);
       if (gap <= 8) return true;
@@ -1041,8 +1062,8 @@ function tryBuild(col, row, key_) {
   if (state.cash < t.cost) { toast("Not enough cash."); sfx("error"); flash(false); return; }
   if (t.kind === "infra" && row >= 0) { toast("Build this underground, in a basement."); sfx("error"); return; }
   if (t.kind === "outdoor" && row < 0) { toast("Outdoor spaces must be above ground."); sfx("error"); return; }
-  if ((t.kind === "work" || t.kind === "home" || t.kind === "shop" || t.kind === "hotel" || t.kind === "outdoor" || t.kind === "amenity" || t.kind === "infra") && !hasTransitAccess(col, row, t.w)) {
-    toast("Needs stairs or an elevator within 8 cells on this floor."); sfx("error");
+  if ((["work","home","shop","hotel","outdoor","amenity","infra"].includes(t.kind) || key_ === "skylobby") && !hasTransitAccess(col, row, t.w)) {
+    toast("Needs stairs, an elevator or a sky lobby within 8 cells."); sfx("error");
     return;
   }
   if (t.kind === "outdoor" && !hasOpenSkyAbove(col, row, t.w)) {
@@ -1061,7 +1082,7 @@ function tryBuild(col, row, key_) {
     revenueTimer: Math.random() * 60,
   };
   placeUnit(unit);
-  if (key_ === "elevator" || key_ === "stair") rebuildShafts();
+  if (["elevator","stair","expresselevator","skylobby"].includes(key_)) rebuildShafts();
   rebuildFacade();
   state.cash -= t.cost;
   log(`Built ${t.name} on floor ${row} for $${t.cost.toLocaleString()}`, "good");
@@ -1116,7 +1137,7 @@ function shortLabel(type) {
   return ({office:"OFF", apartment:"APT", condo:"CONDO", hotel:"🛏", shop:"SHOP", restaurant:"REST",
            cinema:"🎬", terrace:"⛱", garden:"🌳", pool:"POOL", playground:"PLAY", skybar:"BAR",
            gym:"GYM", spa:"SPA", conference:"CONF", spire:"♛", parking:"🅿", metro:"Ⓜ",
-           stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
+           skylobby:"SKY", expresselevator:"▲", stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
 }
 
 function onUnitClick(unit) {
@@ -1136,7 +1157,7 @@ function sellUnit(unit, refund) {
       delete state.grid[key(unit.col + dc, unit.row + dr)];
   unit.el.remove();
   state.units = state.units.filter(u => u.id !== unit.id);
-  if (unit.type === "elevator" || unit.type === "stair") rebuildShafts();
+  if (["elevator","stair","expresselevator","skylobby"].includes(unit.type)) rebuildShafts();
   rebuildFacade();
   state.cash += refund;
   log(`Sold ${TYPES[unit.type].name} for $${refund.toLocaleString()}`, "bad");
@@ -1564,7 +1585,7 @@ function spawnPerson() {
   if (state.pop > 0) {
     for (const u of state.units) {
       const k = TYPES[u.type].kind;
-      if (u.type === "lobby" || k === "outdoor" || k === "amenity" || k === "infra") pool.push(u);
+      if (u.type === "lobby" || u.type === "skylobby" || k === "outdoor" || k === "amenity" || k === "infra") pool.push(u);
     }
   }
   if (pool.length === 0) return;
@@ -1595,30 +1616,43 @@ function rushPhase() {
 }
 function commuteChance() { return 0.003 + 0.02 * rushPhase().intensity; }
 
-// Pick a transit run serving this person's floor and send them to another floor.
-// If an elevator shaft covers the trip they'll wait to board its car; otherwise
-// they take the stairs (a direct climb).
+// Pick a reachable transit option (stairs, local elevator, or — from a sky lobby /
+// the ground — an express elevator) and send the sim to another floor.
 function maybeCommute(p) {
   const seg = walkRange(p);
   if (!seg) return;
-  // only transit the sim can actually reach without crossing empty space
-  const runs = state.transitRuns.filter(r =>
-    r.lo <= p.row && p.row <= r.hi && r.col >= seg.min && r.col <= seg.max);
-  if (!runs.length) return;
-  const r = runs[Math.floor(Math.random() * runs.length)];
-  const choices = [];
-  for (let f = r.lo; f <= r.hi; f++) if (f !== p.row && floorExtent(f)) choices.push(f);
-  if (!choices.length) return;
+  const reachable = c => c >= seg.min && c <= seg.max;
+  const candidates = [];
+  // Local runs (stairs / local elevators): board on any floor, alight on any floor.
+  for (const r of state.transitRuns) {
+    if (r.lo <= p.row && p.row <= r.hi && reachable(r.col)) {
+      const dests = [];
+      for (let f = r.lo; f <= r.hi; f++) if (f !== p.row && floorExtent(f)) dests.push(f);
+      if (dests.length) candidates.push({ col: r.col, dests, express: false });
+    }
+  }
+  // Express runs: only usable when standing on one of its stop floors, to another stop.
+  for (const r of state.expressRuns) {
+    if (r.stops.includes(p.row) && reachable(r.col)) {
+      const dests = r.stops.filter(f => f !== p.row && floorExtent(f));
+      if (dests.length) candidates.push({ col: r.col, dests, express: true });
+    }
+  }
+  if (!candidates.length) return;
+  // Prefer the express when available (it's faster).
+  const expr = candidates.filter(c => c.express);
+  const set = (expr.length && Math.random() < 0.7) ? expr : candidates;
+  const cand = set[Math.floor(Math.random() * set.length)];
   // Rush hour biases travel direction (up in the morning, down in the evening).
   const phase = rushPhase();
-  let pool = choices;
-  if (phase.dir > 0) { const up = choices.filter(f => f > p.row); if (up.length && Math.random() < 0.8) pool = up; }
-  else if (phase.dir < 0) { const dn = choices.filter(f => f < p.row); if (dn.length && Math.random() < 0.8) pool = dn; }
+  let pool = cand.dests;
+  if (phase.dir > 0) { const up = cand.dests.filter(f => f > p.row); if (up.length && Math.random() < 0.8) pool = up; }
+  else if (phase.dir < 0) { const dn = cand.dests.filter(f => f < p.row); if (dn.length && Math.random() < 0.8) pool = dn; }
   const target = pool[Math.floor(Math.random() * pool.length)];
   const lo = Math.min(p.row, target), hi = Math.max(p.row, target);
   p.targetRow = target;
-  p.goCol = r.col;
-  p.shaft = state.shafts.find(s => s.col === r.col && s.lo <= lo && s.hi >= hi) || null;
+  p.goCol = cand.col;
+  p.shaft = state.shafts.find(s => s.col === cand.col && s.lo <= lo && s.hi >= hi && !!s.express === cand.express) || null;
   p.mode = "approach";
 }
 
@@ -1694,29 +1728,43 @@ function eachVerticalRun(predicate, onRun) {
   });
 }
 
+// A floor express elevators may stop at: the ground or any sky-lobby floor.
+function isStopFloor(row) {
+  return row === 0 || state.units.some(u => u.type === "skylobby" && u.row === row);
+}
+
 function rebuildShafts() {
   state.shafts.forEach(s => s.carEl && s.carEl.remove());
   state.shafts = [];
-  // Elevator shafts get an animated car.
-  eachVerticalRun(u => u.type === "elevator", addShaft);
-  // Transit runs (stairs OR elevators) let pedestrians change floors.
+  // Local elevator shafts (stop everywhere) and express shafts (sky lobbies only) get cars.
+  eachVerticalRun(u => u.type === "elevator", (col, lo, hi) => addShaft(col, lo, hi, false));
+  eachVerticalRun(u => u.type === "expresselevator", (col, lo, hi) => addShaft(col, lo, hi, true));
+  // Local transit runs (stairs OR elevators) let pedestrians change any floor.
   state.transitRuns = [];
   eachVerticalRun(u => u.type === "stair" || u.type === "elevator",
     (col, lo, hi) => state.transitRuns.push({ col, lo, hi }));
+  // Express runs only connect their stop floors (≥2 to be useful).
+  state.expressRuns = [];
+  eachVerticalRun(u => u.type === "expresselevator", (col, lo, hi) => {
+    const stops = [];
+    for (let f = lo; f <= hi; f++) if (isStopFloor(f)) stops.push(f);
+    if (stops.length >= 2) state.expressRuns.push({ col, lo, hi, stops });
+  });
   // Any sim mid-commute references shafts/columns that may be gone now: reset them.
   state.people.forEach(p => {
     if (p.mode !== "walk") { p.el.style.display = ""; p.mode = "walk"; p.shaft = null; p.goCol = null; }
   });
 }
 
-function addShaft(col, lo, hi) {
+function addShaft(col, lo, hi, express) {
   const carEl = document.createElement("div");
-  carEl.className = "elev-car";
+  carEl.className = "elev-car" + (express ? " express" : "");
   carEl.style.left = (colLeft(col) + 3) + "px";
   carEl.style.width = (CELL_W - 6) + "px";
   carEl.style.height = (CELL_H - 6) + "px";
   world.appendChild(carEl);
-  state.shafts.push({ col, lo, hi, carEl, pos: lo, dir: 1, riders: [], shownRiders: -1 });
+  state.shafts.push({ col, lo, hi, carEl, pos: lo, dir: 1, riders: [], shownRiders: -1,
+    express: !!express, cap: express ? 8 : 4, speed: express ? 0.22 : 0.12 });
 }
 
 // A simple call-answering elevator: it heads to floors that waiting sims or
@@ -1738,7 +1786,7 @@ function elevatorStep(s) {
       else if (s.dir < 0 && f <= s.pos + 0.05) { if (goal === null || f > goal) goal = f; }
     });
     if (goal === null) targets.forEach(f => { if (goal === null || Math.abs(f - s.pos) < Math.abs(goal - s.pos)) goal = f; });
-    const dist = goal - s.pos, step = 0.12;
+    const dist = goal - s.pos, step = s.speed;
     if (Math.abs(dist) <= step) { s.pos = goal; serveFloor(s, goal, waits); }
     else s.pos += Math.sign(dist) * step;
   }
@@ -1761,9 +1809,9 @@ function serveFloor(s, floor, waits) {
       p.el.style.top = (rowTop(floor) + CELL_H - 12) + "px";
     }
   }
-  // Board waiting sims at this floor, up to a small capacity.
+  // Board waiting sims at this floor, up to the car's capacity.
   for (const p of waits) {
-    if (p.row === floor && p.mode === "wait" && s.riders.length < 4) {
+    if (p.row === floor && p.mode === "wait" && s.riders.length < s.cap) {
       p.mode = "ride"; p.el.style.display = "none"; s.riders.push(p);
     }
   }
