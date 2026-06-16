@@ -444,6 +444,20 @@
       linear-gradient(180deg, #7a8aa0 0 4px, #c2ccd8 4px calc(100% - 5px), #5d6878 calc(100% - 5px));
   }
   .unit-security .u-extra { top:auto; bottom:5px; left:14%; right:14%; height:4px; background:#3a4250; border-radius:2px; }
+  /* Housekeeping — clean room with a cart */
+  .unit-housekeeping .u-face {
+    background:
+      linear-gradient(90deg, transparent 60%, #d8e6ec 60% 74%, transparent 74%),                 /* cart body */
+      linear-gradient(180deg, #8fc7d6 0 4px, #e6f3f7 4px calc(100% - 5px), #5f96a4 calc(100% - 5px));
+  }
+  .unit-housekeeping .u-extra { top:auto; bottom:5px; left:18%; width:2px; height:7px; background:#7a5a33; }
+  /* Maintenance — workshop with a tool */
+  .unit-maintenance .u-face {
+    background:
+      radial-gradient(circle at 30% 52%, #444 0 2px, transparent 3px),                            /* bolt */
+      linear-gradient(180deg, #c79a5a 0 4px, #eadcc2 4px calc(100% - 5px), #8a6a3c calc(100% - 5px));
+  }
+  .unit-maintenance .u-extra { top:auto; bottom:5px; left:58%; right:22%; height:4px; background:#5a4630; border-radius:1px; }
   /* Sky Spire — the golden crowning landmark */
   .unit-spire { --wall: transparent; border: none; }
   .unit-spire .u-face {
@@ -671,6 +685,8 @@
       <span class="k">Day / Time</span><span class="v" id="s-time">1 · 6:00</span>
       <span class="k">Star Rating</span><span class="v" id="s-stars">☆☆☆☆☆</span>
       <span class="k">Next ★</span><span class="v" id="s-next">—</span>
+      <span class="k">Cleanliness</span><span class="v" id="s-clean">100%</span>
+      <span class="k">Upkeep</span><span class="v" id="s-upkeep">100%</span>
     </div>
 
     <div class="objective" id="objective"></div>
@@ -777,6 +793,8 @@ const TYPES = {
   spa:       { name: "Spa",         cost: 40000, w: 3, h: 1, color: "#86b8b0", income: 0,    cap: 0,  kind: "amenity", appeal: 18, favors: "hotel" },
   conference:{ name: "Conf. Room",  cost: 34000, w: 3, h: 1, color: "#b0a48c", income: 0,    cap: 0,  kind: "amenity", appeal: 16, favors: "work" },
   security:  { name: "Security",    cost: 30000, w: 2, h: 1, color: "#7a8aa0", income: 0,    cap: 0,  kind: "security" },
+  housekeeping: { name: "Housekeeping", cost: 22000, w: 2, h: 1, color: "#8fc7d6", income: 0, cap: 0, kind: "service", serves: "clean", capacity: 40 },
+  maintenance:  { name: "Maintenance",  cost: 24000, w: 2, h: 1, color: "#c79a5a", income: 0, cap: 0, kind: "service", serves: "upkeep", capacity: 15 },
   spire:     { name: "Sky Spire",   cost: 250000,w: 3, h: 1, color: "#e9cf86", income: 0,    cap: 0,  kind: "landmark", appeal: 30 },
   parking:   { name: "Parking",     cost: 18000, w: 3, h: 1, color: "#5a5f66", income: 0,    cap: 0,  kind: "infra", infra: 0.006 },
   metro:     { name: "Metro Station",cost: 90000,w: 4, h: 1, color: "#3a4656", income: 0,    cap: 0,  kind: "infra", infra: 0.022 },
@@ -791,7 +809,7 @@ const TYPES = {
 const UNLOCK_STAR = {
   elevator: 1, restaurant: 1, terrace: 1, parking: 1,
   condo: 2, hotel: 2, gym: 2,
-  security: 2,
+  security: 2, housekeeping: 2, maintenance: 2,
   cinema: 3, garden: 3, conference: 3, playground: 3, metro: 3, skylobby: 3,
   pool: 4, spa: 4, skybar: 4, expresselevator: 4,
   spire: 5,
@@ -801,7 +819,7 @@ const UNLOCK_STAR = {
 const TOOL_GROUPS = [
   { title: "Rooms",       keys: ["office","apartment","condo","hotel","shop","restaurant","cinema"] },
   { title: "Amenities",   keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference"] },
-  { title: "Services",    keys: ["security"] },
+  { title: "Services",    keys: ["security","housekeeping","maintenance"] },
   { title: "Transit",     keys: ["floor","stair","elevator","expresselevator","skylobby"] },
   { title: "Underground", keys: ["parking","metro"] },
   { title: "Landmark",    keys: ["spire"] },
@@ -837,6 +855,8 @@ const TYPE_DESC = {
   spa:       "Indoor spa. Especially delights nearby hotel guests.",
   conference:"Indoor meeting space. Especially boosts nearby offices.",
   security:  "Security office — contains fires, foils bomb threats, and reassures VIP inspectors.",
+  housekeeping: "Keeps the tower clean. Cleanliness lifts satisfaction; add more as population grows.",
+  maintenance:  "Keeps the building in repair. Upkeep lifts satisfaction and trims maintenance costs; scale with size.",
   spire:     "The crowning landmark. Build it to complete your TOWER and win.",
   parking:   "Basement parking — a modest boost to move-ins tower-wide. Underground only.",
   metro:     "Underground station that brings commuters — a big move-in boost tower-wide. Underground only.",
@@ -868,6 +888,8 @@ const state = {
   won: false,
   frustration: 0,   // builds when sims give up waiting for elevators; hurts tenants
   reputation: 0,    // temporary appeal modifier from VIP inspections / events (decays)
+  cleanliness: 100, // tower-wide; falls as population outgrows housekeeping
+  upkeep: 100,      // tower-wide; falls as the building outgrows maintenance
 };
 
 const ROLE_COLOR = { work: "#5b8def", home: "#56c271", hotel: "#d9b36b", visitor: "#b4bfca" };
@@ -1081,7 +1103,7 @@ function tryBuild(col, row, key_) {
   if (state.cash < t.cost) { toast("Not enough cash."); sfx("error"); flash(false); return; }
   if (t.kind === "infra" && row >= 0) { toast("Build this underground, in a basement."); sfx("error"); return; }
   if (t.kind === "outdoor" && row < 0) { toast("Outdoor spaces must be above ground."); sfx("error"); return; }
-  if ((["work","home","shop","hotel","outdoor","amenity","infra","security"].includes(t.kind) || key_ === "skylobby") && !hasTransitAccess(col, row, t.w)) {
+  if ((["work","home","shop","hotel","outdoor","amenity","infra","security","service"].includes(t.kind) || key_ === "skylobby") && !hasTransitAccess(col, row, t.w)) {
     toast("Needs stairs, an elevator or a sky lobby within 8 cells."); sfx("error");
     return;
   }
@@ -1155,7 +1177,7 @@ function unitInnerHTML(type) {
 function shortLabel(type) {
   return ({office:"OFF", apartment:"APT", condo:"CONDO", hotel:"🛏", shop:"SHOP", restaurant:"REST",
            cinema:"🎬", terrace:"⛱", garden:"🌳", pool:"POOL", playground:"PLAY", skybar:"BAR",
-           gym:"GYM", spa:"SPA", conference:"CONF", security:"🛡", spire:"♛", parking:"🅿", metro:"Ⓜ",
+           gym:"GYM", spa:"SPA", conference:"CONF", security:"🛡", housekeeping:"🧹", maintenance:"🔧", spire:"♛", parking:"🅿", metro:"Ⓜ",
            skylobby:"SKY", expresselevator:"▲", stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
 }
 
@@ -1164,7 +1186,14 @@ function onUnitClick(unit) {
     const t = TYPES[unit.type];
     const refund = Math.floor(t.cost * 0.5);
     if (unit.type === "lobby") { toast("The lobby can't be sold."); return; }
-    if (confirm(`${t.name} on floor ${unit.row}\nOccupants: ${unit.occupants}/${t.cap||0}\nSatisfaction: ${Math.round(unit.satisfaction)}%\n\nSell for $${refund.toLocaleString()}?`)) {
+    let info = `${t.name} on floor ${unit.row}\nOccupants: ${unit.occupants}/${t.cap || 0}`;
+    if (t.cap > 0) { // tenanted: show the satisfaction needs breakdown
+      const n = unitNeeds(unit);
+      info += `\nSatisfaction: ${Math.round(unit.satisfaction)}%`
+        + `\n  Transit ${Math.round(n.transit)}/40   Recreation ${Math.round(n.recreation)}/20`
+        + `\n  Cleanliness ${Math.round(n.cleanliness)}/20   Upkeep ${Math.round(n.upkeep)}/20`;
+    }
+    if (confirm(`${info}\n\nSell for $${refund.toLocaleString()}?`)) {
       sellUnit(unit, refund);
     }
   }
@@ -1362,10 +1391,12 @@ function hotelUnits() {
 function simHotels() {
   const evening = state.minutes >= 17 * 60 || state.minutes < 60; // 5pm–1am
   const morning = state.minutes >= 6 * 60 && state.minutes < 11 * 60; // 6am–11am
+  const cleanFactor = 0.5 + state.cleanliness / 200; // dirty rooms drive guests away
   hotelUnits().forEach(u => {
     const t = TYPES[u.type];
+    u.satisfaction += (satisfactionTarget(u) - u.satisfaction) * 0.05;
     if (evening && u.occupants < t.cap) {
-      const appeal = 0.05 + state.stars * 0.012 + amenityBonus(u) * 0.0009;
+      const appeal = (0.05 + state.stars * 0.012 + amenityBonus(u) * 0.0009) * cleanFactor;
       if (Math.random() < appeal) { u.occupants++; state.pop++; updateUnitVisual(u); }
     } else if (morning && u.occupants > 0) {
       if (Math.random() < 0.25) { u.occupants--; state.pop--; updateUnitVisual(u); }
@@ -1412,10 +1443,47 @@ function infrastructureBonus() {
 function securityCount() {
   return state.units.reduce((n, u) => n + (u.type === "security" ? 1 : 0), 0);
 }
+// Total capacity of a service role (housekeeping = "clean", maintenance = "upkeep").
+function serviceCapacity(role) {
+  let c = 0;
+  for (const u of state.units) { const t = TYPES[u.type]; if (t.serves === role) c += t.capacity || 0; }
+  return c;
+}
+// Count of rooms that "wear" (everything but plain structure/transit).
+function roomCount() {
+  return state.units.reduce((n, u) => {
+    const k = TYPES[u.type].kind;
+    return n + (k === "transit" || k === "structure" ? 0 : 1);
+  }, 0);
+}
+// Tower-wide cleanliness and upkeep drift toward what the services can sustain.
+function updateServices() {
+  const cleanTarget = Math.max(0, Math.min(100, 100 - Math.max(0, state.pop - 25 - serviceCapacity("clean")) * 1.2));
+  state.cleanliness += (cleanTarget - state.cleanliness) * 0.08;
+  const upTarget = Math.max(0, Math.min(100, 100 - Math.max(0, roomCount() - 8 - serviceCapacity("upkeep")) * 2));
+  state.upkeep += (upTarget - state.upkeep) * 0.08;
+}
+
+// Satisfaction is a sum of distinct needs (each capped), so the player can read
+// what's helping or hurting. Maxes: transit 40, recreation 20, clean 20, upkeep 20.
+function unitNeeds(u, amen) {
+  if (amen == null) amen = amenityBonus(u);
+  const frustHit = Math.min(40, state.frustration * 1.6);
+  const access = hasTransitAccess(u.col, u.row, u.w);
+  return {
+    transit: access ? Math.max(0, 40 - frustHit) : 12,
+    recreation: Math.min(20, amen * 0.9),
+    cleanliness: state.cleanliness * 0.2,
+    upkeep: state.upkeep * 0.2,
+  };
+}
+function satisfactionTarget(u, amen) {
+  const n = unitNeeds(u, amen);
+  return Math.max(0, Math.min(100, n.transit + n.recreation + n.cleanliness + n.upkeep));
+}
 
 function simTenants() {
-  // Long elevator waits (frustration) suppress demand and tenant happiness.
-  const frustHit = Math.min(40, state.frustration * 1.6);
+  updateServices(); // refresh tower-wide cleanliness/upkeep first
   const infra = infrastructureBonus();
   rentableUnits().forEach(u => {
     const t = TYPES[u.type];
@@ -1436,10 +1504,8 @@ function simTenants() {
         if (u.occupants === t.cap) log(`${t.name} on floor ${u.row} fully ${t.sale ? "sold out" : "leased"}!`, "good");
       }
     }
-    // satisfaction drifts toward a target set by transit access, amenities, and service quality
-    const access = hasTransitAccess(u.col, u.row, u.w);
-    const target = Math.max(0, Math.min(100, (access ? 85 : 40) + amen - frustHit));
-    u.satisfaction += (target - u.satisfaction) * 0.05;
+    // satisfaction drifts toward the sum of its needs (transit, recreation, cleanliness, upkeep)
+    u.satisfaction += (satisfactionTarget(u, amen) - u.satisfaction) * 0.05;
     // owners (sold condos) stay put; renters can leave when unhappy
     if (!t.sale && u.satisfaction < 30 && u.occupants > 0 && Math.random() < 0.1) {
       u.occupants--; state.pop--; updateUnitVisual(u);
@@ -1525,8 +1591,8 @@ function maybeEvent() {
       toast("🎩 VIP unimpressed…");
       log(`🎩 A VIP left unimpressed (${Math.round(sat)}% satisfaction). Your reputation takes a hit.`, "bad");
     }
-  } else if (roll < 0.62) {                 // maintenance
-    const fee = 1000 + state.units.length * 150;
+  } else if (roll < 0.62) {                 // maintenance — cheaper when upkeep is high
+    const fee = Math.round((1000 + state.units.length * 150) * (0.4 + (100 - state.upkeep) / 100 * 0.8));
     state.cash -= fee; floatText(`-$${fee.toLocaleString()}`, "bad");
     log(`🔧 Routine maintenance and upkeep: -$${fee.toLocaleString()}`, "bad");
   } else if (roll < 0.84) {                 // fire — spreads if there's no security
@@ -1958,6 +2024,8 @@ function advanceMinute() {
     collectRent();
     recomputeStars();
     if (state.frustration > 8) log("⏳ Long elevator waits are frustrating tenants — add transit capacity!", "bad");
+    if (state.cleanliness < 55) log("🧹 The tower is getting dirty — build Housekeeping.", "bad");
+    if (state.upkeep < 55) log("🔧 The building is wearing down — build Maintenance.", "bad");
     state.reputation *= 0.7; // reputation fades back toward neutral each day
     maybeEvent();
     saveGame(true);
@@ -2001,7 +2069,18 @@ function refreshStats() {
   nextEl.textContent = state.stars >= STAR_THRESHOLDS.length
     ? "MAX ★★★★★"
     : `${state.pop} / ${STAR_THRESHOLDS[state.stars]} pop`;
+  setMeter("s-clean", state.cleanliness);
+  setMeter("s-upkeep", state.upkeep);
   updateObjective();
+}
+
+// Show a 0–100 stat as a coloured percentage (green / amber / red).
+function setMeter(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const v = Math.round(val);
+  el.textContent = v + "%";
+  el.style.color = v >= 70 ? "var(--good)" : v >= 45 ? "var(--accent)" : "var(--bad)";
 }
 
 function toast(msg) {
@@ -2087,6 +2166,7 @@ function saveGame(silent) {
   const data = {
     cash: state.cash, pop: state.pop, day: state.day, minutes: state.minutes,
     stars: state.stars, nextId: state.nextId, won: state.won,
+    cleanliness: state.cleanliness, upkeep: state.upkeep,
     units: state.units.map(u => ({
       id: u.id, type: u.type, col: u.col, row: u.row,
       occupants: u.occupants, satisfaction: u.satisfaction,
@@ -2109,6 +2189,8 @@ function loadGame(silent) {
   clearWorld();
   state.cash = d.cash; state.pop = d.pop; state.day = d.day;
   state.minutes = d.minutes; state.stars = d.stars; state.nextId = d.nextId || 1; state.won = !!d.won;
+  state.cleanliness = d.cleanliness == null ? 100 : d.cleanliness;
+  state.upkeep = d.upkeep == null ? 100 : d.upkeep;
   (d.units || []).forEach(su => {
     const t = TYPES[su.type];
     if (!t) return;
