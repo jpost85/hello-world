@@ -443,6 +443,7 @@
       linear-gradient(#e6ebf0,#e6ebf0) 27px 4px / 8px 3px no-repeat,
       linear-gradient(180deg, #98a4b3, #7c8898);
   }
+  .unit-stair.stair-flip .u-face { transform: scaleX(-1); } /* alternate flights mirror (switchback) */
 
   /* Small props — subtle furnishings */
   .unit-lobby .u-extra {           /* reception counter on the marble floor */
@@ -986,7 +987,9 @@ function placeUnit(unit) {
 
   const winTypes = ["office", "apartment", "condo", "hotel"];
   const el = document.createElement("div");
-  el.className = "unit unit-" + unit.type + (winTypes.includes(unit.type) ? " win" : "");
+  el.className = "unit unit-" + unit.type
+    + (winTypes.includes(unit.type) ? " win" : "")
+    + (unit.type === "stair" && unit.row % 2 === 1 ? " stair-flip" : ""); // switchback flights
   el.style.left = colLeft(unit.col) + "px";
   el.style.top = rowTop(unit.row + unit.h - 1) + "px";
   el.style.width = (unit.w * CELL_W) + "px";
