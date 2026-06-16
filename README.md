@@ -177,9 +177,10 @@ line still shows a notable first-player advantage — a known item to balance.)
 - [x] Continent bonuses derived from map structure and validated with the harness.
 - [x] Antarctica as a non-playable decorative landmass.
 - [x] Geometry compression + lazy-loaded maps (scales to many boards).
-- [x] Map picker (World / Classic) that lazy-loads the chosen board.
+- [x] Map picker (World / Classic / Caribbean) that lazy-loads the chosen board.
+- [x] Multi-map genmap with regional crop + 1:50m detail; **Caribbean theatre** (16 territories).
+- [ ] More theatres (Napoleonic Europe, Southeast Asia, Egypt & Near East, Scramble for Africa).
 - [ ] Tune first-player advantage (e.g. scaling setup or reinforcement curves).
-- [ ] More maps (regional theatres, higher-detail 1:50m) — just add registry entries.
 - [ ] Faction traits/bonuses (the `Faction` type is the hook).
 - [ ] Smarter AI difficulty levels.
 - [ ] Conquest cards / set trade-ins for escalating reinforcements.

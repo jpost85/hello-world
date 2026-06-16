@@ -32,6 +32,12 @@ export const MAP_REGISTRY: MapInfo[] = [
     description: "The traditional 42-territory board.",
     load: () => import("./classicWorld.ts").then((m) => m.classicWorld),
   },
+  {
+    id: "caribbean",
+    name: "Caribbean",
+    description: "Napoleonic-era island theatre — 16 territories, naval routes.",
+    load: () => import("./caribbean.ts").then((m) => m.caribbeanMap),
+  },
 ];
 
 export const DEFAULT_MAP_ID = "world";
