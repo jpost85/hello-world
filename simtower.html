@@ -196,7 +196,7 @@
     border-right: 1px solid rgba(0,0,0,.08);
     border-bottom: 1px solid rgba(0,0,0,.08);
   }
-  .ground { background: #5a8a3c; }
+  .ground { background: #5a8a3c; transition: filter .8s ease; }
   .empty-buildable { background: rgba(255,255,255,.03); }
   .empty-buildable:hover { background: rgba(255,207,77,.25); cursor: pointer; }
 
@@ -206,8 +206,8 @@
     overflow: hidden; cursor: pointer;
     background: var(--wall, #c9d3da);
   }
-  .u-face { position: absolute; inset: 0; }
-  .u-extra { position: absolute; left: 0; right: 0; top: 0; pointer-events: none; }
+  .u-face { position: absolute; inset: 0; transition: filter .8s ease; }
+  .u-extra { position: absolute; left: 0; right: 0; top: 0; pointer-events: none; transition: filter .8s ease; }
   /* soft ceiling shadow at the top of each unit, for depth between floors */
   .unit::before {
     content:""; position:absolute; left:0; right:0; top:0; height:7px; z-index:3;
@@ -277,6 +277,10 @@
   .night .u-windows span { background:#18212c; }                                          /* dark at night... */
   .night .unit.lit .u-windows span.on { background:#ffdd99; box-shadow:0 0 3px rgba(255,213,128,.55); } /* ...lit where occupied */
   .win.lit::after { content:none; }   /* the windows provide the glow now, not a blob */
+  /* At night, dim the building structure + ground so the scene reads as night;
+     the window panes above are left untouched so lit windows still glow. */
+  .night .u-face, .night .u-extra { filter: brightness(0.62); }
+  .night .ground { filter: brightness(0.5); }
 
   .unit-office    { --wall:#7f93a6; --glass:#bfe0f5; --frame:#52677d; }
   .unit-apartment { --wall:#caa06a; --glass:#ffe4b3; --frame:#9c7642; }
