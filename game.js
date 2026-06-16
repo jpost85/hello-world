@@ -591,17 +591,18 @@
     return g;
   }
 
-  // Portrait for a general's panel medallion: the project's art if present,
-  // else a drawn period-officer emblem tinted by side.
+  // Portrait for a general's panel medallion: the project's framed art if
+  // present, else a drawn period-officer emblem tinted by side. `art` images
+  // are full framed portraits (with a name banner), shown as a rectangle.
+  function hasArt(general) { return !!(general && general.art && PORTRAITS[general.art]); }
   function portraitHTML(general, side) {
-    const src = general.art && PORTRAITS[general.art];
-    if (src) return `<img class="portrait-img" src="${src}" alt="${general.name}">`;
+    if (hasArt(general)) return `<img class="portrait-img" src="${PORTRAITS[general.art]}" alt="${general.name}">`;
     const accent = side === "crown" ? "#8c2b2b" : "#1f4e79";
-    return `<svg viewBox="0 0 60 60" class="portrait-svg" aria-hidden="true">
-      <circle cx="30" cy="31" r="27" fill="#efe3c8" stroke="${accent}" stroke-width="3"/>
-      <path d="M13 57 Q30 39 47 57 Z" fill="${accent}"/>
-      <circle cx="30" cy="30" r="8.5" fill="#cdab86" stroke="#3a2c1c" stroke-width="0.8"/>
-      <path d="M17 25 Q30 12 43 25 Q30 22 17 25 Z" fill="#1a120a"/>
+    return `<svg viewBox="0 0 60 70" class="portrait-svg" aria-hidden="true">
+      <rect x="2" y="2" width="56" height="66" rx="4" fill="#efe3c8" stroke="${accent}" stroke-width="3"/>
+      <path d="M12 64 Q30 46 48 64 Z" fill="${accent}"/>
+      <circle cx="30" cy="34" r="9" fill="#cdab86" stroke="#3a2c1c" stroke-width="0.8"/>
+      <path d="M17 29 Q30 16 43 29 Q30 26 17 29 Z" fill="#1a120a"/>
     </svg>`;
   }
 
