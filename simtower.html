@@ -668,6 +668,46 @@
 
   #hud .hud-item b.bump { animation: cashbump .5s ease; }
   @keyframes cashbump { 0%{ transform:scale(1);} 35%{ transform:scale(1.25); color:#fff;} 100%{ transform:scale(1);} }
+
+  /* ---------- Mobile-only UI (hidden on desktop) ---------- */
+  #hotbar, #edgeHandle { display: none; }   /* desktop: never shown */
+  @media (max-width: 700px) {
+    /* leave room for the bottom build bar */
+    #scroller { bottom: 54px; }
+    #placeBar { bottom: 62px; }
+    /* bottom build hotbar: build without opening the drawer */
+    #hotbar {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 54px; z-index: 16;
+      display: flex; align-items: center; gap: 6px; padding: 0 6px;
+      background: rgba(20,28,36,.97); border-top: 2px solid #000;
+    }
+    #hotbarMenu {
+      flex: 0 0 auto; width: 42px; height: 40px; border: 2px solid #000; border-radius: 8px;
+      background: var(--accent); color: #1a1a1a; font-size: 19px; line-height: 1; cursor: pointer;
+    }
+    #hotbarMenu:active { transform: translateY(1px); }
+    #hotbarTools {
+      flex: 1; display: flex; gap: 6px; height: 100%; align-items: center;
+      overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    #hotbarTools::-webkit-scrollbar { display: none; }
+    .hot-tool {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 5px; height: 40px; padding: 0 10px;
+      border: 2px solid #000; border-radius: 8px; background: var(--panel-2); color: var(--text);
+      font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer;
+    }
+    .hot-tool.on { outline: 2px solid var(--accent); background: #36495b; }
+    .hot-tool.locked { opacity: .45; }
+    .hot-sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #000; flex: 0 0 auto; }
+    /* left-edge handle to summon the drawer (hidden while it's open) */
+    #edgeHandle {
+      position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 14;
+      width: 15px; height: 66px; border-radius: 0 9px 9px 0; cursor: pointer;
+      background: linear-gradient(90deg, rgba(255,207,77,.9), rgba(255,207,77,.3));
+      box-shadow: 1px 0 5px rgba(0,0,0,.45);
+    }
+    #app:not(.nav-closed) #edgeHandle { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -755,6 +795,11 @@
       <span id="placeInfo"></span>
       <button id="placeBuild" class="btn">Build ✓</button>
       <button id="placeCancel" class="btn">✗</button>
+    </div>
+    <div id="edgeHandle" title="Open menu"></div>
+    <div id="hotbar">
+      <button id="hotbarMenu" title="Menu">☰</button>
+      <div id="hotbarTools"></div>
     </div>
     <div id="toast"></div>
   </div>
@@ -1050,10 +1095,35 @@ function buildToolbar() {
   });
 }
 
+// Mobile bottom hotbar: a flat, scrollable row of build tools (Pointer first).
+function buildHotbar() {
+  const bar = document.getElementById("hotbarTools");
+  if (!bar) return;
+  bar.innerHTML = "";
+  const keys = ["pointer"].concat(...TOOL_GROUPS.map(g => g.keys));
+  keys.forEach(key => {
+    const t = TYPES[key];
+    const need = UNLOCK_STAR[key] || 0;
+    const locked = state.stars < need;
+    const b = document.createElement("button");
+    b.className = "hot-tool" + (key === state.tool ? " on" : "") + (locked ? " locked" : "");
+    b.dataset.tool = key;
+    b.innerHTML = `<span class="hot-sw" style="background:${t.color === 'transparent' ? '#556' : t.color}"></span>`
+      + `<span>${key === 'pointer' ? 'Inspect' : t.name}</span>`;
+    b.addEventListener("click", () => {
+      if (locked) { toast(`${t.name} unlocks at ${need}★`); sfx("error"); return; }
+      selectTool(key);
+    });
+    bar.appendChild(b);
+  });
+}
+
 function selectTool(key) {
   state.tool = key;
   document.querySelectorAll(".tool").forEach(el =>
     el.classList.toggle("selected", el.dataset.tool === key));
+  document.querySelectorAll(".hot-tool").forEach(el =>
+    el.classList.toggle("on", el.dataset.tool === key));
   ghost.style.display = "none";
   if (typeof clearPending === "function") clearPending();
   const descEl = document.getElementById("toolDesc");
@@ -1682,6 +1752,7 @@ function recomputeStars() {
     }
     state.stars = s;
     buildToolbar();       // reveal newly unlocked build options
+    buildHotbar();
     updateObjective();
   }
 }
@@ -2186,6 +2257,25 @@ document.getElementById("menuToggle").addEventListener("click", () => app.classL
 document.getElementById("closeNav").addEventListener("click", closeNav);
 document.getElementById("backdrop").addEventListener("click", closeNav);
 
+// ---------- Mobile menu ergonomics: hotbar button, edge handle, swipe gestures ----------
+const sidebarEl = document.getElementById("sidebar");
+const edgeHandleEl = document.getElementById("edgeHandle");
+document.getElementById("hotbarMenu").addEventListener("click", () => app.classList.toggle("nav-closed"));
+// Left-edge handle: tap or swipe-right to open the drawer.
+let _ehX = 0;
+edgeHandleEl.addEventListener("click", openNav);
+edgeHandleEl.addEventListener("touchstart", e => { _ehX = e.touches[0].clientX; }, { passive: true });
+edgeHandleEl.addEventListener("touchend", e => {
+  if (e.changedTouches[0].clientX - _ehX > 18) openNav();
+}, { passive: true });
+// Swipe the open drawer left to close it (ignoring vertical scroll).
+let _sbX = 0, _sbY = 0;
+sidebarEl.addEventListener("touchstart", e => { _sbX = e.touches[0].clientX; _sbY = e.touches[0].clientY; }, { passive: true });
+sidebarEl.addEventListener("touchend", e => {
+  const dx = e.changedTouches[0].clientX - _sbX, dy = e.changedTouches[0].clientY - _sbY;
+  if (dx < -45 && Math.abs(dx) > Math.abs(dy)) closeNav();
+}, { passive: true });
+
 // ---------- Save / Load / New ----------
 function clearWorld() {
   state.units.forEach(u => u.el && u.el.remove());
@@ -2423,6 +2513,7 @@ document.getElementById("soundToggle").addEventListener("click", (e) => {
 function init() {
   buildBackground();
   buildToolbar();
+  buildHotbar();
   buildStars();
 
   const loaded = loadGame(true);
