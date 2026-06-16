@@ -181,7 +181,8 @@ line still shows a notable first-player advantage — a known item to balance.)
 - [x] Multi-map genmap with regional crop + 1:50m detail; **Caribbean theatre** (16 territories).
 - [x] Theatres: **Napoleonic Europe**, **Scramble for Africa**, **Egypt & the Near East**, **Crimean War**, **Indian Subcontinent** (8 maps total).
 - [ ] More theatres (Southeast Asia, North America, …) — just config blocks now.
-- [ ] Per-map factions (era powers: France, Britain, Austria, Russia, Prussia, Ottomans).
+- [x] Faction pool (great powers) with per-map era rosters; generic factions for World/Classic.
+- [ ] Faction traits (e.g. British naval bonus) layered on the shared faction objects.
 - [ ] Tune first-player advantage (e.g. scaling setup or reinforcement curves).
 - [ ] Faction traits/bonuses (the `Faction` type is the hook).
 - [ ] Smarter AI difficulty levels.

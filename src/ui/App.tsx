@@ -1,12 +1,12 @@
 import { useState } from "react";
 import {
-  DEFAULT_FACTIONS,
   DEFAULT_MAP_ID,
   MAP_REGISTRY,
   currentPlayer,
   mapInfo,
+  rosterFor,
 } from "../engine/index.ts";
-import type { GameMap, PlayerConfig } from "../engine/index.ts";
+import type { Faction, GameMap, PlayerConfig } from "../engine/index.ts";
 import { useGame } from "./useGame.ts";
 import { hasSavedGame } from "./persistence.ts";
 import { MapView } from "./components/MapView.tsx";
@@ -62,27 +62,25 @@ function Setup({
   onStart,
   onResume,
 }: {
-  onStart: (map: GameMap, players: PlayerConfig[], seed?: number) => void;
+  onStart: (map: GameMap, players: PlayerConfig[], factions: Faction[], seed?: number) => void;
   onResume: () => boolean;
 }) {
   const [count, setCount] = useState(3);
   const [mapId, setMapId] = useState(DEFAULT_MAP_ID);
   const [loadingMap, setLoadingMap] = useState(false);
-  const [names, setNames] = useState<string[]>([
-    "You",
-    "Player 2",
-    "Player 3",
-    "Player 4",
-    "Player 5",
-    "Player 6",
-  ]);
+  // Custom name overrides, keyed by seat index; otherwise the faction's name.
+  const [custom, setCustom] = useState<Record<number, string>>({});
   // Default: the first seat is human, the rest are computer opponents.
   const [ai, setAi] = useState<boolean[]>([false, true, true, true, true, true]);
   const savedExists = hasSavedGame();
 
+  // The era roster for the selected map (great powers + neutral fillers).
+  const roster = rosterFor(mapInfo(mapId).factionIds, count);
+  const seatName = (i: number) => custom[i] ?? roster[i].name;
+
   const players: PlayerConfig[] = Array.from({ length: count }, (_, i) => ({
-    name: names[i] || `Player ${i + 1}`,
-    factionId: DEFAULT_FACTIONS[i].id,
+    name: seatName(i),
+    factionId: roster[i].id,
     isAI: ai[i],
   }));
 
@@ -91,7 +89,7 @@ function Setup({
     setLoadingMap(true);
     try {
       const map = await mapInfo(mapId).load();
-      onStart(map, players, seed);
+      onStart(map, players, roster, seed);
     } finally {
       setLoadingMap(false);
     }
@@ -141,15 +139,11 @@ function Setup({
         <div className="player-row" key={i}>
           <span
             className="swatch"
-            style={{ background: DEFAULT_FACTIONS[i].color, alignSelf: "center" }}
+            style={{ background: roster[i].color, alignSelf: "center" }}
           />
           <input
-            value={names[i]}
-            onChange={(e) => {
-              const next = names.slice();
-              next[i] = e.target.value;
-              setNames(next);
-            }}
+            value={seatName(i)}
+            onChange={(e) => setCustom({ ...custom, [i]: e.target.value })}
           />
           <button
             onClick={() => {

@@ -15,6 +15,8 @@ export interface MapInfo {
   id: string;
   name: string;
   description: string;
+  /** Era roster (great-power faction ids); omitted maps use generic factions. */
+  factionIds?: string[];
   /** Resolves the full map data — lazily for non-default maps. */
   load: () => Promise<GameMap>;
 }
@@ -36,36 +38,42 @@ export const MAP_REGISTRY: MapInfo[] = [
     id: "caribbean",
     name: "Caribbean",
     description: "Napoleonic-era island theatre — 16 territories, naval routes.",
+    factionIds: ["britain", "france", "spain", "netherlands", "portugal"],
     load: () => import("./caribbean.ts").then((m) => m.caribbeanMap),
   },
   {
     id: "napoleon",
     name: "Napoleonic Europe",
     description: "Europe c.1812 — 24 territories, era states from France to Russia.",
+    factionIds: ["france", "britain", "russia", "austria", "prussia", "ottoman"],
     load: () => import("./napoleon.ts").then((m) => m.napoleonMap),
   },
   {
     id: "africa-scramble",
     name: "Scramble for Africa",
     description: "The colonial partition of Africa — 25 territories.",
+    factionIds: ["britain", "france", "germany", "portugal", "belgium", "italy"],
     load: () => import("./africaScramble.ts").then((m) => m.africaMap),
   },
   {
     id: "near-east",
     name: "Egypt & the Near East",
     description: "Napoleon's Egyptian campaign & the Ottoman Near East — 19 territories.",
+    factionIds: ["france", "britain", "ottoman", "russia", "persia"],
     load: () => import("./nearEast.ts").then((m) => m.nearEastMap),
   },
   {
     id: "crimea",
     name: "Crimean War",
     description: "The Black Sea littoral, 1853-56 — 14 territories.",
+    factionIds: ["russia", "ottoman", "britain", "france", "sardinia", "austria"],
     load: () => import("./crimea.ts").then((m) => m.crimeaMap),
   },
   {
     id: "india",
     name: "Indian Subcontinent",
     description: "The subcontinent by presidency — 15 territories.",
+    factionIds: ["britain", "france", "portugal", "netherlands"],
     load: () => import("./indiaSubcontinent.ts").then((m) => m.indiaMap),
   },
 ];
