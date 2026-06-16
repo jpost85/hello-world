@@ -1,0 +1,246 @@
+:root {
+  --bg: #0e1116;
+  --panel: #171c24;
+  --panel-2: #1f2630;
+  --border: #2b333f;
+  --text: #e6e9ee;
+  --muted: #95a0ad;
+  --accent: #e0a526;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+button.primary {
+  background: var(--accent);
+  color: #1a1300;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+}
+
+.topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.topbar h1 {
+  font-size: 16px;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+.topbar .spacer {
+  flex: 1;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.board {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 30% 20%, #16202c, #0b0e13 70%);
+}
+.board svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.territory {
+  cursor: pointer;
+}
+.territory circle {
+  stroke: #0a0d12;
+  stroke-width: 1.5;
+  transition: stroke 0.1s, stroke-width 0.1s;
+}
+.territory.selectable circle {
+  stroke: #ffffff;
+}
+.territory.selected circle {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+.territory text {
+  fill: #0a0d12;
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+.tname {
+  fill: var(--muted);
+  font-size: 8px;
+  font-weight: 500;
+}
+.marker {
+  font-size: 12px;
+  pointer-events: none;
+}
+.edge {
+  stroke: #33404f;
+  stroke-width: 1;
+}
+
+.panel {
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel section {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.panel h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.row + .row {
+  margin-top: 8px;
+}
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+
+.log {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.log .entry {
+  padding: 3px 0;
+  border-bottom: 1px solid #1c232c;
+  color: var(--muted);
+}
+.log .entry b {
+  color: var(--text);
+}
+
+.dice {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.die {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+.die.atk {
+  background: #d64550;
+  color: #fff;
+}
+.die.def {
+  background: #3d7eb5;
+  color: #fff;
+}
+
+.setup {
+  max-width: 460px;
+  margin: 8vh auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+}
+.setup h1 {
+  margin-top: 0;
+}
+.setup label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 12px 0 4px;
+}
+.setup .player-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.setup input {
+  font: inherit;
+  flex: 1;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
