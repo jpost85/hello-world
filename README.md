@@ -64,6 +64,9 @@ npm run build      # type-check and produce a production build
    then end your turn.
 5. Eliminate every opponent to win.
 
+Navigate the map by **scrolling to zoom** and **dragging to pan** (or use the
+on-screen +/−/reset controls); a short drag won't be mistaken for a territory click.
+
 ## Architecture
 
 The codebase deliberately separates a **pure game engine** from the **UI**:

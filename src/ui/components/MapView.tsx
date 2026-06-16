@@ -1,10 +1,13 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import type { GameState } from "../../engine/index.ts";
 
 // Fallback canvas size for legacy maps whose positions are normalised to [0, 1].
 const NORM_W = 1000;
 const NORM_H = 620;
 const R = 17;
+const MAX_ZOOM = 8;
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 interface Props {
   state: GameState;
@@ -68,7 +71,7 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
 
   // Sea routes drawn as dashed connecting lines. Long Pacific crossings (e.g.
   // Alaska↔Far East Russia) are split into two stubs that run off opposite edges.
-  const [vbW] = useMemo(() => {
+  const [vbW, vbH] = useMemo(() => {
     const parts = viewBox.split(/\s+/).map(Number);
     return [parts[2] || NORM_W, parts[3] || NORM_H];
   }, [viewBox]);
@@ -94,10 +97,121 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
 
   const badgeScale = isGeo ? 0.55 : 1;
 
+  // --- Pan & zoom ----------------------------------------------------------
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [view, setView] = useState({ x: 0, y: 0, k: 1 });
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  const drag = useRef<null | { startX: number; startY: number; viewX: number; viewY: number; moved: boolean }>(null);
+  const draggedRef = useRef(false);
+  const [dragging, setDragging] = useState(false);
+
+  // Reset the view whenever the map changes (e.g. switching boards).
+  useEffect(() => {
+    setView({ x: 0, y: 0, k: 1 });
+  }, [state.map.id]);
+
+  // Convert client (screen) coordinates into the SVG's user space.
+  const clientToSvg = useCallback((cx: number, cy: number) => {
+    const svg = svgRef.current;
+    const ctm = svg?.getScreenCTM();
+    if (!ctm) return null;
+    const p = new DOMPoint(cx, cy).matrixTransform(ctm.inverse());
+    return { x: p.x, y: p.y };
+  }, []);
+
+  // Keep the scaled content covering the viewport (no panning into empty space).
+  const clampPan = useCallback(
+    (x: number, y: number, k: number): [number, number] => [
+      clamp(x, vbW * (1 - k), 0),
+      clamp(y, vbH * (1 - k), 0),
+    ],
+    [vbW, vbH],
+  );
+
+  const zoomAround = useCallback(
+    (px: number, py: number, factor: number) => {
+      setView((v) => {
+        const k = clamp(v.k * factor, 1, MAX_ZOOM);
+        const [x, y] = clampPan(px - ((px - v.x) / v.k) * k, py - ((py - v.y) / v.k) * k, k);
+        return { x, y, k };
+      });
+    },
+    [clampPan],
+  );
+
+  // Wheel zoom (native, non-passive so we can preventDefault the page scroll).
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const p = clientToSvg(e.clientX, e.clientY);
+      if (p) zoomAround(p.x, p.y, e.deltaY < 0 ? 1.15 : 1 / 1.15);
+    };
+    svg.addEventListener("wheel", onWheel, { passive: false });
+    return () => svg.removeEventListener("wheel", onWheel);
+  }, [clientToSvg, zoomAround]);
+
+  // Drag to pan (window listeners so a drag continues outside the SVG).
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const d = drag.current;
+      if (!d) return;
+      const p = clientToSvg(e.clientX, e.clientY);
+      if (!p) return;
+      const dx = p.x - d.startX;
+      const dy = p.y - d.startY;
+      if (!d.moved && Math.hypot(dx, dy) > 3) {
+        d.moved = true;
+        draggedRef.current = true;
+        setDragging(true);
+      }
+      if (!d.moved) return;
+      setView((v) => {
+        const [x, y] = clampPan(d.viewX + dx, d.viewY + dy, v.k);
+        return { x, y, k: v.k };
+      });
+    };
+    const onUp = () => {
+      if (drag.current) drag.current = null;
+      setDragging(false);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [clientToSvg, clampPan]);
+
+  const onPointerDown = (e: ReactPointerEvent) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const p = clientToSvg(e.clientX, e.clientY);
+    if (!p) return;
+    draggedRef.current = false;
+    drag.current = { startX: p.x, startY: p.y, viewX: viewRef.current.x, viewY: viewRef.current.y, moved: false };
+  };
+
+  // Suppress the territory click that follows a drag.
+  const handleTerritoryClick = (id: string) => {
+    if (draggedRef.current) return;
+    onClick(id);
+  };
+
+  const zoomButton = (factor: number) => zoomAround(vbW / 2, vbH / 2, factor);
+
   return (
     <div className="board">
-      <svg viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
+      <svg
+        ref={svgRef}
+        className={dragging ? "grabbing" : "grab"}
+        viewBox={viewBox}
+        preserveAspectRatio="xMidYMid meet"
+        onPointerDown={onPointerDown}
+      >
         {isGeo && <rect className="ocean" x={0} y={0} width="100%" height="100%" />}
+        <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
         {state.map.decorations?.map((d, i) => (
           <g key={`decor-${i}`} className="decoration">
             <path d={d.path} fill={d.fill} />
@@ -120,7 +234,7 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
           if (t.id === from || t.id === to) classes.push("selected");
 
           return (
-            <g key={t.id} className={classes.join(" ")} onClick={() => onClick(t.id)}>
+            <g key={t.id} className={classes.join(" ")} onClick={() => handleTerritoryClick(t.id)}>
               <title>{t.name}</title>
               {t.path ? (
                 <path d={t.path} fill={colorOf(ts.ownerId)} />
@@ -145,7 +259,13 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
             </g>
           );
         })}
+        </g>
       </svg>
+      <div className="zoom-controls">
+        <button title="Zoom in" onClick={() => zoomButton(1.4)}>+</button>
+        <button title="Zoom out" onClick={() => zoomButton(1 / 1.4)}>−</button>
+        <button title="Reset view" onClick={() => setView({ x: 0, y: 0, k: 1 })}>⤢</button>
+      </div>
     </div>
   );
 }
