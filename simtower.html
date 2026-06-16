@@ -437,6 +437,13 @@
     top:auto; bottom:7px; left:20%; right:20%; height:5px;
     background:#6b4a2e; border-radius:2px; box-shadow:0 3px 0 -1px #4a3420;
   }
+  /* Security office — desk + a shield badge */
+  .unit-security .u-face {
+    background:
+      radial-gradient(circle at 50% 42%, #2f6fb0 0 4px, #244f7a 4px 6px, transparent 6.5px), /* shield badge */
+      linear-gradient(180deg, #7a8aa0 0 4px, #c2ccd8 4px calc(100% - 5px), #5d6878 calc(100% - 5px));
+  }
+  .unit-security .u-extra { top:auto; bottom:5px; left:14%; right:14%; height:4px; background:#3a4250; border-radius:2px; }
   /* Sky Spire — the golden crowning landmark */
   .unit-spire { --wall: transparent; border: none; }
   .unit-spire .u-face {
@@ -769,6 +776,7 @@ const TYPES = {
   gym:       { name: "Gym",         cost: 30000, w: 3, h: 1, color: "#9fb0a6", income: 0,    cap: 0,  kind: "amenity", appeal: 14 },
   spa:       { name: "Spa",         cost: 40000, w: 3, h: 1, color: "#86b8b0", income: 0,    cap: 0,  kind: "amenity", appeal: 18, favors: "hotel" },
   conference:{ name: "Conf. Room",  cost: 34000, w: 3, h: 1, color: "#b0a48c", income: 0,    cap: 0,  kind: "amenity", appeal: 16, favors: "work" },
+  security:  { name: "Security",    cost: 30000, w: 2, h: 1, color: "#7a8aa0", income: 0,    cap: 0,  kind: "security" },
   spire:     { name: "Sky Spire",   cost: 250000,w: 3, h: 1, color: "#e9cf86", income: 0,    cap: 0,  kind: "landmark", appeal: 30 },
   parking:   { name: "Parking",     cost: 18000, w: 3, h: 1, color: "#5a5f66", income: 0,    cap: 0,  kind: "infra", infra: 0.006 },
   metro:     { name: "Metro Station",cost: 90000,w: 4, h: 1, color: "#3a4656", income: 0,    cap: 0,  kind: "infra", infra: 0.022 },
@@ -783,6 +791,7 @@ const TYPES = {
 const UNLOCK_STAR = {
   elevator: 1, restaurant: 1, terrace: 1, parking: 1,
   condo: 2, hotel: 2, gym: 2,
+  security: 2,
   cinema: 3, garden: 3, conference: 3, playground: 3, metro: 3, skylobby: 3,
   pool: 4, spa: 4, skybar: 4, expresselevator: 4,
   spire: 5,
@@ -792,6 +801,7 @@ const UNLOCK_STAR = {
 const TOOL_GROUPS = [
   { title: "Rooms",       keys: ["office","apartment","condo","hotel","shop","restaurant","cinema"] },
   { title: "Amenities",   keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference"] },
+  { title: "Services",    keys: ["security"] },
   { title: "Transit",     keys: ["floor","stair","elevator","expresselevator","skylobby"] },
   { title: "Underground", keys: ["parking","metro"] },
   { title: "Landmark",    keys: ["spire"] },
@@ -826,6 +836,7 @@ const TYPE_DESC = {
   gym:       "Indoor fitness center. Boosts nearby satisfaction; works mid-tower, no open sky needed.",
   spa:       "Indoor spa. Especially delights nearby hotel guests.",
   conference:"Indoor meeting space. Especially boosts nearby offices.",
+  security:  "Security office — contains fires, foils bomb threats, and reassures VIP inspectors.",
   spire:     "The crowning landmark. Build it to complete your TOWER and win.",
   parking:   "Basement parking — a modest boost to move-ins tower-wide. Underground only.",
   metro:     "Underground station that brings commuters — a big move-in boost tower-wide. Underground only.",
@@ -856,6 +867,7 @@ const state = {
   pending: null,
   won: false,
   frustration: 0,   // builds when sims give up waiting for elevators; hurts tenants
+  reputation: 0,    // temporary appeal modifier from VIP inspections / events (decays)
 };
 
 const ROLE_COLOR = { work: "#5b8def", home: "#56c271", hotel: "#d9b36b", visitor: "#b4bfca" };
@@ -1069,7 +1081,7 @@ function tryBuild(col, row, key_) {
   if (state.cash < t.cost) { toast("Not enough cash."); sfx("error"); flash(false); return; }
   if (t.kind === "infra" && row >= 0) { toast("Build this underground, in a basement."); sfx("error"); return; }
   if (t.kind === "outdoor" && row < 0) { toast("Outdoor spaces must be above ground."); sfx("error"); return; }
-  if ((["work","home","shop","hotel","outdoor","amenity","infra"].includes(t.kind) || key_ === "skylobby") && !hasTransitAccess(col, row, t.w)) {
+  if ((["work","home","shop","hotel","outdoor","amenity","infra","security"].includes(t.kind) || key_ === "skylobby") && !hasTransitAccess(col, row, t.w)) {
     toast("Needs stairs, an elevator or a sky lobby within 8 cells."); sfx("error");
     return;
   }
@@ -1143,7 +1155,7 @@ function unitInnerHTML(type) {
 function shortLabel(type) {
   return ({office:"OFF", apartment:"APT", condo:"CONDO", hotel:"🛏", shop:"SHOP", restaurant:"REST",
            cinema:"🎬", terrace:"⛱", garden:"🌳", pool:"POOL", playground:"PLAY", skybar:"BAR",
-           gym:"GYM", spa:"SPA", conference:"CONF", spire:"♛", parking:"🅿", metro:"Ⓜ",
+           gym:"GYM", spa:"SPA", conference:"CONF", security:"🛡", spire:"♛", parking:"🅿", metro:"Ⓜ",
            skylobby:"SKY", expresselevator:"▲", stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
 }
 
@@ -1397,6 +1409,9 @@ function infrastructureBonus() {
   for (const u of state.units) b += (TYPES[u.type].infra || 0);
   return Math.min(0.1, b);
 }
+function securityCount() {
+  return state.units.reduce((n, u) => n + (u.type === "security" ? 1 : 0), 0);
+}
 
 function simTenants() {
   // Long elevator waits (frustration) suppress demand and tenant happiness.
@@ -1406,8 +1421,9 @@ function simTenants() {
     const t = TYPES[u.type];
     const amen = amenityBonus(u);
     if (u.occupants < t.cap) {
-      // chance to gain a tenant scales with tower appeal + amenities + infrastructure, minus frustration
-      const appeal = (0.02 + state.stars * 0.01 + amen * 0.0009 + infra) * (1 - Math.min(0.7, state.frustration * 0.03));
+      // chance to gain a tenant scales with appeal + amenities + infrastructure + reputation, minus frustration
+      const rep = 1 + Math.max(-0.5, Math.min(0.5, state.reputation));
+      const appeal = (0.02 + state.stars * 0.01 + amen * 0.0009 + infra) * (1 - Math.min(0.7, state.frustration * 0.03)) * rep;
       if (Math.random() < appeal) {
         u.occupants++;
         state.pop++;
@@ -1459,55 +1475,92 @@ function collectRent() {
   refreshStats();
 }
 
-// Random once-a-day events that keep the tower lively.
+// Rooms a disaster can strike (and pop-aware damage to them).
+function disasterTargets() {
+  return state.units.filter(u => {
+    const k = TYPES[u.type].kind;
+    return k === "work" || k === "home" || k === "hotel" || k === "shop";
+  });
+}
+function damageUnit(u, satHit) {
+  const k = TYPES[u.type].kind;
+  if ((k === "work" || k === "home" || k === "hotel") && u.occupants > 0) {
+    state.pop -= u.occupants; u.occupants = 0; updateUnitVisual(u);
+  }
+  u.satisfaction = Math.max(0, u.satisfaction - satHit);
+  spawnSmoke(u);
+}
+function adjacentTarget(u) {
+  for (const c of [u.col - 1, u.col + u.w]) {
+    const id = state.grid[key(c, u.row)];
+    if (!id) continue;
+    const n = state.units.find(x => x.id === id);
+    if (n && disasterTargets().includes(n)) return n;
+  }
+  return null;
+}
+
+// Random once-a-day events: booms, VIP inspections, maintenance, fires and bomb threats.
 function maybeEvent() {
   if (state.units.length < 5) return;      // grace period while getting started
   if (Math.random() > 0.4) return;          // ~40% chance per day
+  const sec = securityCount();
   const roll = Math.random();
-  if (roll < 0.30) {
+  if (roll < 0.22) {                        // economic boom
     const bonus = 3000 + Math.round(state.pop * 80);
     state.cash += bonus;
-    toast("📈 Economic boom!");
-    sfx("bonus");
-    floatText(`+$${bonus.toLocaleString()}`);
+    toast("📈 Economic boom!"); sfx("bonus"); floatText(`+$${bonus.toLocaleString()}`);
     log(`📈 Economic boom — investors pour in: +$${bonus.toLocaleString()}`, "good");
-  } else if (roll < 0.55) {
-    if (avgSatisfaction() >= 70) {
-      const b = 5000;
+  } else if (roll < 0.44) {                 // VIP inspection — lasting reputation effect
+    const sat = avgSatisfaction();
+    const passed = sat >= 65 || (sat >= 50 && sec > 0);
+    if (passed) {
+      const b = 6000;
       state.cash += b;
-      toast("🎩 VIP inspection passed!");
-      sfx("bonus");
-      floatText(`+$${b.toLocaleString()}`);
-      log(`🎩 VIP inspection passed — reputation bonus: +$${b.toLocaleString()}`, "good");
+      state.reputation = Math.min(0.5, state.reputation + 0.25);
+      toast("🎩 VIP inspection passed!"); sfx("bonus"); floatText(`+$${b.toLocaleString()}`);
+      log(`🎩 VIP impressed (${Math.round(sat)}% satisfaction): +$${b.toLocaleString()} and a reputation boost.`, "good");
     } else {
-      log("🎩 A VIP toured the tower and left unimpressed by tenant satisfaction.", "bad");
+      state.reputation = Math.max(-0.5, state.reputation - 0.2);
+      toast("🎩 VIP unimpressed…");
+      log(`🎩 A VIP left unimpressed (${Math.round(sat)}% satisfaction). Your reputation takes a hit.`, "bad");
     }
-  } else if (roll < 0.80) {
+  } else if (roll < 0.62) {                 // maintenance
     const fee = 1000 + state.units.length * 150;
-    state.cash -= fee;
-    floatText(`-$${fee.toLocaleString()}`, "bad");
+    state.cash -= fee; floatText(`-$${fee.toLocaleString()}`, "bad");
     log(`🔧 Routine maintenance and upkeep: -$${fee.toLocaleString()}`, "bad");
-  } else {
-    const targets = state.units.filter(u => {
-      const k = TYPES[u.type].kind;
-      return k === "work" || k === "home" || k === "hotel" || k === "shop";
-    });
+  } else if (roll < 0.84) {                 // fire — spreads if there's no security
+    const targets = disasterTargets();
     if (targets.length) {
       const u = targets[Math.floor(Math.random() * targets.length)];
-      const k = TYPES[u.type].kind;
-      // Only residents/workers/guests count toward population; shop "occupants"
-      // are foot-traffic figures and must not be subtracted from it.
-      if ((k === "work" || k === "home" || k === "hotel") && u.occupants > 0) {
-        state.pop -= u.occupants; u.occupants = 0; updateUnitVisual(u);
+      damageUnit(u, 40);
+      let repair = 4000, spread = "";
+      if (sec === 0) {
+        const n = adjacentTarget(u);
+        if (n) { damageUnit(n, 30); repair += 4000; spread = " It spread to the next unit!"; }
       }
-      u.satisfaction = Math.max(0, u.satisfaction - 40);
-      const repair = 4000;
       state.cash -= repair;
-      toast("🔥 Fire!");
-      sfx("fire");
-      spawnSmoke(u);
-      floatText(`-$${repair.toLocaleString()}`, "bad");
-      log(`🔥 Fire in ${TYPES[u.type].name} on floor ${u.row}! Evacuated; repairs -$${repair.toLocaleString()}.`, "bad");
+      toast("🔥 Fire!"); sfx("fire"); floatText(`-$${repair.toLocaleString()}`, "bad");
+      log(`🔥 Fire in ${TYPES[u.type].name} on floor ${u.row}!${spread}${sec ? " Security contained it." : ""} Repairs -$${repair.toLocaleString()}.`, "bad");
+    }
+  } else {                                  // bomb threat — security defuses it
+    if (sec > 0) {
+      state.reputation = Math.min(0.5, state.reputation + 0.06);
+      toast("🚨 Bomb threat foiled!"); sfx("bonus");
+      log("🚨 Security received a bomb threat and defused it — crisis averted, reputation up.", "good");
+    } else {
+      const targets = disasterTargets();
+      if (targets.length) {
+        const u = targets[Math.floor(Math.random() * targets.length)];
+        damageUnit(u, 60);
+        const cost = 9000;
+        state.cash -= cost;
+        state.reputation = Math.max(-0.5, state.reputation - 0.15);
+        toast("💥 Bomb detonated!"); sfx("fire"); floatText(`-$${cost.toLocaleString()}`, "bad");
+        log(`💥 A bomb went off in ${TYPES[u.type].name} on floor ${u.row} — no security to stop it! -$${cost.toLocaleString()} and reputation damage. Build a Security office.`, "bad");
+      } else {
+        log("🚨 A bomb threat came in, but there was nothing to target.", "bad");
+      }
     }
   }
   refreshStats();
@@ -1905,6 +1958,7 @@ function advanceMinute() {
     collectRent();
     recomputeStars();
     if (state.frustration > 8) log("⏳ Long elevator waits are frustrating tenants — add transit capacity!", "bad");
+    state.reputation *= 0.7; // reputation fades back toward neutral each day
     maybeEvent();
     saveGame(true);
   }
