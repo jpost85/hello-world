@@ -222,6 +222,11 @@
     font-size:8px; font-weight:700; letter-spacing:.5px;
     color: rgba(0,0,0,.5); pointer-events:none;
   }
+  .lobby-label {
+    position:absolute; z-index:5; text-align:center; pointer-events:none;
+    font-size:9px; font-weight:700; letter-spacing:3px; color:rgba(0,0,0,.5);
+    text-shadow:0 1px 0 rgba(255,255,255,.25);
+  }
   .unit-shop .u-tag, .unit-restaurant .u-tag, .unit-cinema .u-tag {
     top:auto; bottom:4px; color: rgba(255,255,255,.85); text-shadow:0 1px 1px rgba(0,0,0,.6);
   }
@@ -1006,7 +1011,7 @@ function placeUnit(unit) {
 // Layered interior markup for a unit: facade + type extras + tag + vacancy sign + occupancy bar.
 function unitInnerHTML(type) {
   const t = TYPES[type];
-  const tag = (type === "floor") ? "" : `<div class="u-tag">${shortLabel(type)}</div>`;
+  const tag = (type === "floor" || type === "lobby") ? "" : `<div class="u-tag">${shortLabel(type)}</div>`;
   const vac = (t.cap > 0) ? `<div class="u-vac">FOR LEASE</div>` : "";
   let windows = "";
   if (type === "office" || type === "apartment" || type === "condo" || type === "hotel") {
@@ -1640,6 +1645,23 @@ function rebuildFacade() {
   }
 }
 
+// The lobby is many 1-wide cells; show a single label centered over the whole run.
+function updateLobbyLabel() {
+  const old = world.querySelector(".lobby-label");
+  if (old) old.remove();
+  const cells = state.units.filter(u => u.type === "lobby");
+  if (!cells.length) return;
+  let min = Infinity, max = -Infinity, row = 0;
+  for (const u of cells) { min = Math.min(min, u.col); max = Math.max(max, u.col + u.w - 1); row = u.row; }
+  const el = document.createElement("div");
+  el.className = "lobby-label";
+  el.textContent = "LOBBY";
+  el.style.left = colLeft(min) + "px";
+  el.style.width = ((max - min + 1) * CELL_W) + "px";
+  el.style.top = (rowTop(row) + 4) + "px";
+  world.appendChild(el);
+}
+
 // ---------- Time loop ----------
 let lastTs = 0;
 let minuteAccumulator = 0;
@@ -2029,6 +2051,7 @@ function init() {
   }
   rebuildFacade();
   applyFacade();
+  updateLobbyLabel();
   refreshStats();
   updateClock();
   updateSky(true);
