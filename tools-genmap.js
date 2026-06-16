@@ -6,6 +6,9 @@
      /tmp/us-states.json   https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json
      /tmp/canada.geojson   https://raw.githubusercontent.com/codeforgermany/click_that_hood/main/public/data/canada.geojson
 
+   Dev dependency (not needed to play): npm install polygon-clipping
+   (used to dissolve multi-state regions into a single outline).
+
    - Playable regions use real outlines in their colonial configurations
      (e.g. Massachusetts incl. the District of Maine; Virginia incl. WV).
    - Every other state/province whose bounding box overlaps the visible window
@@ -13,6 +16,7 @@
      only real water (Atlantic, Gulf, Great Lakes, St. Lawrence) shows as water.
    - Dense Canadian coastlines are simplified, since they're only backdrop. */
 const fs = require("fs");
+const polygonClipping = require("polygon-clipping");
 const us = JSON.parse(fs.readFileSync("/tmp/us-states.json", "utf8"));
 const ca = JSON.parse(fs.readFileSync("/tmp/canada.geojson", "utf8"));
 const FEATURES = us.features.concat(ca.features); // names are unique across both
@@ -40,6 +44,7 @@ const PLAYABLE = {
   novascotia: "Nova Scotia",             // British Nova Scotia (Halifax naval base)
   ohio:       "Ohio",                    // the Ohio Country / Northwest frontier
   appalachia: ["Kentucky", "Tennessee"], // trans-Appalachian backcountry
+  alabama:    "Alabama",                 // the Alabama / Mississippi Gulf frontier
   florida:    "Florida",                 // East Florida (cropped to its north)
   quebec:     "Quebec",                  // Province of Quebec (cropped to its south)
 };
@@ -117,7 +122,19 @@ function ringPath(ring) {
   return d + "Z";
 }
 function geomPath(geom) { return ringsOf(geom).map((r) => ringPath(simplifyRing(r, 0.12))).join(" "); }
-function regionPath(v) { return statesOf(v).map((n) => geomPath(featByName(n).geometry)).join(" "); }
+function polygonsOfName(n) {
+  const g = featByName(n).geometry;
+  return g.type === "Polygon" ? [g.coordinates] : g.coordinates;
+}
+// Multi-state regions are dissolved into a single outline (shared internal
+// borders removed) by unioning their polygons; single states pass through.
+function regionPath(v) {
+  const names = statesOf(v);
+  if (names.length === 1) return geomPath(featByName(names[0]).geometry);
+  let acc = polygonsOfName(names[0]);
+  for (let i = 1; i < names.length; i++) acc = polygonClipping.union(acc, polygonsOfName(names[i]));
+  return acc.flatMap((poly) => poly.map((ring) => ringPath(simplifyRing(ring, 0.12)))).join(" ");
+}
 
 // Area-weighted centroid of the largest ring across all states of a region.
 function centroidOf(v) {
@@ -145,7 +162,7 @@ const ANCHOR = {
   vermont: [-72.9, 44.35], ny: [-75.3, 42.95], nj: [-74.5, 40.1], del: [-75.45, 39.05],
   md: [-77.2, 39.45], va: [-79.5, 38.3], quebec: [-71.5, 47.2],
   ohio: [-82.7, 40.3], appalachia: [-85.8, 36.4], florida: [-83.0, 29.65], ontario: [-80.6, 43.6],
-  novascotia: [-64.7, 45.0],
+  novascotia: [-64.7, 45.0], alabama: [-86.8, 32.7],
 };
 
 const regions = {};
