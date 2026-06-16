@@ -1068,7 +1068,7 @@ function updateUnitVisual(unit) {
 
 // ---------- Day / night sky ----------
 const SKY = {
-  night: ["#05080f", "#0f1c2b"],
+  night: ["#010206", "#060c17"],
   day:   ["#6db3e8", "#cfe9fb"],
   dusk:  ["#e8895a", "#f3cd9a"],
 };
@@ -1106,7 +1106,7 @@ function updateSky(force) {
   const moonH = h < 6 ? h + 24 : h;
   if (placeArc(moonEl, (moonH - 18) / 12)) moonEl.style.opacity = String(clamp01((1 - bright) - 0.15));
   starsEl.style.opacity = String(clamp01(1 - bright * 2.4));
-  cloudsEl.style.opacity = String(0.25 + bright * 0.6);
+  cloudsEl.style.opacity = String(0.06 + bright * 0.7);
 
   const isNight = bright < 0.12;
   if (force || isNight !== state.isNight) {
