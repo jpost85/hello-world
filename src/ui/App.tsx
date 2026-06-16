@@ -11,6 +11,7 @@ import { useGame } from "./useGame.ts";
 import { hasSavedGame } from "./persistence.ts";
 import { MapView } from "./components/MapView.tsx";
 import { ControlPanel } from "./components/ControlPanel.tsx";
+import { Flag } from "./components/Flag.tsx";
 
 export function App() {
   const g = useGame();
@@ -38,7 +39,7 @@ export function App() {
                 outline: p.id === active.id ? "1px solid var(--accent)" : "none",
               }}
             >
-              <span className="swatch" style={{ background: faction.color }} />
+              <Flag id={p.factionId} color={faction.color} size={20} />
               {p.name}
               {p.isAI && " 🤖"}
               {p.isEliminated && " ✗"}
@@ -137,10 +138,9 @@ function Setup({
       <label>Players</label>
       {Array.from({ length: count }, (_, i) => (
         <div className="player-row" key={i}>
-          <span
-            className="swatch"
-            style={{ background: roster[i].color, alignSelf: "center" }}
-          />
+          <span style={{ alignSelf: "center", display: "flex" }}>
+            <Flag id={roster[i].id} color={roster[i].color} size={26} />
+          </span>
           <input
             value={seatName(i)}
             onChange={(e) => setCustom({ ...custom, [i]: e.target.value })}

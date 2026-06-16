@@ -5,6 +5,7 @@ import {
 } from "../../engine/index.ts";
 import type { AttackStyle, DefenseStyle } from "../../engine/index.ts";
 import type { UseGame } from "../useGame.ts";
+import { Flag } from "./Flag.tsx";
 
 const ATTACK_STYLES: { value: AttackStyle; label: string }[] = [
   { value: "standard", label: "Standard — up to 3 dice, ties to defender" },
@@ -35,7 +36,7 @@ export function ControlPanel(g: UseGame) {
         </h2>
         <div className="row">
           <span className="badge">
-            <span className="swatch" style={{ background: faction.color }} />
+            <Flag id={player.factionId} color={faction.color} size={20} />
             {player.name}
           </span>
           <span className="badge">{territoriesOf(state, player.id).length} territories</span>
