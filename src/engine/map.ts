@@ -47,7 +47,7 @@ export function regionBonus(state: GameState, playerId: string): number {
 
 /**
  * Base reinforcements from territory count: floor(owned / 3), minimum 3 — the
- * classic Risk formula. Region bonuses are added on top by the caller.
+ * classic conquest-game formula. Region bonuses are added on top by the caller.
  */
 export function baseReinforcements(state: GameState, playerId: string): number {
   const count = territoriesOf(state, playerId).length;

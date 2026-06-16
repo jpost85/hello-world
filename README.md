@@ -1,11 +1,11 @@
-# Risk · 1996 Web Remake
+# Dominion: Balance of Power
 
-A web-based remake of the 1996 PC game *Risk: The Game of Global Domination*,
-built with React + TypeScript + Vite.
+A web-based, turn-based strategy game of global conquest, built with
+React + TypeScript + Vite.
 
 This milestone delivers a **fully tested, deterministic game engine**, a
 **computer opponent**, and a **playable UI** (single-player vs. AI or hot-seat)
-on a **real-world map of 67 territories** drawn from actual geography. It is the
+on a **real-world map of 60 territories** drawn from actual geography. It is the
 foundation for the larger feature set (more maps, factions, online multiplayer)
 described in the roadmap.
 
@@ -91,7 +91,7 @@ tools/
 ## Map data pipeline
 
 The real-world board is generated, not hand-placed. `tools/genmap.mjs`
-(the Risk analogue of Liberty's Call's `tools-genmap.js`):
+(the Dominion analogue of Liberty's Call's `tools-genmap.js`):
 
 1. Downloads public-domain **Natural Earth** admin-0 country geometry (1:110m).
 2. Groups/splits countries into a curated `SPEC` of 67 territories in 9 regions
@@ -145,6 +145,6 @@ first-player advantage — a known item to balance, see roadmap.)
 - [ ] Higher-detail (1:50m) and additional regional maps.
 - [ ] Faction traits/bonuses (the `Faction` type is the hook).
 - [ ] Smarter AI difficulty levels.
-- [ ] Risk cards / set trade-ins for escalating reinforcements.
+- [ ] Conquest cards / set trade-ins for escalating reinforcements.
 - [ ] Animations for dice and troop movement.
 - [ ] Online multiplayer (deterministic engine + serialisable state enable this).

@@ -2,7 +2,7 @@
  * Inline the Vite build into a single, self-contained HTML file that runs by
  * double-clicking it — no server, no network, like our sister project's
  * `liberty-call.html`. Run after `vite build`; reads from `dist/` and writes
- * `dist/risk-1996.html`.
+ * `dist/dominion.html`.
  */
 import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -28,7 +28,7 @@ html = html
   )
   .replace(/<link\b[^>]*rel="stylesheet"[^>]*>/, () => `<style>\n${css}\n</style>`);
 
-const out = join(dist, "risk-1996.html");
+const out = join(dist, "dominion.html");
 writeFileSync(out, html);
 
 const kb = (Buffer.byteLength(html) / 1024).toFixed(0);

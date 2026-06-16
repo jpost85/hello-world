@@ -18,7 +18,7 @@ export function App() {
   return (
     <div className="app">
       <div className="topbar">
-        <h1>RISK · 1996 WEB REMAKE</h1>
+        <h1>DOMINION · BALANCE OF POWER</h1>
         {g.isAITurn && <span className="badge">🤖 {active.name} is planning…</span>}
         <div className="spacer" />
         {g.state.players.map((p) => {
@@ -80,7 +80,7 @@ function Setup({
 
   return (
     <div className="setup">
-      <h1>Risk · Web Remake</h1>
+      <h1>Dominion: Balance of Power</h1>
       <p className="hint">
         Dice-based combat with attack and defense styles, mobile generals, and fortresses — against
         the computer or in hot-seat. Play continues from your last move automatically.

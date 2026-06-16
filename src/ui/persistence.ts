@@ -8,7 +8,7 @@
 
 import type { GameState } from "../engine/index.ts";
 
-const SAVE_KEY = "risk-1996-save-v2";
+const SAVE_KEY = "dominion-save-v1";
 
 export function saveGame(state: GameState): void {
   try {

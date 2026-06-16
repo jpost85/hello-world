@@ -1,5 +1,5 @@
 /**
- * Core domain model for the Risk (1996) remake engine.
+ * Core domain model for the Dominion: Balance of Power engine.
  *
  * Everything in `src/engine` is pure TypeScript with no UI or platform
  * dependencies. State is treated as immutable: engine functions return new

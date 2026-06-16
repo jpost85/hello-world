@@ -31,7 +31,7 @@ import type {
   TerritoryState,
 } from "./types.ts";
 
-/** Armies each player starts with, by player count (classic Risk values). */
+/** Armies each player starts with, by player count (classic conquest-game values). */
 const STARTING_ARMIES = CONFIG.startingArmies;
 
 /** Armies removed from a territory's garrison to raise a fortress. */
@@ -61,7 +61,7 @@ export function createGame(config: GameConfig): GameState {
   const { map, factions } = config;
   const playerCount = config.players.length;
   if (playerCount < 2 || playerCount > 6) {
-    throw new Error("Risk supports 2 to 6 players");
+    throw new Error("Dominion supports 2 to 6 players");
   }
 
   const players: Player[] = config.players.map((p, i) => ({

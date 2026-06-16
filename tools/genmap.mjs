@@ -10,7 +10,7 @@
  *
  *   node tools/genmap.mjs
  *
- * This is the Risk equivalent of Liberty's Call's `tools-genmap.js`.
+ * This is the Dominion equivalent of Liberty's Call's `tools-genmap.js`.
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 

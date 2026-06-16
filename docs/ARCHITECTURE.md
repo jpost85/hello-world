@@ -77,7 +77,7 @@ misuse, which the UI surfaces to the player.
 | New maps | Add a `GameMap` under `src/engine/maps/`. The engine is data-driven; no logic changes needed. A unit test should assert adjacency symmetry. |
 | Faction traits | The `Faction` type already exists. Add trait fields and read them in `combat.ts` / reinforcement math. |
 | AI opponents | Write a pure function `chooseActions(state) => actions[]` that calls the same engine actions the UI does. Determinism makes it testable. |
-| Risk cards | Add card state to `GameState` and a trade-in action that boosts reinforcements; tie award to `conqueredThisTurn`. |
+| Conquest cards | Add card state to `GameState` and a trade-in action that boosts reinforcements; tie award to `conqueredThisTurn`. |
 | Multiplayer | Serialise `GameState` and replay actions server-side; the seeded RNG makes validation deterministic. |
 
 ## Testing

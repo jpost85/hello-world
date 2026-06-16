@@ -1,9 +1,9 @@
 {
-  "name": "risk-1996-remake",
+  "name": "dominion-balance-of-power",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Web-based remake of Risk (1996): dice-based combat, attack/defense styles, generals, and fortresses.",
+  "description": "Dominion: Balance of Power — a turn-based strategy game of global conquest: dice-based combat, attack/defense styles, generals, and fortresses.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

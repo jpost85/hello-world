@@ -3,7 +3,7 @@
  *
  * A battle is fought in rounds. Each round both sides roll dice, the dice are
  * compared highest-against-highest, and the loser of each comparison loses one
- * army. This mirrors classic Risk, extended with:
+ * army. This mirrors classic conquest-game dice combat, extended with:
  *
  *   - Attack / defense *styles* that trade dice count, per-die strength, and
  *     tie-breaking against one another.
@@ -27,7 +27,7 @@ import type {
  * Balance values are sourced from the central `CONFIG` table; these aliases keep
  * the names stable for callers and tests.
  *
- * Standard reproduces classic Risk. Aggressive presses harder (wins ties, or
+ * Standard reproduces the classic conquest rules. Aggressive presses harder (wins ties, or
  * strikes harder); cautious commits fewer dice — slower, but exposes fewer
  * armies to loss in a round.
  */

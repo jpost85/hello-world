@@ -10,7 +10,7 @@
 import type { AttackStyle, DefenseStyle, StyleProfile } from "./types.ts";
 
 export const CONFIG = {
-  /** Starting army pool by player count (classic Risk values). */
+  /** Starting army pool by player count (classic conquest-game values). */
   startingArmies: { 2: 40, 3: 35, 4: 30, 5: 25, 6: 20 } as Record<number, number>,
 
   reinforcements: {
