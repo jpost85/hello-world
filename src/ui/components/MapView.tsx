@@ -102,7 +102,13 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
   const [view, setView] = useState({ x: 0, y: 0, k: 1 });
   const viewRef = useRef(view);
   viewRef.current = view;
-  const drag = useRef<null | { startX: number; startY: number; viewX: number; viewY: number; moved: boolean }>(null);
+  // Active touch/mouse pointers and the gesture in progress (pan or pinch).
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const gesture = useRef<
+    | { type: "pan"; startX: number; startY: number; viewX: number; viewY: number }
+    | { type: "pinch"; startDist: number; startMidX: number; startMidY: number; startView: { x: number; y: number; k: number } }
+    | null
+  >(null);
   const draggedRef = useRef(false);
   const [dragging, setDragging] = useState(false);
 
@@ -153,35 +159,86 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
     return () => svg.removeEventListener("wheel", onWheel);
   }, [clientToSvg, zoomAround]);
 
-  // Drag to pan (window listeners so a drag continues outside the SVG).
+  // Drag to pan and two-finger pinch to zoom. Window listeners keep a gesture
+  // alive outside the SVG; pointercancel ends interrupted touches cleanly.
   useEffect(() => {
+    const beginPinch = () => {
+      const pts = [...pointers.current.values()];
+      if (pts.length < 2) return;
+      const [a, b] = pts;
+      gesture.current = {
+        type: "pinch",
+        startDist: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+        startMidX: (a.x + b.x) / 2,
+        startMidY: (a.y + b.y) / 2,
+        startView: { ...viewRef.current },
+      };
+      draggedRef.current = true;
+    };
+
     const onMove = (e: PointerEvent) => {
-      const d = drag.current;
-      if (!d) return;
+      if (!pointers.current.has(e.pointerId)) return;
       const p = clientToSvg(e.clientX, e.clientY);
       if (!p) return;
-      const dx = p.x - d.startX;
-      const dy = p.y - d.startY;
-      if (!d.moved && Math.hypot(dx, dy) > 3) {
-        d.moved = true;
+      pointers.current.set(e.pointerId, p);
+      const g = gesture.current;
+      if (!g) return;
+
+      if (g.type === "pinch") {
+        const pts = [...pointers.current.values()];
+        if (pts.length < 2) return;
+        const [a, b] = pts;
+        const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        const midX = (a.x + b.x) / 2;
+        const midY = (a.y + b.y) / 2;
+        const k = clamp(g.startView.k * (dist / g.startDist), 1, MAX_ZOOM);
+        const cmx = (g.startMidX - g.startView.x) / g.startView.k;
+        const cmy = (g.startMidY - g.startView.y) / g.startView.k;
+        const [x, y] = clampPan(midX - cmx * k, midY - cmy * k, k);
+        setView({ x, y, k });
         draggedRef.current = true;
-        setDragging(true);
+      } else {
+        const dx = p.x - g.startX;
+        const dy = p.y - g.startY;
+        if (!draggedRef.current && Math.hypot(dx, dy) > 3) {
+          draggedRef.current = true;
+          setDragging(true);
+        }
+        if (!draggedRef.current) return;
+        setView((v) => {
+          const [x, y] = clampPan(g.viewX + dx, g.viewY + dy, v.k);
+          return { x, y, k: v.k };
+        });
       }
-      if (!d.moved) return;
-      setView((v) => {
-        const [x, y] = clampPan(d.viewX + dx, d.viewY + dy, v.k);
-        return { x, y, k: v.k };
-      });
     };
-    const onUp = () => {
-      if (drag.current) drag.current = null;
-      setDragging(false);
+
+    const onUp = (e: PointerEvent) => {
+      pointers.current.delete(e.pointerId);
+      const remaining = [...pointers.current.values()];
+      if (remaining.length === 1) {
+        // Dropped from a pinch to one finger — resume panning seamlessly.
+        gesture.current = {
+          type: "pan",
+          startX: remaining[0].x,
+          startY: remaining[0].y,
+          viewX: viewRef.current.x,
+          viewY: viewRef.current.y,
+        };
+      } else if (remaining.length >= 2) {
+        beginPinch();
+      } else {
+        gesture.current = null;
+        setDragging(false);
+      }
     };
+
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
     };
   }, [clientToSvg, clampPan]);
 
@@ -189,8 +246,30 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     const p = clientToSvg(e.clientX, e.clientY);
     if (!p) return;
-    draggedRef.current = false;
-    drag.current = { startX: p.x, startY: p.y, viewX: viewRef.current.x, viewY: viewRef.current.y, moved: false };
+    pointers.current.set(e.pointerId, p);
+    if (pointers.current.size >= 2) {
+      // Second finger down → start a pinch from the current two pointers.
+      const pts = [...pointers.current.values()];
+      const [a, b] = pts;
+      gesture.current = {
+        type: "pinch",
+        startDist: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+        startMidX: (a.x + b.x) / 2,
+        startMidY: (a.y + b.y) / 2,
+        startView: { ...viewRef.current },
+      };
+      draggedRef.current = true;
+      setDragging(true);
+    } else {
+      draggedRef.current = false;
+      gesture.current = {
+        type: "pan",
+        startX: p.x,
+        startY: p.y,
+        viewX: viewRef.current.x,
+        viewY: viewRef.current.y,
+      };
+    }
   };
 
   // Suppress the territory click that follows a drag.

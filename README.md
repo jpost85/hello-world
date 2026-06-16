@@ -64,8 +64,10 @@ npm run build      # type-check and produce a production build
    then end your turn.
 5. Eliminate every opponent to win.
 
-Navigate the map by **scrolling to zoom** and **dragging to pan** (or use the
-on-screen +/−/reset controls); a short drag won't be mistaken for a territory click.
+Navigate the map by **scrolling to zoom** and **dragging to pan**, **pinch-to-zoom**
+on touchscreens, or the on-screen +/−/reset controls; a short drag or a pinch
+won't be mistaken for a territory click. The layout is responsive — on narrow
+screens the control panel stacks beneath the map.
 
 ## Architecture
 
