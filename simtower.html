@@ -871,6 +871,7 @@ const sunEl = document.getElementById("sun");
 const moonEl = document.getElementById("moon");
 const starsEl = document.getElementById("stars");
 const cloudsEl = document.getElementById("clouds");
+const skylineEl = document.getElementById("skyline");
 
 const MIN_ROW = -BASEMENT_FLOORS;     // deepest buildable basement row
 const worldWidth = COLS * CELL_W;
@@ -1188,7 +1189,7 @@ function updateUnitVisual(unit) {
 
 // ---------- Day / night sky ----------
 const SKY = {
-  night: ["#010206", "#060c17"],
+  night: ["#010206", "#04080f"],
   day:   ["#6db3e8", "#cfe9fb"],
   dusk:  ["#e8895a", "#f3cd9a"],
 };
@@ -1228,6 +1229,8 @@ function updateSky(force) {
   if (placeArc(moonEl, (moonH - 18) / 12)) moonEl.style.opacity = String(clamp01(1 - bright));
   starsEl.style.opacity = String(clamp01(1 - bright * 2.4));
   cloudsEl.style.opacity = String(0.06 + bright * 0.7);
+  // the distant skyline must darken at night too, or it lightens the horizon
+  if (skylineEl) skylineEl.style.filter = "brightness(" + (0.12 + bright * 0.88).toFixed(2) + ")";
 
   const isNight = bright < 0.12;
   if (force || isNight !== state.isNight) {
