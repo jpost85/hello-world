@@ -767,7 +767,18 @@
 // ---------- Configuration ----------
 const CELL_W = 32;          // px per grid column
 const CELL_H = 36;          // px per floor
-const COLS = 40;            // tower width in cells
+// Tower width in cells: wide enough to fill the screen (so the ground spans the
+// whole view) and to contain any saved tower; minimum 40.
+const COLS = (() => {
+  let need = 40;
+  try {
+    const raw = localStorage.getItem("microtower.save.v1");
+    if (raw) (JSON.parse(raw).units || []).forEach(u => { need = Math.max(need, (u.col || 0) + 8); });
+  } catch (e) {}
+  const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
+  const byScreen = Math.min(120, Math.ceil(vw / CELL_W) + 2);
+  return Math.max(40, byScreen, need);
+})();
 const GROUND_ROW = 0;       // logical floor index 0 == ground/lobby level
 const MAX_FLOORS = 30;      // floors above ground you may build
 const BASEMENT_FLOORS = 4;  // below ground (for parking-ish / future)
@@ -2408,9 +2419,12 @@ function init() {
   refreshStats();
   updateClock();
   updateSky(true);
-  // scroll to ground
+  // scroll to ground, centered horizontally on the actual tower
   scroller.scrollTop = world.clientHeight - scroller.clientHeight;
-  scroller.scrollLeft = (worldWidth - scroller.clientWidth) / 2;
+  const cx = state.units.length
+    ? state.units.reduce((a, u) => a + u.col + u.w / 2, 0) / state.units.length
+    : COLS / 2;
+  scroller.scrollLeft = Math.max(0, colLeft(cx) - scroller.clientWidth / 2);
   selectTool("pointer");
   updateSoundBtn();
   if (isMobile()) app.classList.add("nav-closed");
