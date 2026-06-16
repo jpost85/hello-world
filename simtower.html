@@ -279,7 +279,8 @@
   .win.lit::after { content:none; }   /* the windows provide the glow now, not a blob */
   /* At night, dim the building structure + ground so the scene reads as night;
      the window panes above are left untouched so lit windows still glow. */
-  .night .u-face, .night .u-extra { filter: brightness(0.62); }
+  .night .u-face, .night .u-extra,
+  .night .fe-top, .night .fe-left, .night .fe-right, .night .fe-base { filter: brightness(0.62); }
   .night .ground { filter: brightness(0.5); }
 
   .unit-office    { --wall:#7f93a6; --glass:#bfe0f5; --frame:#52677d; }
@@ -477,6 +478,44 @@
   }
   .elev-car i { width:2px; height:4px; background:#33414f; border-radius:1px; display:inline-block; }
 
+  /* ---------- Building façade (outer shell on exposed edges) ---------- */
+  .fe-top, .fe-left, .fe-right, .fe-base { position:absolute; display:none; pointer-events:none; z-index:5; }
+  .fe-top  { top:0; left:0; right:0; height:5px; }
+  .fe-base { bottom:0; left:0; right:0; height:5px; }
+  .fe-left { top:0; bottom:0; left:0; width:4px; }
+  .fe-right{ top:0; bottom:0; right:0; width:4px; }
+  /* show an edge only when a façade style is active AND that edge is exposed */
+  .facade-brick .edge-top .fe-top, .facade-concrete .edge-top .fe-top, .facade-deco .edge-top .fe-top,
+  .facade-brick .edge-base .fe-base, .facade-concrete .edge-base .fe-base, .facade-deco .edge-base .fe-base,
+  .facade-brick .edge-left .fe-left, .facade-concrete .edge-left .fe-left, .facade-deco .edge-left .fe-left,
+  .facade-brick .edge-right .fe-right, .facade-concrete .edge-right .fe-right, .facade-deco .edge-right .fe-right { display:block; }
+
+  /* Brick & Concrete: brick outer walls, gray concrete parapet, stone base */
+  .facade-brick .fe-left, .facade-brick .fe-right {
+    background: repeating-linear-gradient(0deg, #a8503e 0 4px, #7d3a2d 4px 5px);
+    box-shadow: inset -1px 0 1px rgba(0,0,0,.25);
+  }
+  .facade-brick .fe-top {
+    height:6px; background: linear-gradient(180deg, #c2c6ca 0 3px, #969ba0 3px 6px);
+    box-shadow: 0 1px 1px rgba(0,0,0,.3);
+  }
+  .facade-brick .fe-base { background: linear-gradient(180deg, #6f6a63 0 2px, #4f4b45 2px); }
+
+  /* Poured Concrete Frame: uniform light-gray band all around */
+  .facade-concrete .fe-left, .facade-concrete .fe-right { background:#bcc1c5; box-shadow: inset -1px 0 2px rgba(0,0,0,.18); }
+  .facade-concrete .fe-top  { height:6px; background:#c6cacd; border-bottom:1px solid #9aa0a5; }
+  .facade-concrete .fe-base { background:#aeb3b8; }
+
+  /* Art-Deco: stepped parapet cornice, pier strips, dark granite base */
+  .facade-deco .fe-left, .facade-deco .fe-right {
+    width:5px; background: linear-gradient(90deg, #cdbb91 0 1px, #a8946a 1px 4px, #7e6d49 4px 5px);
+  }
+  .facade-deco .fe-top {
+    height:7px; background: linear-gradient(180deg, #e0d2b0 0 1px, #c2ac7c 1px 4px, #93805330 4px, #8a784f 4px 7px);
+    box-shadow: 0 1px 2px rgba(0,0,0,.35);
+  }
+  .facade-deco .fe-base { height:6px; background: linear-gradient(180deg, #4a4a52 0 2px, #303036 2px); }
+
   /* ---------- Sky backdrop ---------- */
   #sky { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
   #sun, #moon { position:absolute; width:46px; height:46px; border-radius:50%; transition:opacity .8s; }
@@ -571,6 +610,14 @@
       <button class="btn active" data-speed="1">▶</button>
       <button class="btn" data-speed="3">▶▶</button>
       <button class="btn" data-speed="8">▶▶▶</button>
+    </div>
+
+    <div class="section-title">Façade</div>
+    <div class="controls" id="facadeControls">
+      <button class="btn" data-facade="off">Off</button>
+      <button class="btn" data-facade="brick">Brick</button>
+      <button class="btn" data-facade="concrete">Concrete</button>
+      <button class="btn" data-facade="deco">Deco</button>
     </div>
 
     <div class="section-title">Game</div>
@@ -923,6 +970,7 @@ function tryBuild(col, row, key_) {
   };
   placeUnit(unit);
   if (key_ === "elevator" || key_ === "stair") rebuildShafts();
+  rebuildFacade();
   state.cash -= t.cost;
   log(`Built ${t.name} on floor ${row} for $${t.cost.toLocaleString()}`, "good");
   sfx("build");
@@ -963,7 +1011,10 @@ function unitInnerHTML(type) {
     for (let i = 0; i < t.w * 2; i++) spans += `<span${Math.random() < 0.55 ? ' class="on"' : ''}></span>`;
     windows = `<div class="u-windows">${spans}</div>`;
   }
-  return `<div class="u-face"></div>${windows}<div class="u-extra"></div>${tag}${vac}<div class="occ"></div>`;
+  // Enclosed units carry façade edge elements (shown only on exposed sides).
+  const facade = (t.kind === "outdoor") ? ""
+    : `<div class="fe-left"></div><div class="fe-right"></div><div class="fe-base"></div><div class="fe-top"></div>`;
+  return `<div class="u-face"></div>${windows}<div class="u-extra"></div>${tag}${vac}<div class="occ"></div>${facade}`;
 }
 
 function shortLabel(type) {
@@ -990,6 +1041,7 @@ function sellUnit(unit, refund) {
   unit.el.remove();
   state.units = state.units.filter(u => u.id !== unit.id);
   if (unit.type === "elevator" || unit.type === "stair") rebuildShafts();
+  rebuildFacade();
   state.cash += refund;
   log(`Sold ${TYPES[unit.type].name} for $${refund.toLocaleString()}`, "bad");
   sfx("sell");
@@ -1562,6 +1614,28 @@ function moveShafts() {
   state.shafts.forEach(elevatorStep);
 }
 
+// ---------- Building façade ----------
+// Tag each enclosed unit's exposed edges (open air, no neighbour) so the chosen
+// façade style can paint a brick/concrete shell only on the building's outline.
+function rebuildFacade() {
+  for (const u of state.units) {
+    if (!u.el) continue;
+    if (TYPES[u.type].kind === "outdoor") {
+      u.el.classList.remove("edge-top", "edge-left", "edge-right", "edge-base");
+      continue;
+    }
+    const topRow = u.row + u.h - 1;
+    let top = true, left = true, right = true;
+    for (let dc = 0; dc < u.w; dc++) if (state.grid[key(u.col + dc, topRow + 1)]) { top = false; break; }
+    for (let dr = 0; dr < u.h; dr++) if (state.grid[key(u.col - 1, u.row + dr)]) { left = false; break; }
+    for (let dr = 0; dr < u.h; dr++) if (state.grid[key(u.col + u.w, u.row + dr)]) { right = false; break; }
+    u.el.classList.toggle("edge-top", top);
+    u.el.classList.toggle("edge-left", left);
+    u.el.classList.toggle("edge-right", right);
+    u.el.classList.toggle("edge-base", u.row === 0);
+  }
+}
+
 // ---------- Time loop ----------
 let lastTs = 0;
 let minuteAccumulator = 0;
@@ -1748,6 +1822,7 @@ function loadGame(silent) {
     });
   });
   rebuildShafts();
+  rebuildFacade();
   refreshStats(); updateClock(); updateSky(true);
   if (!silent) { toast("Tower loaded."); }
   return true;
@@ -1762,6 +1837,24 @@ function newGame() {
 document.getElementById("btnSave").addEventListener("click", () => saveGame(false));
 document.getElementById("btnLoad").addEventListener("click", () => loadGame(false));
 document.getElementById("btnNew").addEventListener("click", newGame);
+
+// ---------- Façade style (single on/off + style choice) ----------
+const FACADE_KEY = "microtower.facade";
+let facadeStyle = "brick";
+try { const f = localStorage.getItem(FACADE_KEY); if (f) facadeStyle = f; } catch (e) {}
+function applyFacade() {
+  world.classList.remove("facade-brick", "facade-concrete", "facade-deco");
+  if (facadeStyle !== "off") world.classList.add("facade-" + facadeStyle);
+  document.querySelectorAll("[data-facade]").forEach(b =>
+    b.classList.toggle("active", b.dataset.facade === facadeStyle));
+}
+document.querySelectorAll("[data-facade]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    facadeStyle = btn.dataset.facade;
+    try { localStorage.setItem(FACADE_KEY, facadeStyle); } catch (e) {}
+    applyFacade();
+  });
+});
 
 // ---------- Audio (synthesized — no external files) ----------
 // actx: null = not yet started, false = unavailable, else an AudioContext.
@@ -1930,6 +2023,8 @@ function init() {
     }
     log("Welcome to MicroTower. Build stairs/elevators, then offices & apartments above the lobby.", "good");
   }
+  rebuildFacade();
+  applyFacade();
   refreshStats();
   updateClock();
   updateSky(true);
