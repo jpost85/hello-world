@@ -71,14 +71,13 @@ const SPEC = [
   { id: "balkans", name: "Balkans", region: "eastern-europe", countries: ["Croatia", "Bosnia and Herzegovina", "Republic of Serbia", "Montenegro", "Kosovo", "North Macedonia", "Albania", "Romania", "Bulgaria", "Greece"] },
 
   // North Asia
-  { id: "western-russia", name: "Western Russia", region: "north-asia", countries: ["Russia"], clip: { lngMax: 60 }, normalizeRussia: true },
+  { id: "western-russia", name: "Western Russia & Caucasus", region: "north-asia", countries: ["Russia", "Georgia", "Armenia", "Azerbaijan"], clip: { lngMax: 60 }, normalizeRussia: true },
   { id: "siberia", name: "Siberia", region: "north-asia", countries: ["Russia"], clip: { lngMin: 60, lngMax: 115 }, normalizeRussia: true },
   { id: "far-east-russia", name: "Far East Russia", region: "north-asia", countries: ["Russia"], clip: { lngMin: 115, lngMax: 180 }, normalizeRussia: true },
   { id: "central-asia", name: "Central Asia", region: "north-asia", countries: ["Kazakhstan", "Uzbekistan", "Turkmenistan", "Tajikistan", "Kyrgyzstan"] },
 
   // Middle East
   { id: "turkey", name: "Turkey", region: "middle-east", countries: ["Turkey", "Cyprus", "Northern Cyprus"] },
-  { id: "caucasus", name: "Caucasus", region: "middle-east", countries: ["Georgia", "Armenia", "Azerbaijan"] },
   { id: "levant", name: "Levant & Iraq", region: "middle-east", countries: ["Syria", "Lebanon", "Jordan", "Israel", "Palestine", "Iraq"] },
   { id: "iran", name: "Iran", region: "middle-east", countries: ["Iran"] },
   { id: "arabia", name: "Arabia", region: "middle-east", countries: ["Saudi Arabia", "Yemen", "Oman", "United Arab Emirates", "Qatar", "Kuwait"] },
@@ -95,8 +94,7 @@ const SPEC = [
 
   // Africa
   { id: "maghreb", name: "Maghreb", region: "africa", countries: ["Morocco", "Western Sahara", "Algeria", "Tunisia"] },
-  { id: "libya", name: "Libya", region: "africa", countries: ["Libya"] },
-  { id: "egypt", name: "Egypt", region: "africa", countries: ["Egypt"] },
+  { id: "north-africa", name: "North Africa", region: "africa", countries: ["Egypt", "Libya"] },
   { id: "west-africa", name: "West Africa", region: "africa", countries: ["Mauritania", "Mali", "Niger", "Senegal", "Gambia", "Guinea-Bissau", "Guinea", "Sierra Leone", "Liberia", "Ivory Coast", "Burkina Faso", "Ghana", "Togo", "Benin", "Nigeria"] },
   { id: "central-africa", name: "Central Africa", region: "africa", countries: ["Chad", "Cameroon", "Central African Republic", "Equatorial Guinea", "Gabon", "Republic of the Congo", "Democratic Republic of the Congo", "Angola"] },
   { id: "horn-africa", name: "Horn of Africa", region: "africa", countries: ["Sudan", "South Sudan", "Eritrea", "Ethiopia", "Djibouti", "Somalia", "Somaliland"] },
@@ -141,7 +139,7 @@ const SEA_LINKS = [
   ["iberia", "maghreb"],
   ["italy", "maghreb"],
   ["italy", "balkans"],
-  ["egypt", "arabia"],
+  ["north-africa", "arabia"],
   ["arabia", "horn-africa"],
   ["madagascar", "southern-africa"],
   ["madagascar", "east-africa"],
