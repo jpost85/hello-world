@@ -804,7 +804,10 @@ const state = {
   isNight: false,
   pending: null,
   won: false,
+  frustration: 0,   // builds when sims give up waiting for elevators; hurts tenants
 };
+
+const ROLE_COLOR = { work: "#5b8def", home: "#56c271", hotel: "#d9b36b", visitor: "#b4bfca" };
 
 // ---------- DOM ----------
 const world = document.getElementById("world");
@@ -1319,12 +1322,14 @@ function amenityBonus(u) {
 
 // Tenants move in over time if there is transit access and demand
 function simTenants() {
+  // Long elevator waits (frustration) suppress demand and tenant happiness.
+  const frustHit = Math.min(40, state.frustration * 1.6);
   rentableUnits().forEach(u => {
     const t = TYPES[u.type];
     const amen = amenityBonus(u);
     if (u.occupants < t.cap) {
-      // chance to gain a tenant scales with tower appeal + nearby outdoor space
-      const appeal = 0.02 + state.stars * 0.01 + amen * 0.0009;
+      // chance to gain a tenant scales with tower appeal + nearby amenities, minus frustration
+      const appeal = (0.02 + state.stars * 0.01 + amen * 0.0009) * (1 - Math.min(0.7, state.frustration * 0.03));
       if (Math.random() < appeal) {
         u.occupants++;
         state.pop++;
@@ -1332,13 +1337,13 @@ function simTenants() {
         if (u.occupants === t.cap) log(`${t.name} on floor ${u.row} fully leased!`, "good");
       }
     }
-    // satisfaction drifts toward a target set by transit access + outdoor amenities
+    // satisfaction drifts toward a target set by transit access, amenities, and service quality
     const access = hasTransitAccess(u.col, u.row, u.w);
-    const target = Math.min(100, (access ? 85 : 40) + amen);
+    const target = Math.max(0, Math.min(100, (access ? 85 : 40) + amen - frustHit));
     u.satisfaction += (target - u.satisfaction) * 0.05;
     if (u.satisfaction < 30 && u.occupants > 0 && Math.random() < 0.1) {
       u.occupants--; state.pop--; updateUnitVisual(u);
-      log(`A tenant left ${t.name} on floor ${u.row} (poor access).`, "bad");
+      log(`A tenant left ${t.name} on floor ${u.row}.`, "bad");
     }
   });
 }
@@ -1518,16 +1523,29 @@ function spawnPerson() {
   const u = pool[Math.floor(Math.random() * pool.length)];
   const ext = floorExtent(u.row) || { min: u.col, max: u.col + u.w - 1 };
   const startCol = u.col + Math.random() * Math.max(1, u.w);
-  const roleClass = { work: "role-work", home: "role-home", hotel: "role-hotel" }[TYPES[u.type].kind] || "role-visitor";
+  const kind = TYPES[u.type].kind;
+  const role = (kind === "work" || kind === "home" || kind === "hotel") ? kind : "visitor";
   const el = document.createElement("div");
-  el.className = "person " + roleClass;
+  el.className = "person role-" + role;
   el.style.left = colLeft(startCol) + "px";
   el.style.top = (rowTop(u.row) + CELL_H - 12) + "px";
   el.style.animationDelay = (Math.random() * 0.5) + "s";
   world.appendChild(el);
   state.people.push({ el, col: startCol, row: u.row, life: 200 + Math.random()*200,
-    mode: "walk", goCol: null, targetRow: null, transitCol: 0, y: u.row, shaft: null });
+    mode: "walk", goCol: null, targetRow: null, transitCol: 0, y: u.row, shaft: null,
+    baseColor: ROLE_COLOR[role], patience: 0, patience0: 1 });
 }
+
+// Time-of-day traffic: morning rush goes up, evening rush goes down, lunch is busy.
+function rushPhase() {
+  const h = state.minutes / 60;
+  if (h >= 7 && h < 9.5)  return { intensity: 1.0, dir: 1 };   // morning: up to work
+  if (h >= 11.5 && h < 13.5) return { intensity: 0.7, dir: 0 }; // lunch: to shops/restaurants
+  if (h >= 17 && h < 19.5) return { intensity: 1.0, dir: -1 };  // evening: down / home
+  if (h >= 22 || h < 6)    return { intensity: 0.1, dir: 0 };   // overnight: quiet
+  return { intensity: 0.35, dir: 0 };                           // daytime baseline
+}
+function commuteChance() { return 0.003 + 0.02 * rushPhase().intensity; }
 
 // Pick a transit run serving this person's floor and send them to another floor.
 // If an elevator shaft covers the trip they'll wait to board its car; otherwise
@@ -1543,7 +1561,12 @@ function maybeCommute(p) {
   const choices = [];
   for (let f = r.lo; f <= r.hi; f++) if (f !== p.row && floorExtent(f)) choices.push(f);
   if (!choices.length) return;
-  const target = choices[Math.floor(Math.random() * choices.length)];
+  // Rush hour biases travel direction (up in the morning, down in the evening).
+  const phase = rushPhase();
+  let pool = choices;
+  if (phase.dir > 0) { const up = choices.filter(f => f > p.row); if (up.length && Math.random() < 0.8) pool = up; }
+  else if (phase.dir < 0) { const dn = choices.filter(f => f < p.row); if (dn.length && Math.random() < 0.8) pool = dn; }
+  const target = pool[Math.floor(Math.random() * pool.length)];
   const lo = Math.min(p.row, target), hi = Math.max(p.row, target);
   p.targetRow = target;
   p.goCol = r.col;
@@ -1559,8 +1582,13 @@ function movepeople() {
     if (p.mode === "ride") continue; // hidden aboard a car; the elevator controls them
 
     if (p.mode === "wait") { // standing at the shaft doors for the car
-      if (--p.patience <= 0) { p.mode = "walk"; p.shaft = null; p.goCol = null; } // give up, wander off
-      else {
+      if (--p.patience <= 0) { // gave up: wander off, and ding building service quality
+        p.mode = "walk"; p.shaft = null; p.goCol = null;
+        p.el.style.background = "";
+        state.frustration = Math.min(25, state.frustration + 1);
+      } else {
+        const stress = clamp01(1 - p.patience / p.patience0);
+        p.el.style.background = lerpColor(p.baseColor, "#e0463a", stress * 0.9); // redden as they wait
         p.el.style.left = colLeft(p.transitCol) + "px";
         p.el.style.top = (rowTop(p.row) + CELL_H - 12) + "px";
         continue;
@@ -1586,13 +1614,13 @@ function movepeople() {
       const d = p.goCol - p.col;
       if (Math.abs(d) <= 0.4) {
         p.transitCol = p.goCol;
-        if (p.shaft) { p.mode = "wait"; p.patience = 90 + Math.random() * 90; }
+        if (p.shaft) { p.mode = "wait"; p.patience = p.patience0 = 90 + Math.random() * 90; }
         else { p.mode = "climb"; p.y = p.row; }
       } else p.col += Math.sign(d) * 0.6;
-    } else { // walk: wander, occasionally decide to commute
+    } else { // walk: wander, occasionally decide to commute (more often at rush hour)
       p.col += (Math.random() - 0.5) * 1.5;
       p.col = Math.max(ext.min, Math.min(ext.max, p.col));
-      if (Math.random() < 0.005) maybeCommute(p);
+      if (Math.random() < commuteChance()) maybeCommute(p);
     }
     p.el.style.left = colLeft(p.col) + "px";
     p.el.style.top = (rowTop(p.row) + CELL_H - 12) + "px";
@@ -1680,7 +1708,7 @@ function serveFloor(s, floor, waits) {
     const p = s.riders[i];
     if (p.targetRow === floor) {
       s.riders.splice(i, 1);
-      p.el.style.display = ""; p.mode = "walk"; p.row = floor; p.col = s.col; p.shaft = null; p.goCol = null;
+      p.el.style.display = ""; p.el.style.background = ""; p.mode = "walk"; p.row = floor; p.col = s.col; p.shaft = null; p.goCol = null;
       p.el.style.left = colLeft(s.col) + "px";
       p.el.style.top = (rowTop(floor) + CELL_H - 12) + "px";
     }
@@ -1759,11 +1787,13 @@ function advanceMinute() {
   state.minutes++;
   if (state.minutes % 5 === 0) { simTenants(); simHotels(); movepeople(); }
   if (state.minutes % 20 === 0) spawnPerson();
+  if (state.minutes % 30 === 0) state.frustration = Math.max(0, state.frustration * 0.9 - 0.2); // service recovers
   if (state.minutes >= 24 * 60) {
     state.minutes = 0;
     state.day++;
     collectRent();
     recomputeStars();
+    if (state.frustration > 8) log("⏳ Long elevator waits are frustrating tenants — add transit capacity!", "bad");
     maybeEvent();
     saveGame(true);
   }
