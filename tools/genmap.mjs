@@ -58,8 +58,7 @@ const SPEC = [
 
   // Western Europe
   { id: "iceland", name: "Iceland", region: "western-europe", countries: ["Iceland"] },
-  { id: "united-kingdom", name: "United Kingdom", region: "western-europe", countries: ["United Kingdom"] },
-  { id: "ireland", name: "Ireland", region: "western-europe", countries: ["Ireland"] },
+  { id: "united-kingdom", name: "British Isles", region: "western-europe", countries: ["United Kingdom", "Ireland"] },
   { id: "france", name: "France", region: "western-europe", countries: ["France"], keepBounds: { lngMin: -6, lngMax: 10, latMin: 41, latMax: 52 } },
   { id: "iberia", name: "Iberia", region: "western-europe", countries: ["Spain", "Portugal"], keepBounds: { lngMin: -10, lngMax: 4, latMin: 35, latMax: 44 } },
   { id: "benelux", name: "Benelux", region: "western-europe", countries: ["Netherlands", "Belgium", "Luxembourg"] },
@@ -69,13 +68,9 @@ const SPEC = [
 
   // Eastern Europe
   { id: "scandinavia", name: "Scandinavia", region: "eastern-europe", countries: ["Norway", "Sweden", "Finland"], keepBounds: { lngMin: 4, lngMax: 32, latMin: 54, latMax: 72 } },
-  { id: "poland", name: "Poland", region: "eastern-europe", countries: ["Poland"] },
-  { id: "baltics", name: "Baltics", region: "eastern-europe", countries: ["Estonia", "Latvia", "Lithuania"] },
-  { id: "belarus", name: "Belarus", region: "eastern-europe", countries: ["Belarus"] },
-  { id: "ukraine", name: "Ukraine", region: "eastern-europe", countries: ["Ukraine", "Moldova"] },
-  { id: "balkans", name: "Balkans", region: "eastern-europe", countries: ["Croatia", "Bosnia and Herzegovina", "Republic of Serbia", "Montenegro", "Kosovo", "North Macedonia", "Albania"] },
-  { id: "romania", name: "Romania", region: "eastern-europe", countries: ["Romania"] },
-  { id: "greece", name: "Greece & Bulgaria", region: "eastern-europe", countries: ["Greece", "Bulgaria"] },
+  { id: "poland", name: "Poland & Baltics", region: "eastern-europe", countries: ["Poland", "Estonia", "Latvia", "Lithuania"] },
+  { id: "ukraine", name: "Ukraine & Belarus", region: "eastern-europe", countries: ["Ukraine", "Belarus", "Moldova"] },
+  { id: "balkans", name: "Balkans", region: "eastern-europe", countries: ["Croatia", "Bosnia and Herzegovina", "Republic of Serbia", "Montenegro", "Kosovo", "North Macedonia", "Albania", "Romania", "Bulgaria", "Greece"] },
 
   // North Asia
   { id: "western-russia", name: "Western Russia", region: "north-asia", countries: ["Russia"], clip: { lngMax: 60 }, normalizeRussia: true },
@@ -97,12 +92,10 @@ const SPEC = [
   { id: "china", name: "China", region: "asia", countries: ["China", "Taiwan"] },
   { id: "korea", name: "Korea", region: "asia", countries: ["North Korea", "South Korea"] },
   { id: "japan", name: "Japan", region: "asia", countries: ["Japan"] },
-  { id: "afghanistan", name: "Afghanistan", region: "asia", countries: ["Afghanistan"] },
-  { id: "pakistan", name: "Pakistan", region: "asia", countries: ["Pakistan"] },
+  { id: "afghanistan-pakistan", name: "Afghanistan & Pakistan", region: "asia", countries: ["Afghanistan", "Pakistan"] },
   { id: "india", name: "India", region: "asia", countries: ["India", "Nepal", "Bhutan", "Bangladesh", "Sri Lanka"] },
   { id: "indochina", name: "Indochina", region: "asia", countries: ["Myanmar", "Thailand", "Laos", "Cambodia", "Vietnam"] },
-  { id: "maritime-sea", name: "Malaya", region: "asia", countries: ["Malaysia", "Brunei"] },
-  { id: "indonesia", name: "Indonesia", region: "asia", countries: ["Indonesia", "East Timor"] },
+  { id: "indonesia", name: "Indonesia", region: "asia", countries: ["Indonesia", "East Timor", "Malaysia", "Brunei"] },
   { id: "philippines", name: "Philippines", region: "asia", countries: ["Philippines"] },
 
   // Africa
@@ -127,7 +120,7 @@ const REGIONS = [
   { id: "north-america", name: "North America", bonusArmies: 5 },
   { id: "south-america", name: "South America", bonusArmies: 3 },
   { id: "western-europe", name: "Western Europe", bonusArmies: 5 },
-  { id: "eastern-europe", name: "Eastern Europe", bonusArmies: 5 },
+  { id: "eastern-europe", name: "Eastern Europe", bonusArmies: 3 },
   { id: "north-asia", name: "North Asia", bonusArmies: 4 },
   { id: "middle-east", name: "Middle East", bonusArmies: 4 },
   { id: "asia", name: "South & East Asia", bonusArmies: 7 },
@@ -142,7 +135,6 @@ const SEA_LINKS = [
   ["greenland", "iceland"],
   ["iceland", "united-kingdom"],
   ["iceland", "scandinavia"],
-  ["united-kingdom", "ireland"],
   ["united-kingdom", "france"],
   ["united-kingdom", "benelux"],
   ["caribbean", "central-america"],
@@ -153,7 +145,6 @@ const SEA_LINKS = [
   ["iberia", "maghreb"],
   ["italy", "maghreb"],
   ["italy", "balkans"],
-  ["greece", "turkey"],
   ["egypt", "arabia"],
   ["arabia", "horn-africa"],
   ["madagascar", "southern-africa"],
@@ -162,9 +153,7 @@ const SEA_LINKS = [
   ["china", "japan"],
   ["korea", "japan"],
   ["japan", "far-east-russia"],
-  ["philippines", "maritime-sea"],
   ["philippines", "indonesia"],
-  ["indonesia", "maritime-sea"],
   ["indonesia", "western-australia"],
   ["indonesia", "new-guinea"],
   ["new-guinea", "eastern-australia"],
