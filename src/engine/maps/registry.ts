@@ -44,6 +44,30 @@ export const MAP_REGISTRY: MapInfo[] = [
     description: "Europe c.1812 — 24 territories, era states from France to Russia.",
     load: () => import("./napoleon.ts").then((m) => m.napoleonMap),
   },
+  {
+    id: "africa-scramble",
+    name: "Scramble for Africa",
+    description: "The colonial partition of Africa — 25 territories.",
+    load: () => import("./africaScramble.ts").then((m) => m.africaMap),
+  },
+  {
+    id: "near-east",
+    name: "Egypt & the Near East",
+    description: "Napoleon's Egyptian campaign & the Ottoman Near East — 19 territories.",
+    load: () => import("./nearEast.ts").then((m) => m.nearEastMap),
+  },
+  {
+    id: "crimea",
+    name: "Crimean War",
+    description: "The Black Sea littoral, 1853-56 — 14 territories.",
+    load: () => import("./crimea.ts").then((m) => m.crimeaMap),
+  },
+  {
+    id: "india",
+    name: "Indian Subcontinent",
+    description: "The subcontinent by presidency — 15 territories.",
+    load: () => import("./indiaSubcontinent.ts").then((m) => m.indiaMap),
+  },
 ];
 
 export const DEFAULT_MAP_ID = "world";
