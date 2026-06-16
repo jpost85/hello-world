@@ -179,7 +179,9 @@ line still shows a notable first-player advantage — a known item to balance.)
 - [x] Geometry compression + lazy-loaded maps (scales to many boards).
 - [x] Map picker (World / Classic / Caribbean) that lazy-loads the chosen board.
 - [x] Multi-map genmap with regional crop + 1:50m detail; **Caribbean theatre** (16 territories).
-- [ ] More theatres (Napoleonic Europe, Southeast Asia, Egypt & Near East, Scramble for Africa).
+- [x] **Napoleonic Europe** theatre (24 territories; era states via subdivided modern geometry).
+- [ ] More theatres (Southeast Asia, Egypt & Near East, Scramble for Africa).
+- [ ] Per-map factions (era powers: France, Britain, Austria, Russia, Prussia, Ottomans).
 - [ ] Tune first-player advantage (e.g. scaling setup or reinforcement curves).
 - [ ] Faction traits/bonuses (the `Faction` type is the hook).
 - [ ] Smarter AI difficulty levels.

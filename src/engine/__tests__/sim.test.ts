@@ -5,6 +5,7 @@ import { territoriesOf } from "../map.ts";
 import { classicWorld } from "../maps/classicWorld.ts";
 import { worldMap } from "../maps/worldMap.ts";
 import { caribbeanMap } from "../maps/caribbean.ts";
+import { napoleonMap } from "../maps/napoleon.ts";
 import { DEFAULT_FACTIONS } from "../factions.ts";
 import type { GameMap, GameState } from "../types.ts";
 
@@ -112,6 +113,16 @@ describe("Caribbean theatre simulation", () => {
       const { state, finished } = playGame(seed, 4, caribbeanMap);
       expect(finished, `caribbean seed ${seed} did not finish`).toBe(true);
       expect(territoriesOf(state, state.winnerId!)).toHaveLength(caribbeanMap.territories.length);
+    }
+  });
+});
+
+describe("Napoleonic Europe simulation", () => {
+  it("plays full 5-player games on the Napoleon map to a valid finish", () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const { state, finished } = playGame(seed, 5, napoleonMap);
+      expect(finished, `napoleon seed ${seed} did not finish`).toBe(true);
+      expect(territoriesOf(state, state.winnerId!)).toHaveLength(napoleonMap.territories.length);
     }
   });
 });

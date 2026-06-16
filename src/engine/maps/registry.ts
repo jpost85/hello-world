@@ -38,6 +38,12 @@ export const MAP_REGISTRY: MapInfo[] = [
     description: "Napoleonic-era island theatre — 16 territories, naval routes.",
     load: () => import("./caribbean.ts").then((m) => m.caribbeanMap),
   },
+  {
+    id: "napoleon",
+    name: "Napoleonic Europe",
+    description: "Europe c.1812 — 24 territories, era states from France to Russia.",
+    load: () => import("./napoleon.ts").then((m) => m.napoleonMap),
+  },
 ];
 
 export const DEFAULT_MAP_ID = "world";

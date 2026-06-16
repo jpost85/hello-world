@@ -77,6 +77,8 @@ function clipRing(ring, clip) {
   let r = ring;
   if (clip.lngMin !== undefined) r = clipAxis(r, 0, clip.lngMin, true);
   if (r.length && clip.lngMax !== undefined) r = clipAxis(r, 0, clip.lngMax, false);
+  if (r.length && clip.latMin !== undefined) r = clipAxis(r, 1, clip.latMin, true);
+  if (r.length && clip.latMax !== undefined) r = clipAxis(r, 1, clip.latMax, false);
   return r;
 }
 
@@ -493,7 +495,76 @@ const CARIBBEAN = {
   ],
 };
 
-const MAPS = [WORLD, CARIBBEAN];
+// Napoleonic Europe (~1809-1812). Modern geometry subdivided/regrouped into the
+// era's states — Germany split into Prussia/Rhineland/Bavaria, Italy into the
+// Kingdom of Italy and Naples, the Duchy of Warsaw and Illyria carved out, etc.
+const NAPOLEON = {
+  id: "napoleon",
+  name: "Napoleonic Europe",
+  dataset: "50m",
+  exportName: "napoleonMap",
+  outFile: "napoleon.ts",
+  crop: { lngMin: -11, lngMax: 46, latMin: 36, latMax: 62 },
+  landThreshold: 0.2,
+  simplifyTerritory: 0.5,
+  regions: [
+    { id: "western-europe", name: "Western Europe" },
+    { id: "italy", name: "Italy" },
+    { id: "central-europe", name: "Central Europe" },
+    { id: "northern-europe", name: "Northern Europe" },
+    { id: "russia", name: "Russia" },
+    { id: "balkans", name: "The Balkans" },
+  ],
+  spec: [
+    // Western Europe
+    { id: "france", name: "France", region: "western-europe", countries: ["France"], keepBounds: { lngMin: -6, lngMax: 10, latMin: 41, latMax: 52 } },
+    { id: "low-countries", name: "Low Countries", region: "western-europe", countries: ["Netherlands", "Belgium", "Luxembourg"] },
+    { id: "switzerland", name: "Switzerland", region: "western-europe", countries: ["Switzerland"] },
+    { id: "spain", name: "Spain", region: "western-europe", countries: ["Spain"], keepBounds: { lngMin: -10, lngMax: 4, latMin: 36, latMax: 44 } },
+    { id: "portugal", name: "Portugal", region: "western-europe", countries: ["Portugal"], keepBounds: { lngMin: -10, lngMax: -6, latMin: 36, latMax: 42 } },
+
+    // Italy
+    { id: "north-italy", name: "Kingdom of Italy", region: "italy", countries: ["Italy"], clip: { latMin: 43 } },
+    { id: "south-italy", name: "Naples & Sicily", region: "italy", countries: ["Italy"], clip: { latMax: 43 } },
+
+    // Central Europe (German & Polish states)
+    { id: "prussia", name: "Prussia", region: "central-europe", countries: ["Germany"], clip: { latMin: 51.5 } },
+    { id: "rhineland", name: "Rhineland", region: "central-europe", countries: ["Germany"], clip: { latMax: 51.5, lngMax: 11 } },
+    { id: "bavaria", name: "Bavaria & Saxony", region: "central-europe", countries: ["Germany"], clip: { latMax: 51.5, lngMin: 11 } },
+    { id: "austria", name: "Austria & Bohemia", region: "central-europe", countries: ["Austria", "Czechia"] },
+    { id: "hungary", name: "Hungary", region: "central-europe", countries: ["Hungary", "Slovakia"] },
+    { id: "duchy-of-warsaw", name: "Duchy of Warsaw", region: "central-europe", countries: ["Poland"] },
+    { id: "illyria", name: "Illyria", region: "central-europe", countries: ["Slovenia", "Croatia"] },
+
+    // Northern Europe
+    { id: "britain", name: "Great Britain", region: "northern-europe", countries: ["United Kingdom", "Ireland"] },
+    { id: "denmark-norway", name: "Denmark-Norway", region: "northern-europe", countries: ["Denmark", "Norway"] },
+    { id: "sweden", name: "Sweden", region: "northern-europe", countries: ["Sweden"] },
+
+    // Russia
+    { id: "lithuania", name: "Lithuania", region: "russia", countries: ["Lithuania", "Latvia", "Estonia", "Belarus"] },
+    { id: "russia-north", name: "Russia", region: "russia", countries: ["Russia", "Finland"], clip: { lngMax: 46, latMin: 53 } },
+    { id: "russia-south", name: "Southern Russia", region: "russia", countries: ["Russia"], clip: { lngMax: 46, latMax: 53 } },
+    { id: "ukraine", name: "Ukraine", region: "russia", countries: ["Ukraine", "Moldova"] },
+
+    // The Balkans (Ottoman Europe)
+    { id: "balkans", name: "Balkans", region: "balkans", countries: ["Romania", "Bulgaria", "Republic of Serbia", "Bosnia and Herzegovina", "Montenegro", "Kosovo", "North Macedonia", "Albania"] },
+    { id: "greece", name: "Greece", region: "balkans", countries: ["Greece"] },
+    { id: "ottoman", name: "Ottoman Empire", region: "balkans", countries: ["Turkey"], clip: { lngMax: 46 } },
+  ],
+  seaLinks: [
+    ["britain", "france"],
+    ["britain", "low-countries"],
+    ["britain", "portugal"],
+    ["britain", "denmark-norway"],
+    ["sweden", "lithuania"],
+    ["sweden", "prussia"],
+    ["south-italy", "greece"],
+    ["south-italy", "balkans"],
+  ],
+};
+
+const MAPS = [WORLD, CARIBBEAN, NAPOLEON];
 
 for (const cfg of MAPS) {
   const byName = await loadDataset(cfg.dataset);
