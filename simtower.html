@@ -65,6 +65,15 @@
   .tool .swatch { width: 18px; height: 18px; border-radius: 3px; border: 1px solid #000; flex: 0 0 18px; }
   .tool .label { flex: 1; font-size: 13px; font-weight: 600; }
   .tool .cost { font-size: 11px; color: var(--muted); }
+  .tool.locked { opacity: .5; cursor: not-allowed; }
+  .tool.locked:hover { background: var(--panel-2); }
+  .tool.locked .cost { color: var(--accent); }
+  .objective {
+    font-size: 11px; line-height: 1.45; color: var(--text);
+    background: #15202c; border: 1px solid #000; border-left: 3px solid var(--accent);
+    border-radius: 5px; padding: 6px 8px;
+  }
+  .objective b { color: var(--accent); }
   .tool-desc {
     min-height: 28px; font-size: 11px; line-height: 1.35; color: var(--text);
     background: #161d24; border: 1px solid #000; border-radius: 6px; padding: 6px 8px;
@@ -422,6 +431,16 @@
     top:auto; bottom:7px; left:20%; right:20%; height:5px;
     background:#6b4a2e; border-radius:2px; box-shadow:0 3px 0 -1px #4a3420;
   }
+  /* Sky Spire — the golden crowning landmark */
+  .unit-spire { --wall: transparent; border: none; }
+  .unit-spire .u-face {
+    background:
+      linear-gradient(180deg, #fff2c0 0 8px, transparent 8px) no-repeat 50% 0 / 2px 100%,         /* antenna mast */
+      radial-gradient(circle at 50% 26%, rgba(255,231,150,.7) 0 9px, transparent 10px),            /* glow */
+      conic-gradient(from 0deg at 50% 100%, transparent 0 42%, #f0d98c 42% 58%, transparent 58%),  /* spire cone */
+      linear-gradient(180deg, transparent 0 calc(100% - 7px), #e6cd83 calc(100% - 7px) calc(100% - 2px), #b89a4d calc(100% - 2px)); /* crown base */
+  }
+  .unit-spire .u-tag { color:#6b531c; }
 
   /* Lobby — columns, ceiling trim, marble floor */
   .unit-lobby { --wall:#e7d8ad; }
@@ -606,6 +625,8 @@
       <span class="k">Next ★</span><span class="v" id="s-next">—</span>
     </div>
 
+    <div class="objective" id="objective"></div>
+
     <div class="section-title">Build</div>
     <div class="tools" id="tools"></div>
     <div class="tool-desc" id="toolDesc"></div>
@@ -707,9 +728,19 @@ const TYPES = {
   gym:       { name: "Gym",         cost: 30000, w: 3, h: 1, color: "#9fb0a6", income: 0,    cap: 0,  kind: "amenity", appeal: 14 },
   spa:       { name: "Spa",         cost: 40000, w: 3, h: 1, color: "#86b8b0", income: 0,    cap: 0,  kind: "amenity", appeal: 18, favors: "hotel" },
   conference:{ name: "Conf. Room",  cost: 34000, w: 3, h: 1, color: "#b0a48c", income: 0,    cap: 0,  kind: "amenity", appeal: 16, favors: "work" },
+  spire:     { name: "Sky Spire",   cost: 250000,w: 3, h: 1, color: "#e9cf86", income: 0,    cap: 0,  kind: "landmark", appeal: 30 },
   stair:     { name: "Stairs",      cost: 5000,  w: 1, h: 1, color: "#8d99ae", kind: "transit" },
   elevator:  { name: "Elevator",    cost: 18000, w: 1, h: 1, color: "#5c6b7a", kind: "transit" },
   floor:     { name: "Floor Slab",  cost: 8000,  w: 1, h: 1, color: "#b8bfc7", kind: "structure" },
+};
+
+// Star tier at which each build type unlocks (anything unlisted is available from the start).
+const UNLOCK_STAR = {
+  elevator: 1, restaurant: 1, terrace: 1,
+  condo: 2, hotel: 2, gym: 2,
+  cinema: 3, garden: 3, conference: 3, playground: 3,
+  pool: 4, spa: 4, skybar: 4,
+  spire: 5,
 };
 
 // Build menu, organized into collapsible sections (the Pointer is shown above them).
@@ -717,6 +748,7 @@ const TOOL_GROUPS = [
   { title: "Rooms",     keys: ["office","apartment","condo","hotel","shop","restaurant","cinema"] },
   { title: "Amenities", keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference"] },
   { title: "Transit",   keys: ["floor","stair","elevator"] },
+  { title: "Landmark",  keys: ["spire"] },
 ];
 const UI_KEY = "microtower.ui.v1";
 // Which sections start collapsed (Amenities is the longest, so it's tucked away).
@@ -748,6 +780,7 @@ const TYPE_DESC = {
   gym:       "Indoor fitness center. Boosts nearby satisfaction; works mid-tower, no open sky needed.",
   spa:       "Indoor spa. Especially delights nearby hotel guests.",
   conference:"Indoor meeting space. Especially boosts nearby offices.",
+  spire:     "The crowning landmark. Build it to complete your TOWER and win.",
   stair:     "Cheap transit. Rooms need a stair or elevator within 8 cells.",
   elevator:  "Vertical transit. Stack several in a column to form a riding shaft.",
   lobby:     "Ground-floor entrance. Free, pre-built, and can't be sold.",
@@ -770,6 +803,7 @@ const state = {
   stars: 0,
   isNight: false,
   pending: null,
+  won: false,
 };
 
 // ---------- DOM ----------
@@ -833,18 +867,26 @@ function buildToolbar() {
   const makeTool = (key) => {
     const t = TYPES[key];
     const desc = TYPE_DESC[key] || "";
+    const need = UNLOCK_STAR[key] || 0;
+    const locked = state.stars < need;
     const div = document.createElement("div");
-    div.className = "tool" + (key === state.tool ? " selected" : "");
+    div.className = "tool" + (key === state.tool ? " selected" : "") + (locked ? " locked" : "");
     div.dataset.tool = key;
-    div.title = desc; // native tooltip on hover (desktop)
+    div.title = locked ? `Unlocks at ${need}★` : desc;
     div.innerHTML = `
       <span class="swatch" style="background:${t.color === 'transparent' ? '#444' : t.color}"></span>
       <span class="label">${t.name}</span>
-      <span class="cost">${t.cost ? "$" + t.cost.toLocaleString() : (key==='pointer'?'inspect':'free')}</span>`;
-    div.addEventListener("click", () => selectTool(key));
-    // Hover previews the description in the info line; leaving restores the selected tool's.
-    div.addEventListener("mouseenter", () => { if (descEl) descEl.textContent = desc; });
-    div.addEventListener("mouseleave", () => { if (descEl) descEl.textContent = TYPE_DESC[state.tool] || ""; });
+      <span class="cost">${locked ? "🔒 " + "★".repeat(need) : (t.cost ? "$" + t.cost.toLocaleString() : (key==='pointer'?'inspect':'free'))}</span>`;
+    if (locked) {
+      const msg = `🔒 ${t.name} unlocks at ${need}★ (${STAR_THRESHOLDS[need-1]} pop).`;
+      div.addEventListener("click", () => { toast(`${t.name} unlocks at ${need}★`); sfx("error"); });
+      div.addEventListener("mouseenter", () => { if (descEl) descEl.textContent = msg; });
+      div.addEventListener("mouseleave", () => { if (descEl) descEl.textContent = TYPE_DESC[state.tool] || ""; });
+    } else {
+      div.addEventListener("click", () => selectTool(key));
+      div.addEventListener("mouseenter", () => { if (descEl) descEl.textContent = desc; });
+      div.addEventListener("mouseleave", () => { if (descEl) descEl.textContent = TYPE_DESC[state.tool] || ""; });
+    }
     return div;
   };
 
@@ -948,6 +990,8 @@ function hasTransitAccess(col, row, w) {
 function tryBuild(col, row, key_) {
   const t = TYPES[key_];
   if (!t || t.tool) return;
+  const need = UNLOCK_STAR[key_] || 0;
+  if (state.stars < need) { toast(`${t.name} unlocks at ${need}★`); sfx("error"); return; }
   if (!cellsFree(col, row, t.w, t.h)) { toast("Space is occupied or out of bounds."); sfx("error"); return; }
   if (!isSupported(col, row, t.w)) {
     toast("Must rest on the ground or the floor below (1-cell overhang max).");
@@ -980,6 +1024,7 @@ function tryBuild(col, row, key_) {
   state.cash -= t.cost;
   log(`Built ${t.name} on floor ${row} for $${t.cost.toLocaleString()}`, "good");
   sfx("build");
+  if (t.kind === "landmark" && !state.won) winGame();
   refreshStats();
   saveGame(true);
 }
@@ -1020,7 +1065,7 @@ function unitInnerHTML(type) {
     windows = `<div class="u-windows">${spans}</div>`;
   }
   // Enclosed units carry façade edge elements (shown only on exposed sides).
-  const facade = (t.kind === "outdoor") ? ""
+  const facade = (t.kind === "outdoor" || t.kind === "landmark") ? ""
     : `<div class="fe-left"></div><div class="fe-right"></div><div class="fe-base"></div><div class="fe-top"></div>`;
   return `<div class="u-face"></div>${windows}<div class="u-extra"></div>${tag}${vac}<div class="occ"></div>${facade}`;
 }
@@ -1028,7 +1073,7 @@ function unitInnerHTML(type) {
 function shortLabel(type) {
   return ({office:"OFF", apartment:"APT", condo:"CONDO", hotel:"🛏", shop:"SHOP", restaurant:"REST",
            cinema:"🎬", terrace:"⛱", garden:"🌳", pool:"POOL", playground:"PLAY", skybar:"BAR",
-           gym:"GYM", spa:"SPA", conference:"CONF", stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
+           gym:"GYM", spa:"SPA", conference:"CONF", spire:"♛", stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
 }
 
 function onUnitClick(unit) {
@@ -1257,7 +1302,7 @@ function amenityBonus(u) {
   let best = 0;
   for (const a of state.units) {
     const at = TYPES[a.type];
-    if (at.kind !== "outdoor" && at.kind !== "amenity") continue;
+    if (at.kind !== "outdoor" && at.kind !== "amenity" && at.kind !== "landmark") continue;
     // A covered outdoor space (no open sky above) provides no benefit.
     if (at.kind === "outdoor" && !hasOpenSkyAbove(a.col, a.row, a.w)) continue;
     const dx = Math.max(a.col - (u.col + u.w), u.col - (a.col + a.w), 0);
@@ -1387,11 +1432,40 @@ function recomputeStars() {
   if (s !== state.stars) {
     if (s > state.stars) {
       log(`★ Promoted to ${s}-star tower!`, "good");
+      const unlocked = Object.keys(UNLOCK_STAR).filter(k => UNLOCK_STAR[k] === s).map(k => TYPES[k].name);
       banner(`★ ${s}-STAR TOWER! ★`);
+      if (unlocked.length) log(`Unlocked: ${unlocked.join(", ")}.`, "good");
       sfx("promote");
     }
     state.stars = s;
+    buildToolbar();       // reveal newly unlocked build options
+    updateObjective();
   }
+}
+
+function winGame() {
+  state.won = true;
+  banner("👑 TOWER COMPLETE! 👑");
+  log("👑 The Sky Spire is raised — your TOWER is complete. Congratulations!", "good");
+  sfx("promote");
+  updateObjective();
+  saveGame(true);
+}
+
+// The current goal: next star tier (with its unlocks), then the Spire, then done.
+function updateObjective() {
+  const el = document.getElementById("objective");
+  if (!el) return;
+  if (state.won) { el.innerHTML = `<b>👑 TOWER complete!</b> Sandbox on, or start a New tower.`; return; }
+  if (state.stars >= STAR_THRESHOLDS.length) {
+    el.innerHTML = `<b>Final goal:</b> build the <b>Sky Spire</b> to complete your TOWER.`;
+    return;
+  }
+  const nextStar = state.stars + 1;
+  const need = STAR_THRESHOLDS[state.stars];
+  const unlocks = Object.keys(UNLOCK_STAR).filter(k => UNLOCK_STAR[k] === nextStar).map(k => TYPES[k].name);
+  el.innerHTML = `<b>Next: ${"★".repeat(nextStar)}</b> — reach ${need} population (now ${state.pop}).`
+    + (unlocks.length ? `<br>Unlocks: ${unlocks.join(", ")}.` : "");
 }
 
 // ---------- People dots (visual flavor) ----------
@@ -1629,7 +1703,8 @@ function moveShafts() {
 function rebuildFacade() {
   for (const u of state.units) {
     if (!u.el) continue;
-    if (TYPES[u.type].kind === "outdoor") {
+    const fk = TYPES[u.type].kind;
+    if (fk === "outdoor" || fk === "landmark") {
       u.el.classList.remove("edge-top", "edge-left", "edge-right", "edge-base");
       continue;
     }
@@ -1731,6 +1806,7 @@ function refreshStats() {
   nextEl.textContent = state.stars >= STAR_THRESHOLDS.length
     ? "MAX ★★★★★"
     : `${state.pop} / ${STAR_THRESHOLDS[state.stars]} pop`;
+  updateObjective();
 }
 
 function toast(msg) {
@@ -1815,7 +1891,7 @@ function clearWorld() {
 function saveGame(silent) {
   const data = {
     cash: state.cash, pop: state.pop, day: state.day, minutes: state.minutes,
-    stars: state.stars, nextId: state.nextId,
+    stars: state.stars, nextId: state.nextId, won: state.won,
     units: state.units.map(u => ({
       id: u.id, type: u.type, col: u.col, row: u.row,
       occupants: u.occupants, satisfaction: u.satisfaction,
@@ -1837,7 +1913,7 @@ function loadGame(silent) {
   try { d = JSON.parse(raw); } catch (e) { return false; }
   clearWorld();
   state.cash = d.cash; state.pop = d.pop; state.day = d.day;
-  state.minutes = d.minutes; state.stars = d.stars; state.nextId = d.nextId || 1;
+  state.minutes = d.minutes; state.stars = d.stars; state.nextId = d.nextId || 1; state.won = !!d.won;
   (d.units || []).forEach(su => {
     const t = TYPES[su.type];
     if (!t) return;
