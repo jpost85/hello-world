@@ -126,8 +126,13 @@
   #app.nav-closed #stage { left: 0; }
   #scroller {
     position: absolute; top: 42px; left: 0; right: 0; bottom: 0; z-index: 1;
-    overflow: auto; -webkit-overflow-scrolling: touch;
+    overflow: auto;
     overscroll-behavior: contain;   /* keep scroll/overscroll inside the tower view */
+    /* Force the scroller onto its OWN compositor layer (and drop the momentum
+       compositing of -webkit-overflow-scrolling) so its scrolling can't repaint
+       and drag the fixed sky/sun/moon that sit behind it. */
+    transform: translateZ(0);
+    isolation: isolate;
   }
   #worldWrap { position: relative; }
   #world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
