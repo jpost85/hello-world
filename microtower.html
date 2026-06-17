@@ -1446,14 +1446,16 @@ function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 let _sunFrac = -1, _moonFrac = -1;   // -1 = currently hidden
 function celestialXY(frac) {
   const hH = stage.clientHeight || 700;
+  const vW = stage.clientWidth || 1000;
   const baseY = hH * 0.40;   // arc endpoints (sunrise/sunset height)
   const peakY = hH * 0.22;   // arc apex — small gap from baseY = flatter, broader curve
   const f = clamp01(frac);
-  const arcSpan = Math.min(worldWidth, 1700);     // wider span = broader arc
-  const arcLeft = worldWidth / 2 - arcSpan / 2;   // centered over the tower
-  const worldX = arcLeft + f * arcSpan;
+  // Viewport-fixed arc: spans the visible sky and does NOT move with scroll or
+  // zoom, so the sun/moon stay put in the sky as you pan the tower.
+  const arcSpan = vW * 0.9;
+  const arcLeft = (vW - arcSpan) / 2;
   return {
-    cx: worldX * zoom - scroller.scrollLeft,                 // arc point (disc centre)
+    cx: arcLeft + f * arcSpan,                              // arc point (disc centre)
     cy: baseY - Math.sin(f * Math.PI) * (baseY - peakY),
   };
 }
