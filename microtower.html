@@ -652,14 +652,6 @@
   .cloud.c2 { width:84px;  height:18px; top:20%; animation:drift 95s linear infinite; animation-delay:-30s; }
   .cloud.c3 { width:150px; height:30px; top:4%;  animation:drift 120s linear infinite; animation-delay:-60s; }
   @keyframes drift { from{ transform:translateX(-180px); } to{ transform:translateX(110vw); } }
-  #skyline {
-    position:absolute; left:0; right:0; bottom:0; height:70px; opacity:.4;
-    background:
-      linear-gradient(180deg, transparent, rgba(20,30,45,.5)),
-      repeating-linear-gradient(90deg, #20303f 0 18px, #1a2735 18px 22px, #243748 22px 46px, #1a2735 46px 50px);
-    -webkit-mask-image: linear-gradient(180deg, transparent, #000 40%);
-            mask-image: linear-gradient(180deg, transparent, #000 40%);
-  }
 
   /* ---------- Juice / effects ---------- */
   .float-text {
@@ -881,7 +873,6 @@ let COLS = (() => {
   const byScreen = Math.min(120, Math.ceil(vw / CELL_W) + 2);
   return Math.max(40, byScreen, need);
 })();
-const GROUND_ROW = 0;       // logical floor index 0 == ground/lobby level
 const MAX_FLOORS = 30;      // floors above ground you may build
 const BASEMENT_FLOORS = 4;  // below ground (for parking-ish / future)
 const START_CASH = 120000;
@@ -1050,10 +1041,10 @@ function setZoom(z, cx, cy) {
   applyZoom();
   scroller.scrollLeft = (scroller.scrollLeft + cx) * k - cx;
   scroller.scrollTop = (scroller.scrollTop + cy) * k - cy;
+  if (typeof layoutBackdrop === "function") layoutBackdrop();
   if (typeof positionCelestial === "function") positionCelestial();
   if (typeof positionCity === "function") positionCity();
 }
-// Keep the city backdrop anchored to the world as the tower is scrolled. The
 // On scroll: reposition the city/sky backdrop (vertical lock) and the sun/moon
 // (their horizontal arc is world-anchored, so it tracks horizontal panning).
 scroller.addEventListener("scroll", () => {
@@ -1151,7 +1142,8 @@ function growWorld(newCols) {
     for (let col = oldCols; col < COLS; col++) addEmptyCell(col, row);
   buildStars();      // restock the starfield across the now-wider board
   applyZoom();       // wrapper must track the new world width
-  positionCity();    // re-span the skyline + starfield to the new width
+  layoutBackdrop();  // re-span the skyline + starfield to the new width
+  positionCity();
 }
 
 // ---------- Tools UI ----------
@@ -1472,9 +1464,8 @@ let _sunFrac = -1, _moonFrac = -1;   // -1 = currently hidden
 // mobile the URL bar shows/hides while scrolling, which changes 100dvh (and thus
 // stage.clientHeight) mid-scroll; reading it live made the sun/moon drift up and
 // down with the scroll. We refresh these only on a real resize instead.
-let _skyW = 0, _skyH = 0;
+let _skyH = 0;
 function cacheSkyDims() {
-  _skyW = stage.clientWidth || _skyW || 1000;
   _skyH = stage.clientHeight || _skyH || 700;
 }
 function celestialXY(frac) {
@@ -1506,44 +1497,49 @@ function positionCelestial() {
 // height) — giving the sun/moon arc headroom up top — while the city keeps its
 // 2-floors-below-ground anchor. (They differ only by a constant, so the gap is
 // fixed and they move as one.)
-function positionCity() {
+const CITY_DROP = 2 * CELL_H;   // skyline base sits ~2 floors below the ground line
+
+// Layout-only backdrop sizing: widths, skyline height, and the star mask. These
+// depend on board width / zoom / viewport size — NOT on scroll — so this runs only
+// on resize/zoom/grow/init, keeping the per-scroll path (positionCity) cheap.
+function layoutBackdrop() {
   if (!cityBgEl) return;
   const sh = stage.clientHeight || scroller.clientHeight || 700;
-  const CITY_DROP = 2 * CELL_H;
-  // City: skyline spans the WHOLE board width and scrolls with horizontal pan, so a
-  // wider tower is covered automatically. Anchored ~2 floors below the ground line
-  // vertically (tracking the world 1:1).
-  cityBgEl.style.width = (worldWidth * zoom) + "px";   // span the full (scaled) board
-  // Skyline height: aspect-locked to the width, then scaled down a touch (VSCALE)
-  // so it sits a little shorter while keeping full width.
-  const imgH = (worldWidth * zoom) / CITY_ASPECT * CITY_VSCALE;
+  const w = worldWidth * zoom;                                  // full (scaled) board width
+  // Skyline height: aspect-locked to the width, then scaled down a touch (VSCALE).
+  const imgH = w / CITY_ASPECT * CITY_VSCALE;
+  cityBgEl.style.width = w + "px";
   cityBgEl.style.backgroundSize = "100% " + imgH.toFixed(1) + "px";
-  const dyCity = scroller.offsetTop + (rowTop(0) + CITY_DROP) * zoom - scroller.scrollTop - sh;
-  cityBgEl.style.transform = "translate(" + (-scroller.scrollLeft).toFixed(1) + "px, "
-    + dyCity.toFixed(1) + "px) translateZ(0)";
-  // Sky: same vertical scroll delta, but 0 at the default ground view (max scroll).
-  const maxScroll = scroller.scrollHeight - scroller.clientHeight;
-  const dySky = maxScroll - scroller.scrollTop;
-  if (skyEl) skyEl.style.transform = "translateY(" + dySky.toFixed(1) + "px) translateZ(0)";
-  // Clouds live in their own layer behind the skyline; lock them to the same
-  // vertical scroll so they move with the backdrop (children still drift via CSS).
-  if (cloudsEl) cloudsEl.style.transform = "translateY(" + dySky.toFixed(1) + "px) translateZ(0)";
-  // Starfield: spans the whole board and scrolls horizontally with the world (it
-  // doesn't arc over time like the sun/moon — it's a static field). It rides #sky's
-  // vertical lock and adds its own horizontal world offset.
   if (starsEl) {
-    starsEl.style.width = (worldWidth * zoom) + "px";
-    starsEl.style.transform = "translateX(" + (-scroller.scrollLeft).toFixed(1) + "px)";
-    // Keep stars above the skyline: use the same rendered height to find where the
-    // rooftops sit (in sky space) and fade the stars out just above that line.
-    const roofViewport = (sh - imgH) + CITY_ROOF_FRAC * imgH + dyCity;
-    const roofInSky = roofViewport - dySky;
+    starsEl.style.width = w + "px";
+    // Fade stars out just above the rooftops. The city and sky scroll by the same
+    // delta, so the rooftop's position within the sky layer is constant per layout:
+    //   roofInSky = (sh - imgH) + ROOF*imgH + (dyCity - dySky), and
+    //   dyCity - dySky = offsetTop + (rowTop(0)+DROP)*zoom - sh - maxScroll
+    const maxScroll = scroller.scrollHeight - scroller.clientHeight;
+    const cityMinusSky = scroller.offsetTop + (rowTop(0) + CITY_DROP) * zoom - sh - maxScroll;
+    const roofInSky = (sh - imgH) + CITY_ROOF_FRAC * imgH + cityMinusSky;
     const p2 = Math.max(6, Math.min(100, roofInSky / sh * 100));
     const p1 = Math.max(0, p2 - 8);
     const g = `linear-gradient(to bottom, #000 ${p1.toFixed(1)}%, transparent ${p2.toFixed(1)}%)`;
     starsEl.style.webkitMaskImage = g;
     starsEl.style.maskImage = g;
   }
+}
+
+// Per-scroll positioning: only the transforms (cheap). The city skyline + sky layer
+// scroll by the same delta so they stay locked; the sky/clouds are anchored so they
+// sit unshifted at the ground view (headroom for the arc) but move 1:1 with scroll.
+function positionCity() {
+  if (!cityBgEl) return;
+  const sh = stage.clientHeight || scroller.clientHeight || 700;
+  const sx = -scroller.scrollLeft;
+  const dyCity = scroller.offsetTop + (rowTop(0) + CITY_DROP) * zoom - scroller.scrollTop - sh;
+  cityBgEl.style.transform = "translate(" + sx.toFixed(1) + "px, " + dyCity.toFixed(1) + "px) translateZ(0)";
+  const dySky = (scroller.scrollHeight - scroller.clientHeight) - scroller.scrollTop;
+  if (skyEl) skyEl.style.transform = "translateY(" + dySky.toFixed(1) + "px) translateZ(0)";
+  if (cloudsEl) cloudsEl.style.transform = "translateY(" + dySky.toFixed(1) + "px) translateZ(0)";
+  if (starsEl) starsEl.style.transform = "translateX(" + sx.toFixed(1) + "px)";
 }
 
 let _lastBright = -1, _lastDusk = -1;
@@ -2763,6 +2759,7 @@ function init() {
     ? state.units.reduce((a, u) => a + u.col + u.w / 2, 0) / state.units.length
     : COLS / 2;
   scroller.scrollLeft = Math.max(0, colLeft(cx) - scroller.clientWidth / 2);
+  layoutBackdrop();
   positionCity();
   selectTool("pointer");
   updateSoundBtn();
@@ -2775,7 +2772,10 @@ if (typeof window !== "undefined" && window.addEventListener) {
   let _resizeT;
   window.addEventListener("resize", () => {
     clearTimeout(_resizeT);
-    _resizeT = setTimeout(() => { cacheSkyDims(); growWorld(desiredCols()); positionCelestial(); }, 200);
+    _resizeT = setTimeout(() => {
+      cacheSkyDims(); growWorld(desiredCols());
+      layoutBackdrop(); positionCity(); positionCelestial();
+    }, 200);
   });
 }
 
