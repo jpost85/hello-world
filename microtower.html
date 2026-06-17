@@ -1466,12 +1466,14 @@ function positionCelestial() {
     const p = celestialXY(_moonFrac); moonEl.style.left = (p.cx - 19.5) + "px"; moonEl.style.top = (p.cy - 19.5) + "px";
   }
 }
-// Anchor the city backdrop to the world's surface so it scrolls in sync with the
-// tower (at the horizon when viewing the ground; receding below as you scroll up).
+// Parallax the city backdrop with the scroll: it sits at the horizon (bottom)
+// when viewing the ground and drifts down/recedes as you scroll up — so it moves
+// with the tower instead of staying static, while remaining visible.
 function positionCity() {
   if (!cityBgEl) return;
-  const surfaceY = (scroller.offsetTop || 0) + rowTop(-1) * zoom - scroller.scrollTop;
-  cityBgEl.style.transform = "translateY(" + (surfaceY - stage.clientHeight) + "px)";
+  const bottom = scroller.scrollHeight - scroller.clientHeight;       // max scrollTop (ground view)
+  const dy = Math.max(0, bottom - scroller.scrollTop) * 0.35;         // 0 at the bottom; grows scrolling up
+  cityBgEl.style.transform = "translateY(" + dy.toFixed(1) + "px)";
 }
 
 let _lastBright = -1, _lastDusk = -1;
