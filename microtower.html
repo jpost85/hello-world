@@ -648,9 +648,9 @@
   .cloud::before, .cloud::after { content:""; position:absolute; background:inherit; border-radius:50%; }
   .cloud::before { width:55%; height:160%; top:-55%; left:12%; }
   .cloud::after  { width:42%; height:150%; top:-45%; right:14%; }
-  .cloud.c1 { width:120px; height:26px; top:14%; animation:drift 70s linear infinite; }
-  .cloud.c2 { width:84px;  height:18px; top:30%; animation:drift 95s linear infinite; animation-delay:-30s; }
-  .cloud.c3 { width:150px; height:30px; top:8%;  animation:drift 120s linear infinite; animation-delay:-60s; }
+  .cloud.c1 { width:120px; height:26px; top:8%;  animation:drift 70s linear infinite; }
+  .cloud.c2 { width:84px;  height:18px; top:20%; animation:drift 95s linear infinite; animation-delay:-30s; }
+  .cloud.c3 { width:150px; height:30px; top:4%;  animation:drift 120s linear infinite; animation-delay:-60s; }
   @keyframes drift { from{ transform:translateX(-180px); } to{ transform:translateX(110vw); } }
   #skyline {
     position:absolute; left:0; right:0; bottom:0; height:70px; opacity:.4;
@@ -808,15 +808,16 @@
   <div id="backdrop"></div>
 
   <div id="stage">
+    <!-- clouds render BEHIND the city skyline so they don't drift over the buildings -->
+    <div id="clouds">
+      <div class="cloud c1"></div>
+      <div class="cloud c2"></div>
+      <div class="cloud c3"></div>
+    </div>
     <div id="cityBg"></div>
     <div id="skyTint"></div>
     <div id="sky">
       <div id="stars"></div>
-      <div id="clouds">
-        <div class="cloud c1"></div>
-        <div class="cloud c2"></div>
-        <div class="cloud c3"></div>
-      </div>
       <div id="sun"></div>
       <div id="moon"></div>
     </div>
@@ -1524,6 +1525,9 @@ function positionCity() {
   const maxScroll = scroller.scrollHeight - scroller.clientHeight;
   const dySky = maxScroll - scroller.scrollTop;
   if (skyEl) skyEl.style.transform = "translateY(" + dySky.toFixed(1) + "px) translateZ(0)";
+  // Clouds live in their own layer behind the skyline; lock them to the same
+  // vertical scroll so they move with the backdrop (children still drift via CSS).
+  if (cloudsEl) cloudsEl.style.transform = "translateY(" + dySky.toFixed(1) + "px) translateZ(0)";
   // Starfield: spans the whole board and scrolls horizontally with the world (it
   // doesn't arc over time like the sun/moon — it's a static field). It rides #sky's
   // vertical lock and adds its own horizontal world offset.
