@@ -2765,8 +2765,12 @@ function init() {
   updateClock();
   cacheSkyDims();   // stable sky size for the sun/moon arc (before first updateSky)
   updateSky(true);
-  // scroll to ground, centered horizontally on the actual tower
-  scroller.scrollTop = world.clientHeight - scroller.clientHeight;
+  // Default view: aboveground-focused — the lobby sits near the bottom with just a
+  // hint of basement below it, rather than centering on the full underground.
+  const undergroundPeek = 2 * CELL_H;   // show the ground floor + ~1 basement row
+  const maxTop = world.clientHeight - scroller.clientHeight;
+  scroller.scrollTop = Math.max(0, Math.min(maxTop,
+    (rowTop(0) + undergroundPeek) * zoom - scroller.clientHeight));
   const cx = state.units.length
     ? state.units.reduce((a, u) => a + u.col + u.w / 2, 0) / state.units.length
     : COLS / 2;
