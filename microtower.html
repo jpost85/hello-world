@@ -2448,9 +2448,27 @@ function audioEnsure() {
   } catch (e) { actx = false; }
 }
 function audioResume() { if (actx && actx.state === "suspended") actx.resume(); }
-function audioKick() { audioEnsure(); audioResume(); }
-document.addEventListener("pointerdown", audioKick);
-document.addEventListener("keydown", audioKick);
+let _audioUnlocked = false;
+function audioKick() {
+  audioEnsure();
+  if (!actx) return;
+  audioResume();
+  if (!_audioUnlocked) {
+    _audioUnlocked = true;
+    // iOS only fully unlocks Web Audio when a sound actually plays inside a gesture.
+    try {
+      const o = actx.createOscillator(), g = actx.createGain();
+      g.gain.value = 0.00001;
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + 0.03);
+    } catch (e) {}
+  }
+}
+// Unlock on the first of any of these gestures (iOS prefers touchend/click).
+["touchend", "pointerup", "pointerdown", "mousedown", "click", "keydown"].forEach(ev =>
+  document.addEventListener(ev, audioKick, { passive: true }));
+// Resume if the tab/app is re-shown (iOS suspends the context in the background).
+document.addEventListener("visibilitychange", () => { if (!document.hidden) audioResume(); });
 
 // Cached white-noise buffer for percussive (hammer) sounds.
 let _noiseBuf = null;
