@@ -1033,9 +1033,10 @@ function setZoom(z, cx, cy) {
   if (typeof positionCelestial === "function") positionCelestial();
   if (typeof positionCity === "function") positionCity();
 }
-// Keep the sky + city backdrop anchored to the world as the tower is scrolled.
+// Keep the city backdrop anchored to the world as the tower is scrolled. The
+// sun/moon are NOT repositioned here — they stay fixed in the sky regardless of
+// scroll (their position only changes with the time of day).
 scroller.addEventListener("scroll", () => {
-  if (typeof positionCelestial === "function") positionCelestial();
   if (typeof positionCity === "function") positionCity();
 }, { passive: true });
 applyZoom(); // size the wrapper from the start
@@ -1444,9 +1445,18 @@ function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 // Sun/moon ride a fixed arc anchored to the WORLD (so they don't follow the
 // viewport when you scroll), but stay vertically near the top so they're visible.
 let _sunFrac = -1, _moonFrac = -1;   // -1 = currently hidden
+// Cache the sky size so the sun/moon arc uses a STABLE viewport height. On
+// mobile the URL bar shows/hides while scrolling, which changes 100dvh (and thus
+// stage.clientHeight) mid-scroll; reading it live made the sun/moon drift up and
+// down with the scroll. We refresh these only on a real resize instead.
+let _skyW = 0, _skyH = 0;
+function cacheSkyDims() {
+  _skyW = stage.clientWidth || _skyW || 1000;
+  _skyH = stage.clientHeight || _skyH || 700;
+}
 function celestialXY(frac) {
-  const hH = stage.clientHeight || 700;
-  const vW = stage.clientWidth || 1000;
+  const hH = _skyH || stage.clientHeight || 700;
+  const vW = _skyW || stage.clientWidth || 1000;
   const baseY = hH * 0.40;   // arc endpoints (sunrise/sunset height)
   const peakY = hH * 0.22;   // arc apex — small gap from baseY = flatter, broader curve
   const f = clamp01(frac);
@@ -2707,6 +2717,7 @@ function init() {
   updateLobbyLabel();
   refreshStats();
   updateClock();
+  cacheSkyDims();   // stable sky size for the sun/moon arc (before first updateSky)
   updateSky(true);
   // scroll to ground, centered horizontally on the actual tower
   scroller.scrollTop = world.clientHeight - scroller.clientHeight;
@@ -2726,7 +2737,7 @@ if (typeof window !== "undefined" && window.addEventListener) {
   let _resizeT;
   window.addEventListener("resize", () => {
     clearTimeout(_resizeT);
-    _resizeT = setTimeout(() => growWorld(desiredCols()), 200);
+    _resizeT = setTimeout(() => { cacheSkyDims(); growWorld(desiredCols()); positionCelestial(); }, 200);
   });
 }
 
