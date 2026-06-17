@@ -229,7 +229,7 @@
   .unit {
     position: absolute; box-sizing: border-box;
     border: 1px solid rgba(0,0,0,.32);
-    overflow: hidden; cursor: pointer;
+    overflow: visible; cursor: pointer;   /* facade edges draw OUTSIDE the cell (see .fe-*) */
     background: var(--wall, #c9d3da);
   }
   .u-face { position: absolute; inset: 0; transition: filter .8s ease; }
@@ -582,10 +582,12 @@
 
   /* ---------- Building façade (outer shell on exposed edges) ---------- */
   .fe-top, .fe-left, .fe-right, .fe-base { position:absolute; display:none; pointer-events:none; z-index:5; }
-  .fe-top  { top:0; left:0; right:0; height:5px; }
-  .fe-base { bottom:0; left:0; right:0; height:5px; }
-  .fe-left { top:0; bottom:0; left:0; width:4px; }
-  .fe-right{ top:0; bottom:0; right:0; width:4px; }
+  /* Facade edges sit OUTSIDE the cell so the room interior keeps its full size
+     (roof above, walls to the sides, base below — only on exposed sides). */
+  .fe-top  { top:-5px; left:-4px; right:-4px; height:5px; }
+  .fe-base { bottom:-5px; left:-4px; right:-4px; height:5px; }
+  .fe-left { top:0; bottom:0; left:-4px; width:4px; }
+  .fe-right{ top:0; bottom:0; right:-4px; width:4px; }
   /* show an edge only when a façade style is active AND that edge is exposed */
   .facade-brick .edge-top .fe-top, .facade-concrete .edge-top .fe-top, .facade-deco .edge-top .fe-top,
   .facade-brick .edge-base .fe-base, .facade-concrete .edge-base .fe-base, .facade-deco .edge-base .fe-base,
