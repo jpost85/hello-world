@@ -39,8 +39,20 @@ export const MAP_REGISTRY: MapInfo[] = [
   {
     id: "caribbean",
     name: "Caribbean",
-    description: "Napoleonic-era island theatre — 16 territories, naval routes.",
+    description: "Napoleonic-era island theatre — 21 territories, naval routes.",
     factionIds: ["britain", "france", "spain", "netherlands", "portugal"],
+    startPositions: {
+      cuba: "spain",
+      "puerto-rico": "spain",
+      "dominican-republic": "spain",
+      florida: "spain",
+      jamaica: "britain",
+      bahamas: "britain",
+      belize: "britain",
+      barbados: "britain",
+      haiti: "france",
+      "leeward-islands": "netherlands",
+    },
     load: () => import("./caribbean.ts").then((m) => m.caribbeanMap),
   },
   {

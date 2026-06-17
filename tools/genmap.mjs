@@ -223,7 +223,13 @@ function generateMap(cfg, byName, provIndex) {
   let H;
   let project;
   if (cfg.crop) {
-    const { lngMin, lngMax, latMin, latMax } = cfg.crop;
+    // Territories are clipped to `crop`; the viewBox adds `pad` degrees of ocean
+    // buffer around it so the map isn't tight against the edges.
+    const pad = cfg.pad ?? 0;
+    const lngMin = cfg.crop.lngMin - pad;
+    const lngMax = cfg.crop.lngMax + pad;
+    const latMin = cfg.crop.latMin - pad;
+    const latMax = cfg.crop.latMax + pad;
     const s = W / (lngMax - lngMin);
     H = Math.round((latMax - latMin) * s);
     project = ([lng, lat]) => [(lng - lngMin) * s, (latMax - lat) * s];
@@ -489,13 +495,15 @@ const CARIBBEAN = {
   dataset: "50m",
   exportName: "caribbeanMap",
   outFile: "caribbean.ts",
-  crop: { lngMin: -92, lngMax: -58, latMin: 8, latMax: 31 },
+  crop: { lngMin: -93, lngMax: -58, latMin: 6.5, latMax: 31 },
+  pad: 2,
   landThreshold: 0.15,
   simplifyTerritory: 0.45,
   regions: [
     { id: "northern-rim", name: "Northern Rim" },
     { id: "greater-antilles", name: "Greater Antilles" },
     { id: "lesser-antilles", name: "Lesser Antilles" },
+    { id: "central-america", name: "Central America" },
     { id: "spanish-main", name: "Spanish Main" },
   ],
   spec: [
@@ -505,7 +513,7 @@ const CARIBBEAN = {
 
     { id: "jamaica", name: "Jamaica", region: "greater-antilles", countries: ["Jamaica"] },
     { id: "haiti", name: "Haiti", region: "greater-antilles", countries: ["Haiti"] },
-    { id: "dominican-republic", name: "Dominican Republic", region: "greater-antilles", countries: ["Dominican Republic"] },
+    { id: "dominican-republic", name: "Santo Domingo", region: "greater-antilles", countries: ["Dominican Republic"] },
     { id: "puerto-rico", name: "Puerto Rico", region: "greater-antilles", countries: ["Puerto Rico"] },
 
     { id: "leeward-islands", name: "Leeward Islands", region: "lesser-antilles", countries: ["Antigua and Barbuda", "Saint Kitts and Nevis", "Dominica"] },
@@ -513,9 +521,15 @@ const CARIBBEAN = {
     { id: "barbados", name: "Barbados", region: "lesser-antilles", countries: ["Barbados"] },
     { id: "trinidad-tobago", name: "Trinidad & Tobago", region: "lesser-antilles", countries: ["Trinidad and Tobago"] },
 
-    { id: "yucatan", name: "Yucatán", region: "spanish-main", countries: ["Mexico"] },
-    { id: "central-america-n", name: "Guatemala & Honduras", region: "spanish-main", countries: ["Guatemala", "Belize", "Honduras", "El Salvador"] },
-    { id: "central-america-s", name: "Nicaragua & Panama", region: "spanish-main", countries: ["Nicaragua", "Costa Rica", "Panama"] },
+    { id: "yucatan", name: "Yucatán", region: "central-america", countries: ["Mexico"] },
+    { id: "belize", name: "Belize", region: "central-america", countries: ["Belize"] },
+    { id: "guatemala", name: "Guatemala", region: "central-america", countries: ["Guatemala"] },
+    { id: "el-salvador", name: "El Salvador", region: "central-america", countries: ["El Salvador"] },
+    { id: "honduras", name: "Honduras", region: "central-america", countries: ["Honduras"] },
+    { id: "nicaragua", name: "Nicaragua", region: "central-america", countries: ["Nicaragua"] },
+    { id: "costa-rica", name: "Costa Rica", region: "central-america", countries: ["Costa Rica"] },
+    { id: "panama", name: "Panama", region: "central-america", countries: ["Panama"] },
+
     { id: "colombia", name: "Colombia", region: "spanish-main", countries: ["Colombia"] },
     { id: "venezuela", name: "Venezuela", region: "spanish-main", countries: ["Venezuela"] },
   ],
@@ -529,7 +543,7 @@ const CARIBBEAN = {
     ["cuba", "haiti"],
     ["cuba", "yucatan"],
     ["jamaica", "haiti"],
-    ["jamaica", "central-america-s"],
+    ["jamaica", "honduras"],
     ["jamaica", "colombia"],
     ["dominican-republic", "puerto-rico"],
     ["puerto-rico", "leeward-islands"],

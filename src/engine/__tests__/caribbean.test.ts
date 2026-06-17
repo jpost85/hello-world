@@ -4,10 +4,10 @@ import { caribbeanMap } from "../maps/caribbean.ts";
 describe("Caribbean theatre map", () => {
   const ids = new Set(caribbeanMap.territories.map((t) => t.id));
 
-  it("is a compact regional board with 4 regions", () => {
+  it("is a compact regional board with 5 regions", () => {
     expect(caribbeanMap.territories.length).toBeGreaterThanOrEqual(12);
-    expect(caribbeanMap.territories.length).toBeLessThanOrEqual(24);
-    expect(caribbeanMap.regions).toHaveLength(4);
+    expect(caribbeanMap.territories.length).toBeLessThanOrEqual(28);
+    expect(caribbeanMap.regions).toHaveLength(5);
     expect(caribbeanMap.viewBox).toMatch(/^0 0 1000 \d+$/);
   });
 
