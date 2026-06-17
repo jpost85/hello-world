@@ -299,12 +299,18 @@
   /* ---------- Unit interiors ---------- */
   /* Window facade: a solid back wall with discrete window panes (elements), so
      individual windows can light up at night. */
-  .win .u-face { background: var(--wall); }
+  /* Daytime: the window band is cut transparent so the city behind shows through
+     the glass (the box bg is transparent too — see .unit.win below). At night the
+     wall is restored solid so lit/dark panes read against it. */
+  .win .u-face { background: linear-gradient(180deg,
+      var(--wall) 0 7px, transparent 7px, transparent calc(100% - 9px), var(--wall) calc(100% - 9px)); }
+  .unit.win { background: transparent; }
+  .night .win .u-face { background: var(--wall); }
   .u-windows {
     position:absolute; left:4px; right:4px; top:7px; bottom:9px;
     display:flex; gap:3px; pointer-events:none;
   }
-  .u-windows span { flex:1; border-radius:1px; background: var(--glass); transition: background .8s ease; }
+  .u-windows span { flex:1; border-radius:1px; background: transparent; transition: background .8s ease; }  /* daytime: clear glass, shows the city */
   .night .u-windows span { background:#18212c; }                                          /* dark at night... */
   .night .unit.lit .u-windows span.on { background:#ffdd99; box-shadow:0 0 3px rgba(255,213,128,.55); } /* ...lit where occupied */
   .win.lit::after { content:none; }   /* the windows provide the glow now, not a blob */
