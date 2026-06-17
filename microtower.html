@@ -1466,13 +1466,20 @@ function positionCelestial() {
     const p = celestialXY(_moonFrac); moonEl.style.left = (p.cx - 19.5) + "px"; moonEl.style.top = (p.cy - 19.5) + "px";
   }
 }
-// Parallax the city backdrop with the scroll: it sits at the horizon (bottom)
-// when viewing the ground and drifts down/recedes as you scroll up — so it moves
-// with the tower instead of staying static, while remaining visible.
+// Pin the city skyline's base to the tower's ground line and let it move 1:1 with
+// the world as you scroll. At the default ground view the skyline sits at the
+// horizon (just behind/above the lobby); scroll up into the sky and it recedes
+// downward with the tower, so it always stays in sync and stays visible.
 function positionCity() {
   if (!cityBgEl) return;
-  const bottom = scroller.scrollHeight - scroller.clientHeight;       // max scrollTop (ground view)
-  const dy = Math.max(0, bottom - scroller.scrollTop) * 0.35;         // 0 at the bottom; grows scrolling up
+  const sh = stage.clientHeight || scroller.clientHeight || 700;
+  // ground line (top of floor 0) expressed in stage/#cityBg pixels:
+  // the scroller is offset below the HUD, and world content scales by zoom.
+  const groundY = scroller.offsetTop + rowTop(0) * zoom - scroller.scrollTop;
+  // #cityBg is bottom-anchored at the stage bottom (sh); shift its base up to the
+  // ground line. clamp so the skyline can never be shoved fully off-screen.
+  let dy = groundY - sh;
+  dy = Math.max(-sh * 0.85, Math.min(sh * 0.25, dy));
   cityBgEl.style.transform = "translateY(" + dy.toFixed(1) + "px)";
 }
 
