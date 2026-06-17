@@ -91,6 +91,7 @@ has real room to outplay it.
 | `styles.css` | Colonial/parchment theme and layout |
 | `game.js` | Game state, map, battles, AI, and persistence |
 | `assets/generals/` | General portrait art, keyed to each commander |
+| `assets/ships/` | Tall-ship art for the sea nodes (British / American) |
 | `liberty-call.html` | Single-file build (CSS + JS + portraits inlined) for easy sharing |
 | `build.js` | Builds `liberty-call.html`: inlines the CSS/JS and base64-embeds the portraits |
 | `tools-genmap.js` | Dev tool: projects a US-states GeoJSON into the SVG map paths in `game.js` |

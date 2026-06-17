@@ -58,16 +58,16 @@ for (const zid in game.SEA_ZONES) {
     s += `<line x1="${sea.cx}" y1="${sea.cy}" x2="${cg.cx}" y2="${cg.cy}" stroke="${seaStroke[navy]}" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.45"/>`;
   }
 }
-const SHIP_W = 50, SHIP_INNER = require("fs").readFileSync("british_tallship.svg", "utf8")
-  .replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
-const SHIP_SCALE = SHIP_W / 268, SHIP_H = 223 * SHIP_SCALE;
+const SHIP_W = 50, SHIP_H = SHIP_W * (1024 / 1536);
+const shipB64 = { crown: require("fs").readFileSync("assets/ships/british.png").toString("base64"),
+                  patriot: require("fs").readFileSync("assets/ships/american.png").toString("base64") };
 const shipTint = { crown: "#ef9a9a", patriot: "#8fc0ee", neutral: "#f7efd9" };
 for (const zid in game.SEA_ZONES) {
   const sea = seaPos[zid]; if (!sea) continue;
   const node = S.regions[zid];
   const cx = sea.cx, cy = sea.cy;
-  // tall-ship art, centred on the node
-  s += `<g transform="translate(${(cx - SHIP_W / 2).toFixed(1)},${(cy - SHIP_H / 2).toFixed(1)}) scale(${SHIP_SCALE.toFixed(4)})">${SHIP_INNER}</g>`;
+  const art = shipB64[node.owner] || shipB64.crown;
+  s += `<image x="${(cx - SHIP_W / 2).toFixed(1)}" y="${(cy - SHIP_H / 2).toFixed(1)}" width="${SHIP_W}" height="${SHIP_H.toFixed(1)}" href="data:image/png;base64,${art}"/>`;
   s += `<text x="${cx}" y="${cy - SHIP_H / 2 - 5}" font-family="Georgia,serif" font-size="10" font-weight="bold" text-anchor="middle" fill="${shipTint[node.owner]}" stroke="rgba(20,12,4,0.8)" stroke-width="2.4" paint-order="stroke">${node.ships.crown}–${node.ships.patriot}</text>`;
   s += `<text x="${cx}" y="${cy + SHIP_H / 2 + 13}" font-family="Georgia,serif" font-size="9" font-style="italic" font-weight="bold" text-anchor="middle" fill="#21424c" stroke="rgba(247,242,226,0.7)" stroke-width="2" paint-order="stroke">${game.SEA_ZONES[zid].name}</text>`;
 }
