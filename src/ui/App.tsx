@@ -2,11 +2,26 @@ import { useState } from "react";
 import {
   DEFAULT_MAP_ID,
   MAP_REGISTRY,
+  availableFactions,
   currentPlayer,
   mapInfo,
-  rosterFor,
 } from "../engine/index.ts";
 import type { Faction, GameMap, PlayerConfig } from "../engine/index.ts";
+
+/** Assign a distinct faction to each seat: honour explicit picks, else next free. */
+function resolveSeats(avail: Faction[], picks: Record<number, string>, count: number): string[] {
+  const taken = new Set<string>();
+  const result: string[] = [];
+  for (let i = 0; i < count; i++) {
+    let id = picks[i];
+    if (!id || taken.has(id) || !avail.some((f) => f.id === id)) {
+      id = avail.find((f) => !taken.has(f.id))?.id ?? avail[0].id;
+    }
+    taken.add(id);
+    result.push(id);
+  }
+  return result;
+}
 import { useGame } from "./useGame.ts";
 import { hasSavedGame } from "./persistence.ts";
 import { MapView } from "./components/MapView.tsx";
@@ -69,19 +84,21 @@ function Setup({
   const [count, setCount] = useState(3);
   const [mapId, setMapId] = useState(DEFAULT_MAP_ID);
   const [loadingMap, setLoadingMap] = useState(false);
-  // Custom name overrides, keyed by seat index; otherwise the faction's name.
-  const [custom, setCustom] = useState<Record<number, string>>({});
+  // Per-seat faction overrides, keyed by seat index.
+  const [picks, setPicks] = useState<Record<number, string>>({});
   // Default: the first seat is human, the rest are computer opponents.
   const [ai, setAi] = useState<boolean[]>([false, true, true, true, true, true]);
   const savedExists = hasSavedGame();
 
-  // The era roster for the selected map (great powers + neutral fillers).
-  const roster = rosterFor(mapInfo(mapId).factionIds, count);
-  const seatName = (i: number) => custom[i] ?? roster[i].name;
+  // All factions this map can field, and a distinct assignment per seat.
+  const avail = availableFactions(mapInfo(mapId).factionIds);
+  const byId = new Map(avail.map((f) => [f.id, f]));
+  const seatFactionIds = resolveSeats(avail, picks, count);
+  const seatFactions = seatFactionIds.map((id) => byId.get(id)!);
 
-  const players: PlayerConfig[] = Array.from({ length: count }, (_, i) => ({
-    name: seatName(i),
-    factionId: roster[i].id,
+  const players: PlayerConfig[] = seatFactions.map((f, i) => ({
+    name: f.name,
+    factionId: f.id,
     isAI: ai[i],
   }));
 
@@ -90,7 +107,7 @@ function Setup({
     setLoadingMap(true);
     try {
       const map = await mapInfo(mapId).load();
-      onStart(map, players, roster, seed);
+      onStart(map, players, seatFactions, seed);
     } finally {
       setLoadingMap(false);
     }
@@ -135,28 +152,40 @@ function Setup({
         ))}
       </div>
 
-      <label>Players</label>
-      {Array.from({ length: count }, (_, i) => (
-        <div className="player-row" key={i}>
-          <span style={{ alignSelf: "center", display: "flex" }}>
-            <Flag id={roster[i].id} color={roster[i].color} size={26} />
-          </span>
-          <input
-            value={seatName(i)}
-            onChange={(e) => setCustom({ ...custom, [i]: e.target.value })}
-          />
-          <button
-            onClick={() => {
-              const next = ai.slice();
-              next[i] = !next[i];
-              setAi(next);
-            }}
-            style={{ minWidth: 86 }}
-          >
-            {ai[i] ? "🤖 Computer" : "🧑 Human"}
-          </button>
-        </div>
-      ))}
+      <label>Players & factions</label>
+      {Array.from({ length: count }, (_, i) => {
+        const usedByOthers = new Set(seatFactionIds.filter((_, j) => j !== i));
+        return (
+          <div className="player-row" key={i}>
+            <span style={{ alignSelf: "center", display: "flex" }}>
+              <Flag id={seatFactions[i].id} color={seatFactions[i].color} size={28} />
+            </span>
+            <select
+              style={{ flex: 1 }}
+              value={seatFactionIds[i]}
+              onChange={(e) => setPicks({ ...picks, [i]: e.target.value })}
+            >
+              {avail
+                .filter((f) => f.id === seatFactionIds[i] || !usedByOthers.has(f.id))
+                .map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+            </select>
+            <button
+              onClick={() => {
+                const next = ai.slice();
+                next[i] = !next[i];
+                setAi(next);
+              }}
+              style={{ minWidth: 86 }}
+            >
+              {ai[i] ? "🤖 Computer" : "🧑 Human"}
+            </button>
+          </div>
+        );
+      })}
 
       <div className="row" style={{ marginTop: 20 }}>
         <button className="primary" disabled={loadingMap} onClick={() => begin(Date.now() >>> 0)}>

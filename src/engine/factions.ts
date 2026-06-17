@@ -41,6 +41,23 @@ export const FACTION_POOL: Record<string, Faction> = Object.fromEntries(
   GREAT_POWERS.map((f) => [f.id, f]),
 );
 
+/**
+ * Minor / regional powers — the local sides of the colonial-era theatres. Like
+ * the great powers these are identity-only (no gameplay modifiers).
+ */
+export const MINOR_POWERS: Faction[] = [
+  { id: "maratha", name: "Maratha Confederacy", color: "#e8841a" },
+  { id: "mysore", name: "Sultanate of Mysore", color: "#7b3fa0" },
+  { id: "sikh", name: "Sikh Empire", color: "#f0c419" },
+  { id: "mughal", name: "Mughal Empire", color: "#2e8b57" },
+  { id: "mamluks", name: "Mamluks", color: "#b89968" },
+  { id: "egypt", name: "Khedivate of Egypt", color: "#c0913a" },
+  { id: "ethiopia", name: "Ethiopia", color: "#146b3a" },
+  { id: "boers", name: "Boer Republics", color: "#8a7a45" },
+];
+
+for (const f of MINOR_POWERS) FACTION_POOL[f.id] = f;
+
 /** Neutral fillers for themed maps whose roster is shorter than the player count. */
 const FILLERS: Faction[] = [
   { id: "neutral-rose", name: "Rose Coalition", color: "#c2569c" },
@@ -66,4 +83,23 @@ export function rosterFor(factionIds: string[] | undefined, count: number): Fact
     out.push(f);
   }
   return out.slice(0, count);
+}
+
+/**
+ * Every faction a map can field (for the per-seat picker): its full roster of
+ * great/minor powers plus neutral fillers, or the generic factions for maps
+ * without a roster. Distinct, in priority order.
+ */
+export function availableFactions(factionIds: string[] | undefined): Faction[] {
+  if (!factionIds || factionIds.length === 0) return DEFAULT_FACTIONS;
+  const out: Faction[] = [];
+  const seen = new Set<string>();
+  for (const id of [...factionIds, ...FILLERS.map((f) => f.id)]) {
+    const f = FACTION_POOL[id] ?? FILLERS.find((x) => x.id === id);
+    if (f && !seen.has(f.id)) {
+      out.push(f);
+      seen.add(f.id);
+    }
+  }
+  return out;
 }

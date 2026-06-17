@@ -125,6 +125,73 @@ const FLAGS: Record<string, ReactNode> = {
       <circle cx={30} cy={20} r={5.5} fill="#E0A92E" />
     </>
   ),
+
+  // --- Minor / regional powers ---
+
+  // Maratha — saffron (bhagwa) swallowtail.
+  maratha: <polygon points="0,0 60,0 48,20 60,40 0,40" fill="#EF7D18" />,
+  // Mysore — the Tiger of Mysore: orange field with black tiger stripes.
+  mysore: (
+    <>
+      <rect width={W} height={H} fill="#D35400" />
+      {[8, 20, 32, 44, 56].map((x) => (
+        <path key={x} d={`M${x},40 L${x - 11},0`} stroke="#1a1a1a" strokeWidth={3.4} />
+      ))}
+    </>
+  ),
+  // Sikh Empire — saffron Nishan Sahib with a navy Khanda (approximated).
+  sikh: (
+    <>
+      <rect width={W} height={H} fill="#E8861A" />
+      <circle cx={30} cy={20} r={7} fill="none" stroke="#13294b" strokeWidth={2.5} />
+      <rect x={28.5} y={5} width={3} height={30} fill="#13294b" />
+    </>
+  ),
+  // Mughal Empire — green with a gold crescent.
+  mughal: (
+    <>
+      <rect width={W} height={H} fill="#14753F" />
+      <circle cx={32} cy={20} r={8} fill="#E0B13A" />
+      <circle cx={36} cy={20} r={6.5} fill="#14753F" />
+    </>
+  ),
+  // Mamluk Sultanate — gold with a white crescent.
+  mamluks: (
+    <>
+      <rect width={W} height={H} fill="#C9A23A" />
+      <circle cx={30} cy={20} r={8} fill="#fff" />
+      <circle cx={26} cy={20} r={6.5} fill="#C9A23A" />
+    </>
+  ),
+  // Khedivate of Egypt — red with white crescent and three stars.
+  egypt: (
+    <>
+      <rect width={W} height={H} fill="#B81C1C" />
+      <circle cx={25} cy={20} r={8} fill="#fff" />
+      <circle cx={28} cy={20} r={6.5} fill="#B81C1C" />
+      <circle cx={41} cy={13} r={1.6} fill="#fff" />
+      <circle cx={44} cy={20} r={1.6} fill="#fff" />
+      <circle cx={41} cy={27} r={1.6} fill="#fff" />
+    </>
+  ),
+  // Ethiopia — green-yellow-red with a golden emblem.
+  ethiopia: (
+    <>
+      <rect width={W} height={13.3} fill="#078930" />
+      <rect y={13.3} width={W} height={13.4} fill="#FCDD09" />
+      <rect y={26.7} width={W} height={13.3} fill="#DA121A" />
+      <circle cx={30} cy={20} r={5} fill="#0a2a66" />
+    </>
+  ),
+  // Boer Republics — the Transvaal Vierkleur.
+  boers: (
+    <>
+      <rect width={W} height={13.3} fill="#DE2910" />
+      <rect y={13.3} width={W} height={13.4} fill="#fff" />
+      <rect y={26.7} width={W} height={13.3} fill="#002395" />
+      <rect width={16} height={H} fill="#007A3D" />
+    </>
+  ),
 };
 
 export function Flag({

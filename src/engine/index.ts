@@ -7,7 +7,14 @@ export * from "./map.ts";
 export * from "./game.ts";
 export { CONFIG } from "./config.ts";
 export { playAITurn } from "./ai.ts";
-export { DEFAULT_FACTIONS, GREAT_POWERS, FACTION_POOL, rosterFor } from "./factions.ts";
+export {
+  DEFAULT_FACTIONS,
+  GREAT_POWERS,
+  MINOR_POWERS,
+  FACTION_POOL,
+  rosterFor,
+  availableFactions,
+} from "./factions.ts";
 // Note: classicWorld is intentionally NOT re-exported here so it stays a
 // lazily-loaded chunk (see registry.ts). Import it directly in tests.
 export { worldMap } from "./maps/worldMap.ts";

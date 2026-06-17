@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FACTIONS, rosterFor } from "../factions.ts";
-import { MAP_REGISTRY } from "../maps/registry.ts";
+import { DEFAULT_FACTIONS, FACTION_POOL, availableFactions, rosterFor } from "../factions.ts";
+import { MAP_REGISTRY, mapInfo } from "../maps/registry.ts";
 
 describe("faction rosters", () => {
   it("uses generic factions for maps without a roster", () => {
@@ -25,6 +25,24 @@ describe("faction rosters", () => {
       const r = rosterFor(m.factionIds, 6);
       const colors = r.map((f) => f.color);
       expect(new Set(colors).size, `${m.id} has duplicate colours`).toBe(colors.length);
+    }
+  });
+
+  it("exposes minor/regional factions through a map's available list", () => {
+    const india = availableFactions(mapInfo("india").factionIds).map((f) => f.id);
+    expect(india).toContain("maratha");
+    expect(india).toContain("mysore");
+    expect(india).toContain("sikh");
+    expect(india).toContain("mughal");
+    expect(FACTION_POOL["ethiopia"]).toBeDefined();
+    expect(FACTION_POOL["mamluks"]).toBeDefined();
+  });
+
+  it("references only factions that exist in the pool for every roster", () => {
+    for (const m of MAP_REGISTRY) {
+      for (const id of m.factionIds ?? []) {
+        expect(FACTION_POOL[id], `${m.id} -> ${id}`).toBeDefined();
+      }
     }
   });
 });

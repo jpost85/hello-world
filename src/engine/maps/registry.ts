@@ -52,14 +52,14 @@ export const MAP_REGISTRY: MapInfo[] = [
     id: "africa-scramble",
     name: "Scramble for Africa",
     description: "The colonial partition of Africa — 25 territories.",
-    factionIds: ["britain", "france", "germany", "portugal", "belgium", "italy"],
+    factionIds: ["britain", "france", "germany", "italy", "portugal", "belgium", "ethiopia", "boers", "egypt"],
     load: () => import("./africaScramble.ts").then((m) => m.africaMap),
   },
   {
     id: "near-east",
     name: "Egypt & the Near East",
     description: "Napoleon's Egyptian campaign & the Ottoman Near East — 19 territories.",
-    factionIds: ["france", "britain", "ottoman", "russia", "persia"],
+    factionIds: ["france", "ottoman", "britain", "mamluks", "persia", "russia"],
     load: () => import("./nearEast.ts").then((m) => m.nearEastMap),
   },
   {
@@ -73,7 +73,7 @@ export const MAP_REGISTRY: MapInfo[] = [
     id: "india",
     name: "Indian Subcontinent",
     description: "The subcontinent by presidency — 15 territories.",
-    factionIds: ["britain", "france", "portugal", "netherlands"],
+    factionIds: ["britain", "maratha", "mysore", "sikh", "mughal", "france", "portugal", "netherlands"],
     load: () => import("./indiaSubcontinent.ts").then((m) => m.indiaMap),
   },
 ];
