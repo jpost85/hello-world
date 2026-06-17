@@ -611,9 +611,9 @@
 
   /* ---------- Sky backdrop ---------- */
   #sky { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
-  #sun, #moon { position:absolute; width:46px; height:46px; border-radius:50%; transition:opacity .8s; }
-  #sun  { background:radial-gradient(circle at 38% 38%, #fff6c8, #ffd24a 60%, #ffb020); box-shadow:0 0 30px 8px rgba(255,200,60,.5); }
-  #moon { background:radial-gradient(circle at 40% 38%, #fdfdff, #d4dcec 60%, #aab4c8); box-shadow:0 0 18px 4px rgba(200,215,255,.35); }
+  #sun, #moon { position:absolute; border-radius:50%; transition:opacity .8s; }
+  #sun  { width:46px; height:46px; background:radial-gradient(circle at 38% 38%, #fff6c8, #ffd24a 60%, #ffb020); box-shadow:0 0 30px 8px rgba(255,200,60,.5); }
+  #moon { width:39px; height:39px; background:radial-gradient(circle at 40% 38%, #fdfdff, #d4dcec 60%, #aab4c8); box-shadow:0 0 18px 4px rgba(200,215,255,.35); }
   #stars { position:absolute; inset:0; transition:opacity 1s; }
   .star { position:absolute; width:2px; height:2px; border-radius:50%; background:#fff; opacity:.85; animation:twinkle 3s infinite ease-in-out; }
   @keyframes twinkle { 0%,100%{ opacity:.2; } 50%{ opacity:.9; } }
@@ -1436,16 +1436,16 @@ function celestialXY(frac) {
   const arcLeft = worldWidth / 2 - arcSpan / 2;   // centered over the tower
   const worldX = arcLeft + f * arcSpan;
   return {
-    left: worldX * zoom - scroller.scrollLeft - 23, // -23 = half the 46px disc
-    top: horizon - Math.sin(f * Math.PI) * (horizon - 30) - 23,
+    cx: worldX * zoom - scroller.scrollLeft,                 // arc point (disc centre)
+    cy: horizon - Math.sin(f * Math.PI) * (horizon - 30),
   };
 }
 function positionCelestial() {
   if (_sunFrac >= -0.05 && _sunFrac <= 1.05) {
-    const p = celestialXY(_sunFrac); sunEl.style.left = p.left + "px"; sunEl.style.top = p.top + "px";
+    const p = celestialXY(_sunFrac); sunEl.style.left = (p.cx - 23) + "px"; sunEl.style.top = (p.cy - 23) + "px";
   }
   if (_moonFrac >= -0.05 && _moonFrac <= 1.05) {
-    const p = celestialXY(_moonFrac); moonEl.style.left = p.left + "px"; moonEl.style.top = p.top + "px";
+    const p = celestialXY(_moonFrac); moonEl.style.left = (p.cx - 19.5) + "px"; moonEl.style.top = (p.cy - 19.5) + "px";
   }
 }
 
