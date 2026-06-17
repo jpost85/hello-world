@@ -1032,9 +1032,13 @@ function setZoom(z, cx, cy) {
   scroller.scrollLeft = (scroller.scrollLeft + cx) * k - cx;
   scroller.scrollTop = (scroller.scrollTop + cy) * k - cy;
   if (typeof positionCelestial === "function") positionCelestial();
+  if (typeof positionCity === "function") positionCity();
 }
-// Keep the sun/moon anchored to the world as the tower is scrolled.
-scroller.addEventListener("scroll", () => { if (typeof positionCelestial === "function") positionCelestial(); }, { passive: true });
+// Keep the sky + city backdrop anchored to the world as the tower is scrolled.
+scroller.addEventListener("scroll", () => {
+  if (typeof positionCelestial === "function") positionCelestial();
+  if (typeof positionCity === "function") positionCity();
+}, { passive: true });
 applyZoom(); // size the wrapper from the start
 
 // Zoom buttons + pinch gesture (touch). Pinch suppresses native page zoom.
@@ -1461,6 +1465,13 @@ function positionCelestial() {
   if (_moonFrac >= -0.05 && _moonFrac <= 1.05) {
     const p = celestialXY(_moonFrac); moonEl.style.left = (p.cx - 19.5) + "px"; moonEl.style.top = (p.cy - 19.5) + "px";
   }
+}
+// Anchor the city backdrop to the world's surface so it scrolls in sync with the
+// tower (at the horizon when viewing the ground; receding below as you scroll up).
+function positionCity() {
+  if (!cityBgEl) return;
+  const surfaceY = (scroller.offsetTop || 0) + rowTop(-1) * zoom - scroller.scrollTop;
+  cityBgEl.style.transform = "translateY(" + (surfaceY - stage.clientHeight) + "px)";
 }
 
 let _lastBright = -1, _lastDusk = -1;
@@ -2677,6 +2688,7 @@ function init() {
     ? state.units.reduce((a, u) => a + u.col + u.w / 2, 0) / state.units.length
     : COLS / 2;
   scroller.scrollLeft = Math.max(0, colLeft(cx) - scroller.clientWidth / 2);
+  positionCity();
   selectTool("pointer");
   updateSoundBtn();
   if (isMobile()) app.classList.add("nav-closed");
