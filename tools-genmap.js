@@ -198,15 +198,19 @@ for (const id in SEA_POINTS) {
   seaZones[id] = { cx: +c[0].toFixed(1), cy: +c[1].toFixed(1) };
 }
 
-// Terrain = every other state/province overlapping the visible window.
+// Terrain = every other state/province overlapping the visible window. The
+// western bound is decoupled from the (cropped) viewBox so the continent keeps
+// going west of the frame: on a wide screen the left letterbox shows interior
+// land rather than ocean, while the playable map stays cropped at minLon.
 const playableNames = new Set();
 for (const id in PLAYABLE) for (const n of statesOf(PLAYABLE[id])) playableNames.add(n);
 const M = 1.0; // window margin (degrees)
+const TERRAIN_MIN_LON = -125; // include the whole continent west to the Pacific
 const terrain = [];
 for (const f of FEATURES) {
   if (playableNames.has(f.properties.name)) continue;
   const b = bboxOf(f.geometry);
-  if (b.mxx < minLon - M || b.mnx > maxLon + M || b.mxy < minLat - M || b.mny > maxLat + M) continue;
+  if (b.mxx < TERRAIN_MIN_LON || b.mnx > maxLon + M || b.mxy < minLat - M || b.mny > maxLat + M) continue;
   terrain.push(geomPath(f.geometry));
 }
 
