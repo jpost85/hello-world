@@ -1018,7 +1018,10 @@ function setZoom(z, cx, cy) {
   applyZoom();
   scroller.scrollLeft = (scroller.scrollLeft + cx) * k - cx;
   scroller.scrollTop = (scroller.scrollTop + cy) * k - cy;
+  if (typeof positionCelestial === "function") positionCelestial();
 }
+// Keep the sun/moon anchored to the world as the tower is scrolled.
+scroller.addEventListener("scroll", () => { if (typeof positionCelestial === "function") positionCelestial(); }, { passive: true });
 applyZoom(); // size the wrapper from the start
 
 // Zoom buttons + pinch gesture (touch). Pinch suppresses native page zoom.
@@ -1422,14 +1425,28 @@ function lerpColor(a, b, f) {
 function bump(x, center, width) { return Math.max(0, 1 - Math.abs(x-center)/width); }
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
-// Place a celestial body along an arc: frac 0 = left horizon, .5 = zenith, 1 = right horizon.
-function placeArc(el, frac) {
-  if (frac < -0.05 || frac > 1.05) { el.style.opacity = "0"; return false; }
-  const w = stage.clientWidth || 1000, hH = stage.clientHeight || 700;
+// Sun/moon ride a fixed arc anchored to the WORLD (so they don't follow the
+// viewport when you scroll), but stay vertically near the top so they're visible.
+let _sunFrac = -1, _moonFrac = -1;   // -1 = currently hidden
+function celestialXY(frac) {
+  const hH = stage.clientHeight || 700;
   const horizon = hH * 0.80;
-  el.style.left = (frac * (w + 60) - 30 - 23) + "px";
-  el.style.top = (horizon - Math.sin(clamp01(frac) * Math.PI) * (horizon - 30) - 23) + "px";
-  return true;
+  const f = clamp01(frac);
+  const arcSpan = Math.min(worldWidth, 1100);     // arc width in world (logical) px
+  const arcLeft = worldWidth / 2 - arcSpan / 2;   // centered over the tower
+  const worldX = arcLeft + f * arcSpan;
+  return {
+    left: worldX * zoom - scroller.scrollLeft - 23, // -23 = half the 46px disc
+    top: horizon - Math.sin(f * Math.PI) * (horizon - 30) - 23,
+  };
+}
+function positionCelestial() {
+  if (_sunFrac >= -0.05 && _sunFrac <= 1.05) {
+    const p = celestialXY(_sunFrac); sunEl.style.left = p.left + "px"; sunEl.style.top = p.top + "px";
+  }
+  if (_moonFrac >= -0.05 && _moonFrac <= 1.05) {
+    const p = celestialXY(_moonFrac); moonEl.style.left = p.left + "px"; moonEl.style.top = p.top + "px";
+  }
 }
 
 function updateSky(force) {
@@ -1442,11 +1459,15 @@ function updateSky(force) {
   bot = lerpColor(bot, SKY.dusk[1], duskAmt);
   stage.style.background = `linear-gradient(${top}, ${bot})`;
 
-  // Sun rides 6:00 → 18:00; moon rides 18:00 → 6:00.
-  if (placeArc(sunEl, (h - 6) / 12)) sunEl.style.opacity = String(clamp01(bright * 1.4));
+  // Sun rides 6:00 → 18:00; moon rides 18:00 → 6:00 — both anchored to the world.
+  const sf = (h - 6) / 12;
+  if (sf >= -0.05 && sf <= 1.05) { _sunFrac = sf; sunEl.style.opacity = String(clamp01(bright * 1.4)); }
+  else { _sunFrac = -1; sunEl.style.opacity = "0"; }
   const moonH = h < 6 ? h + 24 : h;
-  // The moon simply fades opposite the sun; its arc window + CSS fade do the rest.
-  if (placeArc(moonEl, (moonH - 18) / 12)) moonEl.style.opacity = String(clamp01(1 - bright));
+  const mf = (moonH - 18) / 12;
+  if (mf >= -0.05 && mf <= 1.05) { _moonFrac = mf; moonEl.style.opacity = String(clamp01(1 - bright)); }
+  else { _moonFrac = -1; moonEl.style.opacity = "0"; }
+  positionCelestial();
   starsEl.style.opacity = String(clamp01(1 - bright * 2.4));
   cloudsEl.style.opacity = String(0.06 + bright * 0.7);
   // the distant skyline must darken at night too, or it lightens the horizon
