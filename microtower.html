@@ -614,7 +614,10 @@
   #cityBg {
     position:absolute; inset:0; z-index:0; pointer-events:none;
     background-image:url('microtower-background1.png');
-    background-size:100% 100%; background-position:center; background-repeat:no-repeat;
+    background-size:100% 78%;            /* shorter + bottom-anchored = buildings sit lower/further */
+    background-position:center bottom; background-repeat:no-repeat;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 20%, #000 44%); /* top fades into the sky */
+            mask-image: linear-gradient(to bottom, transparent 20%, #000 44%);
   }
   #skyTint { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:0; }
   #sky { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
@@ -1439,7 +1442,7 @@ function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 let _sunFrac = -1, _moonFrac = -1;   // -1 = currently hidden
 function celestialXY(frac) {
   const hH = stage.clientHeight || 700;
-  const horizon = hH * 0.80;
+  const horizon = hH * 0.50;   // arc endpoints start higher up the viewport
   const f = clamp01(frac);
   const arcSpan = Math.min(worldWidth, 1100);     // arc width in world (logical) px
   const arcLeft = worldWidth / 2 - arcSpan / 2;   // centered over the tower
@@ -1481,6 +1484,7 @@ function updateSky(force) {
   let bot = lerpColor(SKY.night[1], SKY.day[1], bright);
   top = lerpColor(top, SKY.dusk[0], duskAmt);
   bot = lerpColor(bot, SKY.dusk[1], duskAmt);
+  stage.style.background = `linear-gradient(${top}, ${bot})`; // open sky above the city
   // City image: darken + desaturate toward night; tint overlay washes in dusk/night hue.
   if (cityBgEl) cityBgEl.style.filter = `brightness(${(0.34 + bright * 0.72).toFixed(3)}) saturate(${(0.6 + bright * 0.4).toFixed(3)})`;
   if (skyTintEl) {
