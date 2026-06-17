@@ -1466,16 +1466,17 @@ function cacheSkyDims() {
 function celestialXY(frac) {
   const hH = _skyH || stage.clientHeight || 700;
   const vW = _skyW || stage.clientWidth || 1000;
-  const baseY = hH * 0.40;   // arc endpoints (sunrise/sunset height)
-  const peakY = hH * 0.22;   // arc apex — small gap from baseY = flatter, broader curve
+  const baseY = hH * 0.40;   // arc endpoints (sunrise/sunset height, near the skyline)
+  const peakY = hH * 0.18;   // arc apex (noon height, high in the open sky)
   const f = clamp01(frac);
-  // Viewport-fixed arc: spans the visible sky and does NOT move with scroll or
-  // zoom, so the sun/moon stay put in the sky as you pan the tower.
+  // Viewport-fixed ARC: the sun/moon rise and fall as they travel left -> right
+  // with the clock. cx/cy depend only on the time of day (frac) and the cached
+  // sky size — never on scroll or zoom — so they don't move when you pan the tower.
   const arcSpan = vW * 0.9;
   const arcLeft = (vW - arcSpan) / 2;
   return {
-    cx: arcLeft + f * arcSpan,                              // arc point (disc centre)
-    cy: baseY - Math.sin(f * Math.PI) * (baseY - peakY),
+    cx: arcLeft + f * arcSpan,                          // horizontal travel with time
+    cy: baseY - Math.sin(f * Math.PI) * (baseY - peakY), // rise to noon, fall to dusk
   };
 }
 function positionCelestial() {
@@ -2751,35 +2752,6 @@ if (typeof window !== "undefined" && window.addEventListener) {
 }
 
 init();
-
-/* ===== TEMP DEBUG: measure the sun/moon/sky real on-screen position vs scroll.
-   Shows a live readout in the top-right. Scroll and watch whether the rect tops
-   actually change. Remove once the scroll-fix is confirmed. ===== */
-(function debugCelestial(){
-  const box = document.createElement("div");
-  box.style.cssText = "position:fixed;top:48px;right:6px;z-index:99999;background:rgba(0,0,0,.8);"
-    + "color:#0f8;font:11px/1.35 monospace;padding:6px 8px;border-radius:6px;white-space:pre;pointer-events:none;";
-  document.body.appendChild(box);
-  // FREEZE the clock so time can't move the sun/moon. Any remaining up/down
-  // motion while scrolling is then a genuine scroll-coupling bug.
-  state.speed = 0;
-  let base = null;
-  function rd(el){ const r = el.getBoundingClientRect(); return {t: r.top, l: r.left}; }
-  function upd(tag){
-    const sun = rd(sunEl), moon = rd(moonEl), sky = rd(stage.querySelector("#sky"));
-    if (!base) base = { sunT: sun.t, skyT: sky.t };
-    const clock = Math.floor(state.minutes/60) + ":" + String(state.minutes%60).padStart(2,"0");
-    box.textContent =
-      "[" + tag + "]   CLOCK FROZEN at " + clock + "  speed=" + state.speed + "\n" +
-      "scrollTop=" + Math.round(scroller.scrollTop) + "   <- scroll now\n" +
-      "sun.top=" + sun.t.toFixed(1) + "  Δfromstart=" + (sun.t - base.sunT).toFixed(1) + "  <- should stay ~0\n" +
-      "moon.top=" + moon.t.toFixed(1) + "\n" +
-      "sky.top=" + sky.t.toFixed(1) + "  Δfromstart=" + (sky.t - base.skyT).toFixed(1) + "  <- 0 = layer is fixed";
-  }
-  scroller.addEventListener("scroll", () => upd("scroll"), { passive: true });
-  setInterval(() => upd("timer"), 200);   // refresh without scrolling — proves it's the clock
-  upd("init");
-})();
 })();
 </script>
 </body>
