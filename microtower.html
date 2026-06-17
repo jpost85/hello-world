@@ -23,8 +23,12 @@
     font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
     background: #0e1419; color: var(--text);
     overflow: hidden;
+    overscroll-behavior: none;   /* don't let inner scroll bubble into a page scroll */
   }
-  #app { position: relative; height: 100vh; height: 100dvh; width: 100vw; overflow: hidden; }
+  /* position:fixed pins the whole app to the viewport so the page itself can never
+     scroll (iOS ignores body overflow:hidden), which would otherwise drag the sky
+     layer — and the sun/moon — along with a scroll gesture. */
+  #app { position: fixed; inset: 0; height: 100vh; height: 100dvh; overflow: hidden; }
 
   /* Sidebar — slides in/out as a drawer */
   #sidebar {
@@ -123,6 +127,7 @@
   #scroller {
     position: absolute; top: 42px; left: 0; right: 0; bottom: 0; z-index: 1;
     overflow: auto; -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;   /* keep scroll/overscroll inside the tower view */
   }
   #worldWrap { position: relative; }
   #world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
