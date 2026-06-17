@@ -610,6 +610,13 @@
   .facade-deco .fe-base { height:6px; background: linear-gradient(180deg, #4a4a52 0 2px, #303036 2px); }
 
   /* ---------- Sky backdrop ---------- */
+  /* City backdrop image (stretched to the canvas) + a day/night tint over it */
+  #cityBg {
+    position:absolute; inset:0; z-index:0; pointer-events:none;
+    background-image:url('microtower-background1.png');
+    background-size:100% 100%; background-position:center; background-repeat:no-repeat;
+  }
+  #skyTint { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:0; }
   #sky { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
   #sun, #moon { position:absolute; border-radius:50%; transition:opacity .8s; }
   #sun  { width:46px; height:46px; background:radial-gradient(circle at 38% 38%, #fff6c8, #ffd24a 60%, #ffb020); box-shadow:0 0 30px 8px rgba(255,200,60,.5); }
@@ -785,6 +792,8 @@
   <div id="backdrop"></div>
 
   <div id="stage">
+    <div id="cityBg"></div>
+    <div id="skyTint"></div>
     <div id="sky">
       <div id="stars"></div>
       <div id="clouds">
@@ -794,7 +803,6 @@
       </div>
       <div id="sun"></div>
       <div id="moon"></div>
-      <div id="skyline"></div>
     </div>
     <div id="hud">
       <button id="menuToggle" title="Show/hide build menu">☰</button>
@@ -989,7 +997,8 @@ const sunEl = document.getElementById("sun");
 const moonEl = document.getElementById("moon");
 const starsEl = document.getElementById("stars");
 const cloudsEl = document.getElementById("clouds");
-const skylineEl = document.getElementById("skyline");
+const cityBgEl = document.getElementById("cityBg");
+const skyTintEl = document.getElementById("skyTint");
 
 const MIN_ROW = -BASEMENT_FLOORS;     // deepest buildable basement row
 let worldWidth = COLS * CELL_W;
@@ -1449,17 +1458,13 @@ function positionCelestial() {
   }
 }
 
+let _lastBright = -1, _lastDusk = -1;
 function updateSky(force) {
   const h = state.minutes / 60;
   const bright = Math.max(0, Math.sin((h - 6) / 12 * Math.PI)); // 0 at 6/18, 1 at noon
   const duskAmt = Math.max(bump(h, 6.5, 2.5), bump(h, 18, 2.5)) * 0.7;
-  let top = lerpColor(SKY.night[0], SKY.day[0], bright);
-  let bot = lerpColor(SKY.night[1], SKY.day[1], bright);
-  top = lerpColor(top, SKY.dusk[0], duskAmt);
-  bot = lerpColor(bot, SKY.dusk[1], duskAmt);
-  stage.style.background = `linear-gradient(${top}, ${bot})`;
 
-  // Sun rides 6:00 → 18:00; moon rides 18:00 → 6:00 — both anchored to the world.
+  // Sun/moon position + opacity is cheap, so update it every call (scroll smoothness).
   const sf = (h - 6) / 12;
   if (sf >= -0.05 && sf <= 1.05) { _sunFrac = sf; sunEl.style.opacity = String(clamp01(bright * 1.4)); }
   else { _sunFrac = -1; sunEl.style.opacity = "0"; }
@@ -1468,10 +1473,22 @@ function updateSky(force) {
   if (mf >= -0.05 && mf <= 1.05) { _moonFrac = mf; moonEl.style.opacity = String(clamp01(1 - bright)); }
   else { _moonFrac = -1; moonEl.style.opacity = "0"; }
   positionCelestial();
+
+  // Recoloring the full-screen backdrop is expensive — only when it changes meaningfully.
+  if (!force && Math.abs(bright - _lastBright) < 0.01 && Math.abs(duskAmt - _lastDusk) < 0.02) return;
+  _lastBright = bright; _lastDusk = duskAmt;
+  let top = lerpColor(SKY.night[0], SKY.day[0], bright);
+  let bot = lerpColor(SKY.night[1], SKY.day[1], bright);
+  top = lerpColor(top, SKY.dusk[0], duskAmt);
+  bot = lerpColor(bot, SKY.dusk[1], duskAmt);
+  // City image: darken + desaturate toward night; tint overlay washes in dusk/night hue.
+  if (cityBgEl) cityBgEl.style.filter = `brightness(${(0.34 + bright * 0.72).toFixed(3)}) saturate(${(0.6 + bright * 0.4).toFixed(3)})`;
+  if (skyTintEl) {
+    skyTintEl.style.background = `linear-gradient(${top}, ${bot})`;
+    skyTintEl.style.opacity = String(clamp01(0.5 - bright * 0.48 + duskAmt * 0.35));
+  }
   starsEl.style.opacity = String(clamp01(1 - bright * 2.4));
   cloudsEl.style.opacity = String(0.06 + bright * 0.7);
-  // the distant skyline must darken at night too, or it lightens the horizon
-  if (skylineEl) skylineEl.style.filter = "brightness(" + (0.12 + bright * 0.88).toFixed(2) + ")";
 
   const isNight = bright < 0.12;
   if (force || isNight !== state.isNight) {
