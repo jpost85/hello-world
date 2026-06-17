@@ -1,0 +1,29 @@
+{
+  "name": "three-kingdoms-mobile",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Three Kingdoms — a mobile-web strategy port of the classic Romance of the Three Kingdoms: a seasonal command loop, officers and loyalty, schemes, and auto-resolve battles with tactical nudges, on an organic map of Han-dynasty China.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "build:single": "tsc -b && SINGLE_FILE=1 vite build && node scripts/inline-html.mjs",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --noEmit",
+    "genmap": "node tools/genmap.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
+  }
+}
