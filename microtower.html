@@ -2760,6 +2760,9 @@ init();
   box.style.cssText = "position:fixed;top:48px;right:6px;z-index:99999;background:rgba(0,0,0,.8);"
     + "color:#0f8;font:11px/1.35 monospace;padding:6px 8px;border-radius:6px;white-space:pre;pointer-events:none;";
   document.body.appendChild(box);
+  // FREEZE the clock so time can't move the sun/moon. Any remaining up/down
+  // motion while scrolling is then a genuine scroll-coupling bug.
+  state.speed = 0;
   let base = null;
   function rd(el){ const r = el.getBoundingClientRect(); return {t: r.top, l: r.left}; }
   function upd(tag){
@@ -2767,9 +2770,9 @@ init();
     if (!base) base = { sunT: sun.t, skyT: sky.t };
     const clock = Math.floor(state.minutes/60) + ":" + String(state.minutes%60).padStart(2,"0");
     box.textContent =
-      "[" + tag + "]   game time " + clock + "  speed=" + state.speed + "\n" +
-      "scrollTop=" + Math.round(scroller.scrollTop) + "  (NOT scrolling? watch sun.top still change)\n" +
-      "sun.top=" + sun.t.toFixed(1) + "  Δfromstart=" + (sun.t - base.sunT).toFixed(1) + "\n" +
+      "[" + tag + "]   CLOCK FROZEN at " + clock + "  speed=" + state.speed + "\n" +
+      "scrollTop=" + Math.round(scroller.scrollTop) + "   <- scroll now\n" +
+      "sun.top=" + sun.t.toFixed(1) + "  Δfromstart=" + (sun.t - base.sunT).toFixed(1) + "  <- should stay ~0\n" +
       "moon.top=" + moon.t.toFixed(1) + "\n" +
       "sky.top=" + sky.t.toFixed(1) + "  Δfromstart=" + (sky.t - base.skyT).toFixed(1) + "  <- 0 = layer is fixed";
   }
