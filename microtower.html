@@ -1048,10 +1048,11 @@ function setZoom(z, cx, cy) {
   if (typeof positionCity === "function") positionCity();
 }
 // Keep the city backdrop anchored to the world as the tower is scrolled. The
-// sun/moon are NOT repositioned here — they stay fixed in the sky regardless of
-// scroll (their position only changes with the time of day).
+// On scroll: reposition the city/sky backdrop (vertical lock) and the sun/moon
+// (their horizontal arc is world-anchored, so it tracks horizontal panning).
 scroller.addEventListener("scroll", () => {
   if (typeof positionCity === "function") positionCity();
+  if (typeof positionCelestial === "function") positionCelestial();
 }, { passive: true });
 applyZoom(); // size the wrapper from the start
 
@@ -1470,17 +1471,16 @@ function cacheSkyDims() {
 }
 function celestialXY(frac) {
   const hH = _skyH || stage.clientHeight || 700;
-  const vW = _skyW || stage.clientWidth || 1000;
   const baseY = hH * 0.17;   // arc endpoints (sunrise/sunset) — up another 5%
   const peakY = hH * -0.10;  // arc apex (noon) — up another 15% (rises above the top edge)
   const f = clamp01(frac);
-  // ARC within the sky layer: the sun/moon rise and fall as they travel left->right
-  // with the clock. The sky layer as a whole is translated with the city by
-  // positionCity, so these positions stay LOCKED to the skyline and scroll with it.
-  const arcSpan = vW * 0.9;
-  const arcLeft = (vW - arcSpan) / 2;
+  // Horizontal: the arc spans the WHOLE tower (world), anchored to the world and
+  // scrolling with horizontal pan — rises at the far-left column (f=0), peaks over
+  // the centre at noon, sets at the far-right column (f=1). This automatically
+  // covers a wider board. Vertical stays locked to the skyline via positionCity.
+  const cx = f * worldWidth * zoom - scroller.scrollLeft;
   return {
-    cx: arcLeft + f * arcSpan,                          // horizontal travel with time
+    cx: cx,                                              // world-anchored horizontal travel
     cy: baseY - Math.sin(f * Math.PI) * (baseY - peakY), // rise to noon, fall to dusk
   };
 }
@@ -1502,10 +1502,14 @@ function positionCity() {
   if (!cityBgEl) return;
   const sh = stage.clientHeight || scroller.clientHeight || 700;
   const CITY_DROP = 2 * CELL_H;
-  // City: skyline base anchored ~2 floors below the ground line, tracking the world 1:1.
+  // City: skyline spans the WHOLE board width and scrolls with horizontal pan, so a
+  // wider tower is covered automatically. Anchored ~2 floors below the ground line
+  // vertically (tracking the world 1:1).
+  cityBgEl.style.width = (worldWidth * zoom) + "px";   // span the full (scaled) board
   const dyCity = scroller.offsetTop + (rowTop(0) + CITY_DROP) * zoom - scroller.scrollTop - sh;
-  cityBgEl.style.transform = "translateY(" + dyCity.toFixed(1) + "px) translateZ(0)";
-  // Sky: same scroll delta, but 0 at the default ground view (max scroll).
+  cityBgEl.style.transform = "translate(" + (-scroller.scrollLeft).toFixed(1) + "px, "
+    + dyCity.toFixed(1) + "px) translateZ(0)";
+  // Sky: same vertical scroll delta, but 0 at the default ground view (max scroll).
   const maxScroll = scroller.scrollHeight - scroller.clientHeight;
   const dySky = maxScroll - scroller.scrollTop;
   if (skyEl) skyEl.style.transform = "translateY(" + dySky.toFixed(1) + "px) translateZ(0)";
