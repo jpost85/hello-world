@@ -625,8 +625,12 @@
        fade out via their own alpha, blending into the dynamic sky. */
   }
   #skyTint { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:0; }
-  #sky { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
-  #sun, #moon { position:absolute; border-radius:50%; transition:opacity .8s; }
+  /* translateZ(0) promotes the sky to its own GPU layer so scrolling the tower
+     (an overflow:auto sibling) can't repaint/drag the sun & moon with the scroll. */
+  #sky { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none;
+         transform:translateZ(0); will-change:transform; }
+  #sun, #moon { position:absolute; border-radius:50%; transition:opacity .8s;
+                transform:translateZ(0); will-change:transform; }
   #sun  { width:46px; height:46px; background:radial-gradient(circle at 38% 38%, #fff6c8, #ffd24a 60%, #ffb020); box-shadow:0 0 30px 8px rgba(255,200,60,.5); }
   #moon { width:39px; height:39px; background:radial-gradient(circle at 40% 38%, #fdfdff, #d4dcec 60%, #aab4c8); box-shadow:0 0 18px 4px rgba(200,215,255,.35); }
   #stars { position:absolute; inset:0; transition:opacity 1s; }
