@@ -299,23 +299,20 @@
   /* ---------- Unit interiors ---------- */
   /* Window facade: a solid back wall with discrete window panes (elements), so
      individual windows can light up at night. */
-  /* Daytime: the window band is cut transparent so the city behind shows through
-     the glass (the box bg is transparent too — see .unit.win below). At night the
-     wall is restored solid so lit/dark panes read against it. */
+  /* Windows are clear glass at ALL times: a transparent band cut through the wall
+     (u-face gradient + transparent box bg) shows the city/sky behind. No separate
+     night treatment — the backdrop darkens at night, so the glass darkens with it. */
   .win .u-face { background: linear-gradient(180deg,
       var(--wall) 0 7px, transparent 7px, transparent calc(100% - 9px), var(--wall) calc(100% - 9px)); }
   .unit.win { background: transparent; }
-  .night .win .u-face { background: var(--wall); }
   .u-windows {
     position:absolute; left:4px; right:4px; top:7px; bottom:9px;
     display:flex; gap:3px; pointer-events:none;
   }
-  .u-windows span { flex:1; border-radius:1px; background: transparent; transition: background .8s ease; }  /* daytime: clear glass, shows the city */
-  .night .u-windows span { background:#18212c; }                                          /* dark at night... */
-  .night .unit.lit .u-windows span.on { background:#ffdd99; box-shadow:0 0 3px rgba(255,213,128,.55); } /* ...lit where occupied */
-  .win.lit::after { content:none; }   /* the windows provide the glow now, not a blob */
-  /* At night, dim the building structure + ground so the scene reads as night;
-     the window panes above are left untouched so lit windows still glow. */
+  .u-windows span { flex:1; border-radius:1px; background: transparent; }
+  .win.lit::after { content:none; }   /* no glow blob on the glass buildings */
+  /* At night, dim the building structure + ground so the scene reads as night
+     (the glass windows simply show the darkened backdrop through them). */
   .night .u-face, .night .u-extra,
   .night .fe-top, .night .fe-left, .night .fe-right, .night .fe-base { filter: brightness(0.62); }
   .night .ground { filter: brightness(0.5); }
