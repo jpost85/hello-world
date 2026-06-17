@@ -613,12 +613,12 @@
   /* City backdrop image (stretched to the canvas) + a day/night tint over it */
   #cityBg {
     position:absolute; inset:0; z-index:0; pointer-events:none;
-    background-image:url('microtower-background1.png');
-    background-size:100% 70%;            /* shorter + bottom-anchored = buildings sit lower/further */
+    background-image:url('microtower-city.png');   /* sky cropped out — only buildings */
+    background-size:100% 58%;            /* shorter + bottom-anchored = buildings sit lower/further */
     background-position:center bottom; background-repeat:no-repeat;
-    /* long, gradual top fade into the sky (no visible seam) */
-    -webkit-mask-image: linear-gradient(to bottom, transparent 30%, #000 60%);
-            mask-image: linear-gradient(to bottom, transparent 30%, #000 60%);
+    /* fade the skyline tops into the dynamic sky gradient (no seam, no baked sky) */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 42%, #000 56%);
+            mask-image: linear-gradient(to bottom, transparent 42%, #000 56%);
   }
   #skyTint { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:0; }
   #sky { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
