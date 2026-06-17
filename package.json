@@ -1,0 +1,16 @@
+{
+  "name": "scorched-earth-mobile",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A mobile-web port of the classic artillery game Scorched Earth.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+}
