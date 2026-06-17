@@ -633,7 +633,11 @@
                 transform:translateZ(0); will-change:transform; }
   #sun  { width:46px; height:46px; background:radial-gradient(circle at 38% 38%, #fff6c8, #ffd24a 60%, #ffb020); box-shadow:0 0 30px 8px rgba(255,200,60,.5); }
   #moon { width:39px; height:39px; background:radial-gradient(circle at 40% 38%, #fdfdff, #d4dcec 60%, #aab4c8); box-shadow:0 0 18px 4px rgba(200,215,255,.35); }
-  #stars { position:absolute; inset:0; transition:opacity 1s; }
+  /* Stars sit in the open sky above the skyline. The sky layer now moves locked to
+     the city, so a static mask keeps them above the rooftops (buildings begin ~40%). */
+  #stars { position:absolute; inset:0; transition:opacity 1s;
+           -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent 42%);
+                   mask-image: linear-gradient(to bottom, #000 30%, transparent 42%); }
   .star { position:absolute; width:2px; height:2px; border-radius:50%; background:#fff; opacity:.85; animation:twinkle 3s infinite ease-in-out; }
   @keyframes twinkle { 0%,100%{ opacity:.2; } 50%{ opacity:.9; } }
   #clouds { position:absolute; inset:0; transition:opacity 1s; }
@@ -1011,6 +1015,7 @@ const starsEl = document.getElementById("stars");
 const cloudsEl = document.getElementById("clouds");
 const cityBgEl = document.getElementById("cityBg");
 const skyTintEl = document.getElementById("skyTint");
+const skyEl = document.getElementById("sky");
 
 const MIN_ROW = -BASEMENT_FLOORS;     // deepest buildable basement row
 let worldWidth = COLS * CELL_W;
@@ -1467,11 +1472,11 @@ function celestialXY(frac) {
   const hH = _skyH || stage.clientHeight || 700;
   const vW = _skyW || stage.clientWidth || 1000;
   const baseY = hH * 0.40;   // arc endpoints (sunrise/sunset height, near the skyline)
-  const peakY = hH * 0.18;   // arc apex (noon height, high in the open sky)
+  const peakY = hH * 0.30;   // arc apex (noon) — kept in the open sky band above the skyline
   const f = clamp01(frac);
-  // Viewport-fixed ARC: the sun/moon rise and fall as they travel left -> right
-  // with the clock. cx/cy depend only on the time of day (frac) and the cached
-  // sky size — never on scroll or zoom — so they don't move when you pan the tower.
+  // ARC within the sky layer: the sun/moon rise and fall as they travel left->right
+  // with the clock. The sky layer as a whole is translated with the city by
+  // positionCity, so these positions stay LOCKED to the skyline and scroll with it.
   const arcSpan = vW * 0.9;
   const arcLeft = (vW - arcSpan) / 2;
   return {
@@ -1487,37 +1492,23 @@ function positionCelestial() {
     const p = celestialXY(_moonFrac); moonEl.style.left = (p.cx - 19.5) + "px"; moonEl.style.top = (p.cy - 19.5) + "px";
   }
 }
-// Pin the city skyline's base to the tower's ground line and let it move 1:1 with
-// the world as you scroll. At the default ground view the skyline sits at the
-// horizon (just behind/above the lobby); scroll up into the sky and it recedes
-// downward with the tower, so it always stays in sync and stays visible.
+// Move the whole backdrop — city skyline AND the sky layer (sun/moon/stars/clouds)
+// — together by the SAME scroll offset, so they scroll up/down with the tower as
+// one unit and keep a constant gap. The sun/moon still arc across the sky over
+// time (positionCelestial), but their baseline is locked to the skyline.
 function positionCity() {
   if (!cityBgEl) return;
   const sh = stage.clientHeight || scroller.clientHeight || 700;
   // Anchor the skyline base ~2 floors BELOW the ground line so the foreground
   // ground/lobby renders in front of it (the city sits behind the tower base).
-  // Expressed in stage/#cityBg pixels: scroller is offset below the HUD, world
-  // content scales by zoom, and lower rows map to larger rowTop (further down).
+  // Lower rows map to larger rowTop (further down); subtracting scrollTop makes
+  // it track the world 1:1 as you scroll.
   const CITY_DROP = 2 * CELL_H;
   const groundY = scroller.offsetTop + (rowTop(0) + CITY_DROP) * zoom - scroller.scrollTop;
-  // #cityBg is bottom-anchored at the stage bottom (sh); shift its base up to the
-  // ground line. clamp so the skyline can never be shoved fully off-screen.
-  let dy = groundY - sh;
-  dy = Math.max(-sh * 0.85, Math.min(sh * 0.25, dy));
-  cityBgEl.style.transform = "translateY(" + dy.toFixed(1) + "px)";
-
-  // Mask the starfield to a horizon that tracks the skyline: stars only draw in
-  // the open sky ABOVE where the buildings begin. The backdrop is bottom-anchored
-  // at 60% height with a transparent top, so its building tips start at ~40% of
-  // the element; keep stars above that line so none land on the rooftops.
-  if (starsEl) {
-    const horizon = dy + sh * 0.40;                 // viewport-Y where buildings start
-    const p2 = Math.max(0, Math.min(100, horizon / sh * 100));
-    const p1 = Math.max(0, p2 - 7);                 // ~50px soft fade above the horizon
-    const g = `linear-gradient(to bottom, #000 ${p1.toFixed(1)}%, transparent ${p2.toFixed(1)}%)`;
-    starsEl.style.webkitMaskImage = g;
-    starsEl.style.maskImage = g;
-  }
+  const dy = groundY - sh;                       // 1:1 with the world (no clamp = moves with scroll)
+  const t = "translateY(" + dy.toFixed(1) + "px) translateZ(0)";
+  cityBgEl.style.transform = t;
+  if (skyEl) skyEl.style.transform = t;          // sun/moon/stars/clouds move with the city
 }
 
 let _lastBright = -1, _lastDusk = -1;
