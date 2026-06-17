@@ -313,10 +313,26 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
             <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" result="n" />
             <feDisplacementMap in="SourceGraphic" in2="n" scale="16" />
           </filter>
+          <filter id="tornSheet" x="-8%" y="-8%" width="116%" height="116%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="3" result="n" />
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="16" />
+            <feDropShadow dx="0" dy="2" stdDeviation="5" floodColor="#000" floodOpacity="0.55" />
+          </filter>
         </defs>
-        {/* Parchment sheet (fixed behind the map). */}
-        <rect x={0} y={0} width="100%" height="100%" fill="url(#parchment)" />
-        <rect className="paper-grain" x={0} y={0} width="100%" height="100%" filter="url(#paperGrain)" />
+        {/* Dark backdrop (the desk) behind the torn parchment sheet. */}
+        <rect x={0} y={0} width="100%" height="100%" fill="#15110b" />
+        {/* Parchment sheet with ragged, scorched outer edges (fixed behind the map). */}
+        <g filter="url(#tornSheet)">
+          <rect x={20} y={20} width={vbW - 40} height={vbH - 40} fill="url(#parchment)" />
+          <rect
+            className="paper-grain"
+            x={20}
+            y={20}
+            width={vbW - 40}
+            height={vbH - 40}
+            filter="url(#paperGrain)"
+          />
+        </g>
         <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
         {/* Scorched edge around the drawn map, then the ocean over the parchment. */}
         <rect
