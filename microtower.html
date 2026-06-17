@@ -2751,6 +2751,30 @@ if (typeof window !== "undefined" && window.addEventListener) {
 }
 
 init();
+
+/* ===== TEMP DEBUG: measure the sun/moon/sky real on-screen position vs scroll.
+   Shows a live readout in the top-right. Scroll and watch whether the rect tops
+   actually change. Remove once the scroll-fix is confirmed. ===== */
+(function debugCelestial(){
+  const box = document.createElement("div");
+  box.style.cssText = "position:fixed;top:48px;right:6px;z-index:99999;background:rgba(0,0,0,.8);"
+    + "color:#0f8;font:11px/1.35 monospace;padding:6px 8px;border-radius:6px;white-space:pre;pointer-events:none;";
+  document.body.appendChild(box);
+  let base = null;
+  function rd(el){ const r = el.getBoundingClientRect(); return {t: r.top, l: r.left}; }
+  function upd(tag){
+    const sun = rd(sunEl), moon = rd(moonEl), sky = rd(stage.querySelector("#sky"));
+    if (!base) base = { sunT: sun.t, skyT: sky.t };
+    box.textContent =
+      "[" + tag + "]\n" +
+      "scrollTop=" + Math.round(scroller.scrollTop) + "  scrollLeft=" + Math.round(scroller.scrollLeft) + "\n" +
+      "sun.top=" + sun.t.toFixed(1) + "  Δ=" + (sun.t - base.sunT).toFixed(1) + "\n" +
+      "moon.top=" + moon.t.toFixed(1) + "\n" +
+      "sky.top=" + sky.t.toFixed(1) + "  Δ=" + (sky.t - base.skyT).toFixed(1);
+  }
+  scroller.addEventListener("scroll", () => upd("scroll"), { passive: true });
+  upd("init");
+})();
 })();
 </script>
 </body>
