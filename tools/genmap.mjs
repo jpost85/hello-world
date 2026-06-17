@@ -43,6 +43,30 @@ async function loadDataset(key) {
   return byName;
 }
 
+/**
+ * Load an admin-1 (states/provinces) dataset and index it by `${admin}|${name}`,
+ * so territories can be built from real sub-national borders (e.g. Indian states
+ * grouped into historical regions) instead of straight clip lines.
+ */
+const provinceCache = new Map();
+async function loadProvinces(key) {
+  if (provinceCache.has(key)) return provinceCache.get(key);
+  const file = `ne_${key}_admin_1_states_provinces.geojson`;
+  const path = `tools/data/${file}`;
+  if (!existsSync(path)) {
+    console.log(`fetching ${BASE_URL}${file}`);
+    const res = await fetch(`${BASE_URL}${file}`);
+    if (!res.ok) throw new Error(`download failed: ${res.status}`);
+    mkdirSync("tools/data", { recursive: true });
+    writeFileSync(path, Buffer.from(await res.arrayBuffer()));
+  }
+  const fc = JSON.parse(readFileSync(path, "utf8"));
+  const idx = new Map();
+  for (const f of fc.features) idx.set(`${f.properties.admin}|${f.properties.name}`, f);
+  provinceCache.set(key, idx);
+  return idx;
+}
+
 // ===========================================================================
 // Shared geometry helpers
 // ===========================================================================
@@ -194,7 +218,7 @@ function minDegDistance(ringsA, ringsB) {
 // Per-map generation
 // ===========================================================================
 
-function generateMap(cfg, byName) {
+function generateMap(cfg, byName, provIndex) {
   const W = WIDTH;
   let H;
   let project;
@@ -215,12 +239,20 @@ function generateMap(cfg, byName) {
 
   for (const spec of cfg.spec) {
     const rings = [];
-    for (const country of spec.countries) {
-      const feature = byName.get(country);
-      if (!feature) {
-        console.warn(`!! [${cfg.id}] missing country: ${country} (${spec.id})`);
-        continue;
-      }
+    // A territory is built from whole countries (admin-0) and/or provinces
+    // (admin-1, for organic sub-national borders).
+    const features = [];
+    for (const country of spec.countries ?? []) {
+      const f = byName.get(country);
+      if (f) features.push(f);
+      else console.warn(`!! [${cfg.id}] missing country: ${country} (${spec.id})`);
+    }
+    for (const province of spec.provinces ?? []) {
+      const f = provIndex?.get(`${spec.admin}|${province}`);
+      if (f) features.push(f);
+      else console.warn(`!! [${cfg.id}] missing province: ${spec.admin}/${province} (${spec.id})`);
+    }
+    for (const feature of features) {
       for (let ring of ringsOf(feature.geometry)) {
         if (spec.keepBounds && !ringInBounds(ring, spec.keepBounds)) continue;
         if (spec.normalizeRussia) ring = ring.map(([lng, lat]) => [lng < -100 ? lng + 360 : lng, lat]);
@@ -701,37 +733,40 @@ const CRIMEA = {
   ],
 };
 
-// Indian Subcontinent — India subdivided into historical presidencies/regions.
+// Indian Subcontinent — India grouped from real states (admin-1) into historical
+// regions, so internal borders are organic rather than straight clip lines.
 const INDIA = {
   id: "india",
   name: "Indian Subcontinent",
   dataset: "50m",
+  provinceDataset: "50m",
   exportName: "indiaMap",
   outFile: "indiaSubcontinent.ts",
-  crop: { lngMin: 60, lngMax: 93, latMin: 5, latMax: 37 },
+  crop: { lngMin: 60, lngMax: 97, latMin: 5, latMax: 37 },
   landThreshold: 0.2,
   simplifyTerritory: 0.5,
   regions: [
     { id: "northwest", name: "The Northwest" },
     { id: "hindustan", name: "Hindustan" },
-    { id: "central-india", name: "Central India" },
+    { id: "the-ganges", name: "The Ganges" },
+    { id: "western-india", name: "Western India" },
     { id: "the-deccan", name: "The Deccan" },
   ],
   spec: [
     { id: "afghanistan", name: "Afghanistan", region: "northwest", countries: ["Afghanistan"] },
-    { id: "baluchistan", name: "Baluchistan", region: "northwest", countries: ["Pakistan"], clip: { latMax: 30, lngMax: 66 } },
-    { id: "sindh", name: "Sindh", region: "northwest", countries: ["Pakistan"], clip: { latMax: 30, lngMin: 66 } },
-    { id: "punjab-pakistan", name: "Punjab", region: "northwest", countries: ["Pakistan"], clip: { latMin: 30 } },
-    { id: "hindustan", name: "Hindustan", region: "hindustan", countries: ["India"], clip: { latMin: 26, lngMax: 80 } },
-    { id: "oudh", name: "Oudh", region: "hindustan", countries: ["India"], clip: { latMin: 26, lngMin: 80 } },
-    { id: "rajputana", name: "Rajputana", region: "hindustan", countries: ["India"], clip: { latMin: 21, latMax: 26, lngMax: 78 } },
+    { id: "indus", name: "The Indus", region: "northwest", countries: ["Pakistan"] },
+    { id: "punjab", name: "Punjab", region: "northwest", admin: "India", provinces: ["Punjab", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Chandigarh", "Ladakh"] },
+    { id: "hindustan", name: "Hindustan", region: "hindustan", admin: "India", provinces: ["Uttar Pradesh", "Delhi", "Uttarakhand"] },
+    { id: "rajputana", name: "Rajputana", region: "hindustan", admin: "India", provinces: ["Rajasthan"] },
     { id: "himalaya", name: "Nepal & Bhutan", region: "hindustan", countries: ["Nepal", "Bhutan"] },
-    { id: "central-india-t", name: "Central India", region: "central-india", countries: ["India"], clip: { latMin: 21, latMax: 26, lngMin: 78, lngMax: 84 } },
-    { id: "bengal", name: "Bengal", region: "central-india", countries: ["India"], clip: { latMin: 21, latMax: 26, lngMin: 84 } },
-    { id: "bangladesh", name: "Bengal Delta", region: "central-india", countries: ["Bangladesh"] },
-    { id: "bombay", name: "Bombay", region: "central-india", countries: ["India"], clip: { latMin: 15, latMax: 21, lngMax: 78 } },
-    { id: "deccan", name: "The Deccan", region: "the-deccan", countries: ["India"], clip: { latMin: 15, latMax: 21, lngMin: 78 } },
-    { id: "madras", name: "Madras", region: "the-deccan", countries: ["India"], clip: { latMax: 15 } },
+    { id: "central-india", name: "Central India", region: "the-ganges", admin: "India", provinces: ["Madhya Pradesh", "Chhattisgarh"] },
+    { id: "bengal", name: "Bengal", region: "the-ganges", admin: "India", provinces: ["West Bengal", "Bihar", "Jharkhand", "Odisha", "Assam", "Sikkim", "Meghalaya", "Tripura", "Manipur", "Mizoram", "Nagaland", "Arunachal Pradesh"] },
+    { id: "bangladesh", name: "Bengal Delta", region: "the-ganges", countries: ["Bangladesh"] },
+    { id: "gujarat", name: "Gujarat", region: "western-india", admin: "India", provinces: ["Gujarat", "Dadra and Nagar Haveli and Daman and Diu"] },
+    { id: "maratha", name: "Maratha", region: "western-india", admin: "India", provinces: ["Maharashtra", "Goa"] },
+    { id: "hyderabad", name: "Hyderabad", region: "the-deccan", admin: "India", provinces: ["Telangana", "Andhra Pradesh"] },
+    { id: "mysore", name: "Mysore", region: "the-deccan", admin: "India", provinces: ["Karnataka"] },
+    { id: "madras", name: "Madras", region: "the-deccan", admin: "India", provinces: ["Tamil Nadu", "Kerala", "Puducherry"] },
     { id: "ceylon", name: "Ceylon", region: "the-deccan", countries: ["Sri Lanka"] },
   ],
   seaLinks: [["ceylon", "madras"]],
@@ -741,5 +776,6 @@ const MAPS = [WORLD, CARIBBEAN, NAPOLEON, AFRICA, NEAR_EAST, CRIMEA, INDIA];
 
 for (const cfg of MAPS) {
   const byName = await loadDataset(cfg.dataset);
-  generateMap(cfg, byName);
+  const provIndex = cfg.provinceDataset ? await loadProvinces(cfg.provinceDataset) : null;
+  generateMap(cfg, byName, provIndex);
 }
