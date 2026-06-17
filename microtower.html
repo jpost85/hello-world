@@ -1471,8 +1471,8 @@ function cacheSkyDims() {
 function celestialXY(frac) {
   const hH = _skyH || stage.clientHeight || 700;
   const vW = _skyW || stage.clientWidth || 1000;
-  const baseY = hH * 0.40;   // arc endpoints (sunrise/sunset height, near the skyline)
-  const peakY = hH * 0.30;   // arc apex (noon) — kept in the open sky band above the skyline
+  const baseY = hH * 0.30;   // arc endpoints (sunrise/sunset) — raised up into the open sky
+  const peakY = hH * 0.20;   // arc apex (noon) — same curve shape, just lifted higher
   const f = clamp01(frac);
   // ARC within the sky layer: the sun/moon rise and fall as they travel left->right
   // with the clock. The sky layer as a whole is translated with the city by
