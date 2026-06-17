@@ -501,7 +501,8 @@
   .unit-metro .u-tag, .unit-parking .u-tag { color: rgba(255,255,255,.8); top:auto; bottom:4px; text-shadow:0 1px 1px rgba(0,0,0,.6); }
 
   /* Lobby — columns, ceiling trim, marble floor */
-  .unit-lobby { --wall:#e7d8ad; }
+  /* no left/right borders so the row of lobby cells reads as one continuous room */
+  .unit-lobby { --wall:#e7d8ad; border-left:0; border-right:0; }
   .unit-lobby .u-face {
     background:
       linear-gradient(180deg, #cdb988 0 4px, transparent 4px),
