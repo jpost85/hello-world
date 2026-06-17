@@ -45,6 +45,8 @@ export interface GameMap {
   regions: Region[];
   /** SVG viewBox for path-based maps; when absent, positions are normalised. */
   viewBox?: string;
+  /** The drawn map (ocean) rectangle inside the parchment frame, in viewBox units. */
+  mapArea?: { x: number; y: number; width: number; height: number };
   /** Sea/strait routes to draw as connecting lines (land borders are implicit). */
   connectors?: [string, string][];
   /** Non-playable landmasses drawn for realism (e.g. Antarctica) — not territories. */

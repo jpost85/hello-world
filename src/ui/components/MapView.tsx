@@ -280,6 +280,9 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
 
   const zoomButton = (factor: number) => zoomAround(vbW / 2, vbH / 2, factor);
 
+  // The drawn map (ocean) rectangle inside the parchment frame.
+  const area = state.map.mapArea ?? { x: 0, y: 0, width: vbW, height: vbH };
+
   return (
     <div className="board">
       <svg
@@ -289,8 +292,42 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
         preserveAspectRatio="xMidYMid meet"
         onPointerDown={onPointerDown}
       >
-        {isGeo && <rect className="ocean" x={0} y={0} width="100%" height="100%" />}
+        <defs>
+          <radialGradient id="parchment" cx="0.5" cy="0.45" r="0.75">
+            <stop offset="0" stopColor="#efe3c4" />
+            <stop offset="0.7" stopColor="#e2d2a8" />
+            <stop offset="1" stopColor="#cab48a" />
+          </radialGradient>
+          <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.72">
+            <stop offset="0.62" stopColor="#000000" stopOpacity="0" />
+            <stop offset="1" stopColor="#2a1808" stopOpacity="0.5" />
+          </radialGradient>
+          <filter id="paperGrain">
+            <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch" />
+            <feColorMatrix
+              type="matrix"
+              values="0 0 0 0 0.36  0 0 0 0 0.27  0 0 0 0 0.13  0 0 0 0.5 0"
+            />
+          </filter>
+          <filter id="torn">
+            <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" result="n" />
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="16" />
+          </filter>
+        </defs>
+        {/* Parchment sheet (fixed behind the map). */}
+        <rect x={0} y={0} width="100%" height="100%" fill="url(#parchment)" />
+        <rect className="paper-grain" x={0} y={0} width="100%" height="100%" filter="url(#paperGrain)" />
         <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
+        {/* Scorched edge around the drawn map, then the ocean over the parchment. */}
+        <rect
+          className="burnt-edge"
+          x={area.x - 10}
+          y={area.y - 10}
+          width={area.width + 20}
+          height={area.height + 20}
+          filter="url(#torn)"
+        />
+        <rect className="ocean" x={area.x} y={area.y} width={area.width} height={area.height} />
         {state.map.decorations?.map((d, i) => (
           <g key={`decor-${i}`} className="decoration">
             <path d={d.path} fill={d.fill} />
@@ -339,6 +376,8 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
           );
         })}
         </g>
+        {/* Aged darkening at the sheet's edges (fixed). */}
+        <rect className="vignette" x={0} y={0} width="100%" height="100%" fill="url(#vignette)" />
       </svg>
       <div className="zoom-controls">
         <button title="Zoom in" onClick={() => zoomButton(1.4)}>+</button>
