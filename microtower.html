@@ -800,19 +800,22 @@
   <div id="backdrop"></div>
 
   <div id="stage">
-    <!-- clouds render BEHIND the city skyline so they don't drift over the buildings -->
-    <div id="clouds">
-      <div class="cloud c1"></div>
-      <div class="cloud c2"></div>
-      <div class="cloud c3"></div>
-    </div>
-    <div id="cityBg"></div>
+    <!-- Backdrop paint order (back -> front): night tint, then sun/moon/stars,
+         then clouds, then the city skyline. So the sun/moon draw BEHIND the clouds,
+         the clouds draw behind the buildings, and the moon/stars stay in front of
+         the night tint (so they aren't dimmed by it). -->
     <div id="skyTint"></div>
     <div id="sky">
       <div id="stars"></div>
       <div id="sun"></div>
       <div id="moon"></div>
     </div>
+    <div id="clouds">
+      <div class="cloud c1"></div>
+      <div class="cloud c2"></div>
+      <div class="cloud c3"></div>
+    </div>
+    <div id="cityBg"></div>
     <div id="hud">
       <button id="menuToggle" title="Show/hide build menu">☰</button>
       <span class="hud-item">💰 <b id="h-cash">$0</b></span>
@@ -1470,8 +1473,8 @@ function cacheSkyDims() {
 }
 function celestialXY(frac) {
   const hH = _skyH || stage.clientHeight || 700;
-  const baseY = hH * 0.17;   // arc endpoints (sunrise/sunset) — up another 5%
-  const peakY = hH * -0.10;  // arc apex (noon) — up another 15% (rises above the top edge)
+  const baseY = hH * 0.02;   // arc endpoints (sunrise/sunset) — whole arc raised ~15% higher
+  const peakY = hH * -0.25;  // arc apex (noon) — raised with it (well above the top edge)
   const f = clamp01(frac);
   // Horizontal: the arc spans the WHOLE tower (world), anchored to the world and
   // scrolling with horizontal pan — rises at the far-left column (f=0), peaks over
