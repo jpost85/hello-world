@@ -2765,14 +2765,16 @@ init();
   function upd(tag){
     const sun = rd(sunEl), moon = rd(moonEl), sky = rd(stage.querySelector("#sky"));
     if (!base) base = { sunT: sun.t, skyT: sky.t };
+    const clock = Math.floor(state.minutes/60) + ":" + String(state.minutes%60).padStart(2,"0");
     box.textContent =
-      "[" + tag + "]\n" +
-      "scrollTop=" + Math.round(scroller.scrollTop) + "  scrollLeft=" + Math.round(scroller.scrollLeft) + "\n" +
-      "sun.top=" + sun.t.toFixed(1) + "  Δ=" + (sun.t - base.sunT).toFixed(1) + "\n" +
+      "[" + tag + "]   game time " + clock + "  speed=" + state.speed + "\n" +
+      "scrollTop=" + Math.round(scroller.scrollTop) + "  (NOT scrolling? watch sun.top still change)\n" +
+      "sun.top=" + sun.t.toFixed(1) + "  Δfromstart=" + (sun.t - base.sunT).toFixed(1) + "\n" +
       "moon.top=" + moon.t.toFixed(1) + "\n" +
-      "sky.top=" + sky.t.toFixed(1) + "  Δ=" + (sky.t - base.skyT).toFixed(1);
+      "sky.top=" + sky.t.toFixed(1) + "  Δfromstart=" + (sky.t - base.skyT).toFixed(1) + "  <- 0 = layer is fixed";
   }
   scroller.addEventListener("scroll", () => upd("scroll"), { passive: true });
+  setInterval(() => upd("timer"), 200);   // refresh without scrolling — proves it's the clock
   upd("init");
 })();
 })();
