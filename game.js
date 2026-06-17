@@ -916,11 +916,24 @@
         `. Commit how many of your ${menFull(max)}?`;
     }
 
-    // Offer to send the general along, when the source has one.
+    // Offer to send the general along, when the source has one. A march into a
+    // region that already has a commander can't bring a second — the army may
+    // still reinforce, but the general stays put (shown, disabled, explained).
     const leadRow = $("#lead-row");
+    const lead = $("#lead-general");
     if (from.general) {
-      $("#lead-label").textContent = ((kind === "move" ? (bySea ? "Sail with " : "March with ") : "Lead the assault with ")) + from.general.name;
-      $("#lead-general").checked = true;
+      const occupied = kind === "move" && S.regions[toId].general;
+      if (occupied) {
+        $("#lead-label").textContent = `${S.regions[toId].general.name} already commands ${def(toId).name} — ${from.general.name} stays behind`;
+        lead.checked = false;
+        lead.disabled = true;
+        leadRow.classList.add("disabled");
+      } else {
+        $("#lead-label").textContent = (kind === "move" ? (bySea ? "Sail with " : "March with ") : "Lead the assault with ") + from.general.name;
+        lead.checked = true;
+        lead.disabled = false;
+        leadRow.classList.remove("disabled");
+      }
       leadRow.classList.remove("hidden");
     } else {
       leadRow.classList.add("hidden");
@@ -958,6 +971,9 @@
       from.general = null;
     }
     log(`${menFull(count)} men marched from ${def(fromId).name} to ${def(toId).name}.`, "");
+    if (from.general && from.troops === 0) {
+      log(`${from.general.name} remains in ${def(fromId).name} with no troops — send men or he risks capture.`, "l-bad");
+    }
     selected = toId;
     save();
     renderAll();

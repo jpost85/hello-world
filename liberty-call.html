@@ -296,6 +296,8 @@ html, body {
 }
 .lead-row { display: flex; align-items: center; gap: 9px; margin: 4px 0 16px; font-size: 15px; cursor: pointer; }
 .lead-row input { width: 17px; height: 17px; cursor: pointer; }
+.lead-row.disabled { opacity: 0.6; cursor: default; font-style: italic; }
+.lead-row.disabled input { cursor: not-allowed; }
 .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; }
 .gameover-modal { text-align: center; }
 .gameover-modal h2 { font-size: 36px; }
@@ -1372,11 +1374,24 @@ html, body {
         `. Commit how many of your ${menFull(max)}?`;
     }
 
-    // Offer to send the general along, when the source has one.
+    // Offer to send the general along, when the source has one. A march into a
+    // region that already has a commander can't bring a second — the army may
+    // still reinforce, but the general stays put (shown, disabled, explained).
     const leadRow = $("#lead-row");
+    const lead = $("#lead-general");
     if (from.general) {
-      $("#lead-label").textContent = ((kind === "move" ? (bySea ? "Sail with " : "March with ") : "Lead the assault with ")) + from.general.name;
-      $("#lead-general").checked = true;
+      const occupied = kind === "move" && S.regions[toId].general;
+      if (occupied) {
+        $("#lead-label").textContent = `${S.regions[toId].general.name} already commands ${def(toId).name} — ${from.general.name} stays behind`;
+        lead.checked = false;
+        lead.disabled = true;
+        leadRow.classList.add("disabled");
+      } else {
+        $("#lead-label").textContent = (kind === "move" ? (bySea ? "Sail with " : "March with ") : "Lead the assault with ") + from.general.name;
+        lead.checked = true;
+        lead.disabled = false;
+        leadRow.classList.remove("disabled");
+      }
       leadRow.classList.remove("hidden");
     } else {
       leadRow.classList.add("hidden");
@@ -1414,6 +1429,9 @@ html, body {
       from.general = null;
     }
     log(`${menFull(count)} men marched from ${def(fromId).name} to ${def(toId).name}.`, "");
+    if (from.general && from.troops === 0) {
+      log(`${from.general.name} remains in ${def(fromId).name} with no troops — send men or he risks capture.`, "l-bad");
+    }
     selected = toId;
     save();
     renderAll();

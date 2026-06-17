@@ -289,6 +289,8 @@ html, body {
 }
 .lead-row { display: flex; align-items: center; gap: 9px; margin: 4px 0 16px; font-size: 15px; cursor: pointer; }
 .lead-row input { width: 17px; height: 17px; cursor: pointer; }
+.lead-row.disabled { opacity: 0.6; cursor: default; font-style: italic; }
+.lead-row.disabled input { cursor: not-allowed; }
 .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; }
 .gameover-modal { text-align: center; }
 .gameover-modal h2 { font-size: 36px; }
