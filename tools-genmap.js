@@ -99,7 +99,7 @@ for (const id in PLAYABLE) {
 
 const PAD = 0.4; // degrees of margin
 minLon -= PAD; maxLon += PAD; minLat -= PAD; maxLat += PAD;
-minLon = Math.min(minLon, -94.0); // extend west: frontier land fills the left
+minLon = Math.min(minLon, -89.5); // west crop: just past Alabama; trims the far interior
 maxLon = Math.max(maxLon, -62.0); // extend east: Maritimes + Atlantic fill the right
 minLat = Math.min(minLat, 29.1);  // extend south to reveal north Florida
 maxLat = Math.max(maxLat, 48.8);  // extend north to frame Quebec / Canada
