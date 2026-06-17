@@ -867,6 +867,7 @@ const CELL_H = 36;          // px per floor
 // fraction down the image where the rooftops sit (used to keep stars above them).
 const CITY_ASPECT = 1100 / 492;
 const CITY_ROOF_FRAC = 0.20;
+const CITY_VSCALE = 0.95;   // scale the skyline height to 95% (slightly shorter) — width unchanged
 // Tower width in cells: wide enough to fill the screen (so the ground spans the
 // whole view) and to contain any saved tower; minimum 40.
 let COLS = (() => {
@@ -1512,6 +1513,10 @@ function positionCity() {
   // wider tower is covered automatically. Anchored ~2 floors below the ground line
   // vertically (tracking the world 1:1).
   cityBgEl.style.width = (worldWidth * zoom) + "px";   // span the full (scaled) board
+  // Skyline height: aspect-locked to the width, then scaled down a touch (VSCALE)
+  // so it sits a little shorter while keeping full width.
+  const imgH = (worldWidth * zoom) / CITY_ASPECT * CITY_VSCALE;
+  cityBgEl.style.backgroundSize = "100% " + imgH.toFixed(1) + "px";
   const dyCity = scroller.offsetTop + (rowTop(0) + CITY_DROP) * zoom - scroller.scrollTop - sh;
   cityBgEl.style.transform = "translate(" + (-scroller.scrollLeft).toFixed(1) + "px, "
     + dyCity.toFixed(1) + "px) translateZ(0)";
@@ -1525,10 +1530,8 @@ function positionCity() {
   if (starsEl) {
     starsEl.style.width = (worldWidth * zoom) + "px";
     starsEl.style.transform = "translateX(" + (-scroller.scrollLeft).toFixed(1) + "px)";
-    // Keep stars above the skyline. The skyline is aspect-locked, so its rendered
-    // height follows the board width; find where the rooftops sit (in sky space)
-    // and fade the stars out just above that line.
-    const imgH = (worldWidth * zoom) / CITY_ASPECT;            // rendered skyline height
+    // Keep stars above the skyline: use the same rendered height to find where the
+    // rooftops sit (in sky space) and fade the stars out just above that line.
     const roofViewport = (sh - imgH) + CITY_ROOF_FRAC * imgH + dyCity;
     const roofInSky = roofViewport - dySky;
     const p2 = Math.max(6, Math.min(100, roofInSky / sh * 100));
