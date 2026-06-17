@@ -614,10 +614,11 @@
   #cityBg {
     position:absolute; inset:0; z-index:0; pointer-events:none;
     background-image:url('microtower-background1.png');
-    background-size:100% 78%;            /* shorter + bottom-anchored = buildings sit lower/further */
+    background-size:100% 70%;            /* shorter + bottom-anchored = buildings sit lower/further */
     background-position:center bottom; background-repeat:no-repeat;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 20%, #000 44%); /* top fades into the sky */
-            mask-image: linear-gradient(to bottom, transparent 20%, #000 44%);
+    /* long, gradual top fade into the sky (no visible seam) */
+    -webkit-mask-image: linear-gradient(to bottom, transparent 30%, #000 60%);
+            mask-image: linear-gradient(to bottom, transparent 30%, #000 60%);
   }
   #skyTint { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:0; }
   #sky { position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
@@ -1442,14 +1443,15 @@ function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 let _sunFrac = -1, _moonFrac = -1;   // -1 = currently hidden
 function celestialXY(frac) {
   const hH = stage.clientHeight || 700;
-  const horizon = hH * 0.50;   // arc endpoints start higher up the viewport
+  const baseY = hH * 0.40;   // arc endpoints (sunrise/sunset height)
+  const peakY = hH * 0.22;   // arc apex — small gap from baseY = flatter, broader curve
   const f = clamp01(frac);
-  const arcSpan = Math.min(worldWidth, 1100);     // arc width in world (logical) px
+  const arcSpan = Math.min(worldWidth, 1700);     // wider span = broader arc
   const arcLeft = worldWidth / 2 - arcSpan / 2;   // centered over the tower
   const worldX = arcLeft + f * arcSpan;
   return {
     cx: worldX * zoom - scroller.scrollLeft,                 // arc point (disc centre)
-    cy: horizon - Math.sin(f * Math.PI) * (horizon - 30),
+    cy: baseY - Math.sin(f * Math.PI) * (baseY - peakY),
   };
 }
 function positionCelestial() {
