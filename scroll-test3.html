@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scroll layer test 3 (zoomed world)</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; overflow:hidden; overscroll-behavior:none;
+               font-family: system-ui, sans-serif; }
+  #app   { position: fixed; inset:0; overflow:hidden; }
+  #stage { position:absolute; inset:0; overflow:hidden;
+           background: linear-gradient(#9ecbff, #dff0ff); }
+
+  #sky { position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden;
+         transform: translateZ(0); will-change: transform; }
+  #sun  { position:absolute; left:50%; top:70px; width:60px; height:60px; margin-left:-30px;
+          border-radius:50%; background:radial-gradient(circle at 38% 38%,#fff6c8,#ffd24a 60%,#ffb020);
+          box-shadow:0 0 30px 8px rgba(255,200,60,.5); }
+  .star { position:absolute; width:4px; height:4px; border-radius:50%; background:#fff;
+          box-shadow:0 0 4px 1px #fff; }
+  #label { position:absolute; left:0; right:0; top:140px; text-align:center; z-index:0;
+           font-weight:700; color:#1a3; text-shadow:0 1px 2px #fff; }
+
+  #scroller { position:absolute; top:42px; left:0; right:0; bottom:0; z-index:1;
+              overflow:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+  /* Mirrors the game: worldWrap is sized to the SCALED world; world is scaled. */
+  #worldWrap { position:relative; }
+  #world { position:absolute; top:0; left:0; transform-origin:0 0;
+           background: repeating-linear-gradient(
+             to bottom, rgba(60,80,120,.0) 0 78px, rgba(40,60,100,.85) 78px 80px); }
+  .floor { position:absolute; left:8px; color:#fff; font:600 13px system-ui; }
+</style>
+</head>
+<body>
+  <div id="app">
+    <div id="stage">
+      <div id="sky">
+        <div id="sun"></div>
+        <div id="label">⬆ SUN + ✦ stars should stay HERE while you scroll ⬆</div>
+      </div>
+      <div id="scroller"><div id="worldWrap"><div id="world"></div></div></div>
+    </div>
+  </div>
+<script>
+  var sky=document.getElementById('sky');
+  for (var i=0;i<40;i++){ var s=document.createElement('div'); s.className='star';
+    s.style.left=(Math.random()*100)+'%'; s.style.top=(Math.random()*40+5)+'%'; sky.appendChild(s); }
+
+  var ZOOM = 1.4, BASE_W = 1600, BASE_H = 2200; // unscaled world size
+  var world=document.getElementById('world'), wrap=document.getElementById('worldWrap');
+  world.style.width = BASE_W+'px'; world.style.height = BASE_H+'px';
+  for (var f=0; f<27; f++){ var d=document.createElement('div'); d.className='floor';
+    d.style.top=(f*80+4)+'px'; d.textContent='Floor '+(27-f)+' — scroll me'; world.appendChild(d); }
+  function applyZoom(){
+    world.style.transform = 'scale('+ZOOM+')';
+    wrap.style.width  = (BASE_W*ZOOM)+'px';
+    wrap.style.height = (BASE_H*ZOOM)+'px';
+  }
+  applyZoom();
+  var sc=document.getElementById('scroller');
+  sc.scrollTop = BASE_H*ZOOM*0.4;
+</script>
+</body>
+</html>
