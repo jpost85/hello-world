@@ -2757,6 +2757,28 @@ if (typeof window !== "undefined" && window.addEventListener) {
 }
 
 init();
+
+/* ===== TEMP DEBUG: position:fixed red ring over the sun. Pause is forced and the
+   sun is parked at noon. Scroll up/down: does the SUN stay inside the RED ring
+   (=fixed) or drift out of it (=the element really moves)? Remove after. ===== */
+(function debugRing(){
+  state.speed = 0;                 // freeze time
+  state.minutes = 12 * 60;         // noon -> sun visible, high in the sky
+  updateSky(true);                 // place + show the sun
+  sunEl.style.opacity = "1";
+  const ring = document.createElement("div");
+  ring.style.cssText = "position:fixed;z-index:99999;border:4px solid red;border-radius:50%;"
+    + "box-sizing:border-box;pointer-events:none;";
+  const note = document.createElement("div");
+  note.style.cssText = "position:fixed;left:8px;top:50px;z-index:99999;color:#fff;background:#c00;"
+    + "font:700 12px/1.3 system-ui;padding:4px 7px;border-radius:5px;pointer-events:none;max-width:60vw;";
+  note.textContent = "RED ring = truly viewport-fixed. Scroll: does the SUN stay inside it?";
+  document.body.appendChild(ring); document.body.appendChild(note);
+  // place the ring once, over the sun's current on-screen spot, then leave it fixed
+  const r = sunEl.getBoundingClientRect();
+  ring.style.left = (r.left - 6) + "px"; ring.style.top = (r.top - 6) + "px";
+  ring.style.width = (r.width + 12) + "px"; ring.style.height = (r.height + 12) + "px";
+})();
 })();
 </script>
 </body>
