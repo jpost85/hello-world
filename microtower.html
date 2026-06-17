@@ -1485,6 +1485,18 @@ function positionCity() {
   let dy = groundY - sh;
   dy = Math.max(-sh * 0.85, Math.min(sh * 0.25, dy));
   cityBgEl.style.transform = "translateY(" + dy.toFixed(1) + "px)";
+
+  // Mask the starfield to a horizon that tracks the skyline: stars only draw in
+  // the open sky ABOVE where the buildings begin (the city mask starts fading the
+  // skyline in at ~34% of its element), so no stars land on the rooftops.
+  if (starsEl) {
+    const horizon = dy + sh * 0.34;                 // viewport-Y where buildings start
+    const p2 = Math.max(0, Math.min(100, horizon / sh * 100));
+    const p1 = Math.max(0, p2 - 7);                 // ~50px soft fade above the horizon
+    const g = `linear-gradient(to bottom, #000 ${p1.toFixed(1)}%, transparent ${p2.toFixed(1)}%)`;
+    starsEl.style.webkitMaskImage = g;
+    starsEl.style.maskImage = g;
+  }
 }
 
 let _lastBright = -1, _lastDusk = -1;
