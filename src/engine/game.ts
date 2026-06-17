@@ -51,6 +51,12 @@ export interface GameConfig {
   factions: Faction[];
   players: PlayerConfig[];
   seed?: number;
+  /**
+   * Optional fixed historical starts: territory id -> faction id. A territory
+   * is given to the player holding that faction (if any is in the game);
+   * everything else is distributed randomly. Used for scenario maps (colonies).
+   */
+  startPositions?: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,12 +80,23 @@ export function createGame(config: GameConfig): GameState {
 
   let rngState = seedRng(config.seed ?? 0x1a2b3c4d);
 
-  // Shuffle territories, then deal them round-robin so ownership is balanced.
-  const shuffled = map.territories.map((t) => t.id);
-  rngState = shuffleInPlace(shuffled, rngState);
-
   const territories: Record<string, TerritoryState> = {};
-  shuffled.forEach((id, i) => {
+
+  // Apply any fixed historical starts first (only for factions actually in play).
+  const factionToPlayer = new Map(players.map((p) => [p.factionId, p.id]));
+  const fixed = new Set<string>();
+  for (const [territoryId, factionId] of Object.entries(config.startPositions ?? {})) {
+    const ownerId = factionToPlayer.get(factionId);
+    if (ownerId && map.territories.some((t) => t.id === territoryId)) {
+      territories[territoryId] = { ownerId, armies: 1, hasFortress: false };
+      fixed.add(territoryId);
+    }
+  }
+
+  // Shuffle and deal the remaining territories round-robin so the rest is balanced.
+  const remainingTerritories = map.territories.map((t) => t.id).filter((id) => !fixed.has(id));
+  rngState = shuffleInPlace(remainingTerritories, rngState);
+  remainingTerritories.forEach((id, i) => {
     territories[id] = {
       ownerId: players[i % playerCount].id,
       armies: 1,

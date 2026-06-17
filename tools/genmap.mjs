@@ -262,6 +262,17 @@ function generateMap(cfg, byName, provIndex) {
         rings.push(ring);
       }
     }
+    // Point enclave (e.g. a colonial port): a small disc at a coordinate.
+    if (spec.point) {
+      const [lng, lat] = spec.point;
+      const rad = spec.radiusDeg ?? 0.45;
+      const ring = [];
+      for (let a = 0; a < 18; a++) {
+        const th = (a / 18) * 2 * Math.PI;
+        ring.push([lng + rad * Math.cos(th), lat + rad * Math.sin(th)]);
+      }
+      rings.push(cfg.crop ? clipToBox(ring, cfg.crop) : ring);
+    }
     if (!rings.length) {
       console.warn(`!! [${cfg.id}] no geometry for ${spec.id}`);
       continue;
@@ -289,6 +300,8 @@ function generateMap(cfg, byName, provIndex) {
     for (let j = i + 1; j < ids.length; j++)
       if (minDegDistance(geoRings.get(ids[i]), geoRings.get(ids[j])) < landThreshold) link(ids[i], ids[j]);
   for (const [a, b] of cfg.seaLinks) link(a, b);
+  // Non-drawn adjacency (e.g. a colonial enclave to its hinterland region).
+  for (const [a, b] of cfg.links ?? []) link(a, b);
   for (const t of territories) t.adjacentTo = [...adj.get(t.id)].sort();
 
   const haveId = new Set(ids);
@@ -751,6 +764,7 @@ const INDIA = {
     { id: "the-ganges", name: "The Ganges" },
     { id: "western-india", name: "Western India" },
     { id: "the-deccan", name: "The Deccan" },
+    { id: "coromandel", name: "The Coromandel Coast" },
   ],
   spec: [
     { id: "afghanistan", name: "Afghanistan", region: "northwest", countries: ["Afghanistan"] },
@@ -762,14 +776,42 @@ const INDIA = {
     { id: "central-india", name: "Central India", region: "the-ganges", admin: "India", provinces: ["Madhya Pradesh", "Chhattisgarh"] },
     { id: "bengal", name: "Bengal", region: "the-ganges", admin: "India", provinces: ["West Bengal", "Bihar", "Jharkhand", "Odisha", "Assam", "Sikkim", "Meghalaya", "Tripura", "Manipur", "Mizoram", "Nagaland", "Arunachal Pradesh"] },
     { id: "bangladesh", name: "Bengal Delta", region: "the-ganges", countries: ["Bangladesh"] },
-    { id: "gujarat", name: "Gujarat", region: "western-india", admin: "India", provinces: ["Gujarat", "Dadra and Nagar Haveli and Daman and Diu"] },
-    { id: "maratha", name: "Maratha", region: "western-india", admin: "India", provinces: ["Maharashtra", "Goa"] },
+    { id: "calcutta", name: "Calcutta", region: "the-ganges", point: [88.36, 22.57], radiusDeg: 0.55 },
+    { id: "gujarat", name: "Gujarat", region: "western-india", admin: "India", provinces: ["Gujarat"] },
+    { id: "maratha", name: "Maratha", region: "western-india", admin: "India", provinces: ["Maharashtra"] },
+    { id: "goa", name: "Goa", region: "western-india", admin: "India", provinces: ["Goa", "Dadra and Nagar Haveli and Daman and Diu"] },
+    { id: "bombay", name: "Bombay", region: "western-india", point: [72.83, 18.96], radiusDeg: 0.55 },
     { id: "hyderabad", name: "Hyderabad", region: "the-deccan", admin: "India", provinces: ["Telangana", "Andhra Pradesh"] },
     { id: "mysore", name: "Mysore", region: "the-deccan", admin: "India", provinces: ["Karnataka"] },
-    { id: "madras", name: "Madras", region: "the-deccan", admin: "India", provinces: ["Tamil Nadu", "Kerala", "Puducherry"] },
-    { id: "ceylon", name: "Ceylon", region: "the-deccan", countries: ["Sri Lanka"] },
+    { id: "carnatic", name: "Carnatic", region: "the-deccan", admin: "India", provinces: ["Tamil Nadu", "Kerala"] },
+    { id: "ceylon", name: "Ceylon", region: "coromandel", countries: ["Sri Lanka"] },
+    { id: "madras", name: "Madras", region: "coromandel", point: [80.27, 13.08], radiusDeg: 0.5 },
+    { id: "pondicherry", name: "Pondicherry", region: "coromandel", admin: "India", provinces: ["Puducherry"] },
+    { id: "tranquebar", name: "Tranquebar", region: "coromandel", point: [79.85, 11.03], radiusDeg: 0.45 },
+    { id: "cochin", name: "Cochin", region: "coromandel", point: [76.27, 9.97], radiusDeg: 0.45 },
   ],
-  seaLinks: [["ceylon", "madras"]],
+  // Drawn sea crossings.
+  seaLinks: [
+    ["ceylon", "carnatic"],
+    ["ceylon", "madras"],
+    ["madras", "pondicherry"],
+    ["pondicherry", "tranquebar"],
+    ["tranquebar", "ceylon"],
+    ["cochin", "ceylon"],
+    ["calcutta", "madras"],
+  ],
+  // Enclaves to their hinterland (adjacency only, not drawn as lines).
+  links: [
+    ["goa", "maratha"],
+    ["goa", "mysore"],
+    ["bombay", "maratha"],
+    ["calcutta", "bengal"],
+    ["calcutta", "bangladesh"],
+    ["madras", "carnatic"],
+    ["pondicherry", "carnatic"],
+    ["tranquebar", "carnatic"],
+    ["cochin", "carnatic"],
+  ],
 };
 
 const MAPS = [WORLD, CARIBBEAN, NAPOLEON, AFRICA, NEAR_EAST, CRIMEA, INDIA];

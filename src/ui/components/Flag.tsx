@@ -126,6 +126,15 @@ const FLAGS: Record<string, ReactNode> = {
     </>
   ),
 
+  // Denmark — the Dannebrog (white Scandinavian cross on red).
+  denmark: (
+    <>
+      <rect width={W} height={H} fill="#C8102E" />
+      <rect x={18} width={7} height={H} fill="#fff" />
+      <rect y={16.5} width={W} height={7} fill="#fff" />
+    </>
+  ),
+
   // --- Minor / regional powers ---
 
   // Maratha — saffron (bhagwa) swallowtail.

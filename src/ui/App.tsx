@@ -78,7 +78,13 @@ function Setup({
   onStart,
   onResume,
 }: {
-  onStart: (map: GameMap, players: PlayerConfig[], factions: Faction[], seed?: number) => void;
+  onStart: (
+    map: GameMap,
+    players: PlayerConfig[],
+    factions: Faction[],
+    seed?: number,
+    startPositions?: Record<string, string>,
+  ) => void;
   onResume: () => boolean;
 }) {
   const [count, setCount] = useState(3);
@@ -106,8 +112,9 @@ function Setup({
   const begin = async (seed?: number) => {
     setLoadingMap(true);
     try {
-      const map = await mapInfo(mapId).load();
-      onStart(map, players, seatFactions, seed);
+      const info = mapInfo(mapId);
+      const map = await info.load();
+      onStart(map, players, seatFactions, seed, info.startPositions);
     } finally {
       setLoadingMap(false);
     }

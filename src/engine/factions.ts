@@ -35,6 +35,7 @@ export const GREAT_POWERS: Faction[] = [
   { id: "sardinia", name: "Sardinia", color: "#9ccc4f" },
   { id: "belgium", name: "Belgium", color: "#9b6d3a" },
   { id: "persia", name: "Persia", color: "#8e5ba6" },
+  { id: "denmark", name: "Denmark", color: "#b33a3a" },
 ];
 
 export const FACTION_POOL: Record<string, Faction> = Object.fromEntries(

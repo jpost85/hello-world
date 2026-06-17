@@ -41,7 +41,13 @@ export interface UseGame {
   setDefenseStyle: (s: DefenseStyle) => void;
   setFortifyCount: (n: number) => void;
   setSelectedGeneralId: (id: string | null) => void;
-  start: (map: GameMap, players: PlayerConfig[], factions: Faction[], seed?: number) => void;
+  start: (
+    map: GameMap,
+    players: PlayerConfig[],
+    factions: Faction[],
+    seed?: number,
+    startPositions?: Record<string, string>,
+  ) => void;
   /** Resume a previously saved game; returns false if there was none. */
   resume: () => boolean;
   clickTerritory: (id: string) => void;
@@ -75,12 +81,19 @@ export function useGame(): UseGame {
   }, []);
 
   const start = useCallback(
-    (map: GameMap, players: PlayerConfig[], factions: Faction[], seed?: number) => {
+    (
+      map: GameMap,
+      players: PlayerConfig[],
+      factions: Faction[],
+      seed?: number,
+      startPositions?: Record<string, string>,
+    ) => {
     const game = createGame({
       map,
       factions,
       players,
       seed,
+      startPositions,
     });
     setState(game);
     setFrom(null);

@@ -61,6 +61,41 @@ function controlled(setup: Record<string, { owner: string; armies: number }>): G
   return { ...game, territories, generals: game.generals.map((g) => ({ ...g, territoryId: null })) };
 }
 
+describe("fixed start positions", () => {
+  it("gives a territory to the player holding the mapped faction", () => {
+    const g = createGame({
+      map: classicWorld,
+      factions,
+      players: [
+        { name: "Alice", factionId: "crimson" },
+        { name: "Bob", factionId: "azure" },
+      ],
+      seed: 3,
+      startPositions: { brazil: "azure", egypt: "crimson" },
+    });
+    const bob = g.players.find((p) => p.factionId === "azure")!.id;
+    const alice = g.players.find((p) => p.factionId === "crimson")!.id;
+    expect(g.territories["brazil"].ownerId).toBe(bob);
+    expect(g.territories["egypt"].ownerId).toBe(alice);
+    // Every territory is still owned and the full pool is dealt.
+    expect(Object.keys(g.territories)).toHaveLength(42);
+  });
+
+  it("ignores fixed starts for factions not in the game", () => {
+    const g = createGame({
+      map: classicWorld,
+      factions,
+      players: [
+        { name: "Alice", factionId: "crimson" },
+        { name: "Bob", factionId: "azure" },
+      ],
+      seed: 3,
+      startPositions: { brazil: "emerald" }, // emerald isn't in this game
+    });
+    expect(g.territories["brazil"].ownerId).not.toBeNull(); // still dealt randomly
+  });
+});
+
 describe("game setup", () => {
   it("deals every territory and the full starting army pool", () => {
     const g = newGame();

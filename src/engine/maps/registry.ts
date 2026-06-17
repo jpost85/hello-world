@@ -17,6 +17,8 @@ export interface MapInfo {
   description: string;
   /** Era roster (great-power faction ids); omitted maps use generic factions. */
   factionIds?: string[];
+  /** Optional fixed historical starts: territory id -> faction id. */
+  startPositions?: Record<string, string>;
   /** Resolves the full map data — lazily for non-default maps. */
   load: () => Promise<GameMap>;
 }
@@ -72,8 +74,17 @@ export const MAP_REGISTRY: MapInfo[] = [
   {
     id: "india",
     name: "Indian Subcontinent",
-    description: "The subcontinent by presidency — 15 territories.",
-    factionIds: ["britain", "maratha", "mysore", "sikh", "mughal", "france", "portugal", "netherlands"],
+    description: "Historical regions + European trading posts — 22 territories.",
+    factionIds: ["britain", "maratha", "mysore", "sikh", "mughal", "france", "portugal", "netherlands", "denmark"],
+    startPositions: {
+      calcutta: "britain",
+      bombay: "britain",
+      madras: "britain",
+      goa: "portugal",
+      pondicherry: "france",
+      cochin: "netherlands",
+      tranquebar: "denmark",
+    },
     load: () => import("./indiaSubcontinent.ts").then((m) => m.indiaMap),
   },
 ];
