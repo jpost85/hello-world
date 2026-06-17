@@ -1,4 +1,4 @@
-/* Build map path data for Liberty's Call from US-state and Canadian-province
+/* Build map path data for Liberty Calls from US-state and Canadian-province
    GeoJSON. Outputs /tmp/mapdata.js with a MAPDATA object:
    { viewBox, terrain[], regions{}, annotations[] }
 

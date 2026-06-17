@@ -1,5 +1,5 @@
 /* ===========================================================================
-   Liberty's Call — a turn-based Revolutionary War strategy game.
+   Liberty Calls — a turn-based Revolutionary War strategy game.
    Vanilla JS, no dependencies. Player = Patriots, AI = British Crown.
    =========================================================================== */
 (function () {
