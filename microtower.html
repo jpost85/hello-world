@@ -505,12 +505,12 @@
 
   /* Lobby — columns, ceiling trim, marble floor */
   /* no left/right borders so the row of lobby cells reads as one continuous room */
-  .unit-lobby { --wall:#e7d8ad; border-left:0; border-right:0; }
+  .unit-lobby { --wall:#d4977e; border-left:0; border-right:0; }   /* light adobe-red wall */
   .unit-lobby .u-face {
+    /* solid adobe wall (no vertical stripes) with a subtle ceiling line + baseboard */
     background:
-      linear-gradient(180deg, #cdb988 0 4px, transparent 4px),
-      linear-gradient(180deg, transparent 0 calc(100% - 6px), #b9a36a calc(100% - 6px)),
-      repeating-linear-gradient(90deg, #ddcc97 0 13px, #c6b079 13px 16px);
+      linear-gradient(180deg, #e0a98f 0 4px, transparent 4px),
+      linear-gradient(180deg, transparent 0 calc(100% - 6px), #b3735a calc(100% - 6px));
   }
 
   /* Floor slab */
