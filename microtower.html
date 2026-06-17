@@ -2019,7 +2019,10 @@ function walkRange(p) {
 }
 
 function spawnPerson() {
-  if (state.people.length > 60) return;
+  // Scale the strolling crowd to the tower's population so a small tower doesn't
+  // look as busy as a skyscraper (was a flat cap of 60 regardless of size).
+  const cap = Math.min(60, 2 + Math.round(state.pop * 0.7));
+  if (state.people.length >= cap) return;
   // Residents, workers and hotel guests stroll their own floors...
   const pool = state.units.filter(u => {
     const k = TYPES[u.type].kind;
