@@ -204,7 +204,7 @@
     crown: "assets/ships/british.png",
     patriot: "assets/ships/american.png",
   };
-  const SHIP_W = 50;            // on-map width in SVG units
+  const SHIP_W = 63;            // on-map width in SVG units
   const SHIP_RATIO = 1024 / 1536; // art height / width
 
   /* ----------------- Generated geographic map data (see tools-genmap.js) -- */

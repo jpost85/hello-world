@@ -58,7 +58,7 @@ for (const zid in game.SEA_ZONES) {
     s += `<line x1="${sea.cx}" y1="${sea.cy}" x2="${cg.cx}" y2="${cg.cy}" stroke="${seaStroke[navy]}" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.45"/>`;
   }
 }
-const SHIP_W = 50, SHIP_H = SHIP_W * (1024 / 1536);
+const SHIP_W = 63, SHIP_H = SHIP_W * (1024 / 1536);
 const shipB64 = { crown: require("fs").readFileSync("assets/ships/british.png").toString("base64"),
                   patriot: require("fs").readFileSync("assets/ships/american.png").toString("base64") };
 const shipTint = { crown: "#ef9a9a", patriot: "#8fc0ee", neutral: "#f7efd9" };
