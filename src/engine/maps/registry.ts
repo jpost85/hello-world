@@ -50,6 +50,7 @@ export const MAP_REGISTRY: MapInfo[] = [
       bahamas: "britain",
       belize: "britain",
       barbados: "britain",
+      "mosquito-coast": "britain",
       haiti: "france",
       "leeward-islands": "netherlands",
     },
