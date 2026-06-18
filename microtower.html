@@ -302,21 +302,15 @@
   /* ---------- Unit interiors ---------- */
   /* Window facade: a solid back wall with discrete window panes (elements), so
      individual windows can light up at night. */
-  /* Windows are clear glass at ALL times: a transparent band cut through the wall
-     (u-face gradient + transparent box bg) shows the city/sky behind. No separate
-     night treatment — the backdrop darkens at night, so the glass darkens with it. */
-  .win .u-face { background: linear-gradient(180deg,
-      var(--wall) 0 7px, transparent 7px, transparent calc(100% - 9px), var(--wall) calc(100% - 9px)); }
-  .unit.win { background: transparent; }
+  /* Each room has a solid BACK WALL; semi-transparent glass window panes are set
+     into it, flanked by wall (the margins + gaps between panes show the wall). The
+     glass shows the (night-dimmed) wall through it, so the windows darken at night too. */
+  .win .u-face { background: var(--wall); }
   .u-windows {
-    position:absolute; left:4px; right:4px; top:7px; bottom:9px;
-    display:flex; gap:3px; pointer-events:none;
+    position:absolute; left:6px; right:6px; top:8px; bottom:10px;
+    display:flex; gap:5px; pointer-events:none;
   }
-  /* Most panes are a translucent cool glass (mutes the city behind + reads as a glass
-     building, distinct from the backdrop); a minority (.on) stay fully clear. The
-     glass is semi-transparent so it still darkens as the backdrop darkens at night. */
   .u-windows span { flex:1; border-radius:1px; background: rgba(150,180,205,0.5); }
-  .u-windows span.on { background: transparent; }
   .win.lit::after { content:none; }   /* no glow blob on the glass buildings */
   /* At night, dim the building structure + ground so the scene reads as night
      (the glass windows simply show the darkened backdrop through them). */
@@ -1391,7 +1385,7 @@ function unitInnerHTML(type) {
   let windows = "";
   if (type === "office" || type === "apartment" || type === "condo" || type === "hotel") {
     let spans = "";
-    for (let i = 0; i < t.w * 2; i++) spans += `<span${Math.random() < 0.35 ? ' class="on"' : ''}></span>`;  // ~35% fully clear, rest glass
+    for (let i = 0; i < t.w; i++) spans += `<span></span>`;   // fewer windows (~1 per cell), all glass on the back wall
     windows = `<div class="u-windows">${spans}</div>`;
   }
   // Enclosed units carry façade edge elements (shown only on exposed sides).
