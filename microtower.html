@@ -644,7 +644,8 @@
      the rooftops is set dynamically in positionCity (the skyline's spot in the sky
      layer is constant). */
   #stars { position:absolute; inset:0; transition:opacity 1s; }
-  .star { position:absolute; width:2px; height:2px; border-radius:50%; background:#fff; opacity:.85; animation:twinkle 3s infinite ease-in-out; }
+  .star { position:absolute; width:2px; height:2px; border-radius:50%; background:#fff; opacity:.85; }
+  .star.tw { animation:twinkle 3s infinite ease-in-out; }   /* only a sprinkle twinkle (perf) */
   @keyframes twinkle { 0%,100%{ opacity:.2; } 50%{ opacity:.9; } }
   #clouds { position:absolute; inset:0; transition:opacity 1s; }
   .cloud {
@@ -1599,7 +1600,7 @@ function buildStars() {
   const count = Math.max(70, Math.round(worldWidth / 18));   // ~1 per 18px across the board
   for (let i = 0; i < count; i++) {
     const d = document.createElement("div");
-    d.className = "star";
+    d.className = "star" + (Math.random() < 0.14 ? " tw" : "");  // only ~14% twinkle (rest are static)
     d.style.left = (Math.random() * 100) + "%";              // across the whole board (#stars is board-wide)
     d.style.top = (Math.random() * 50) + "%";                // upper sky, sitting a bit higher
     d.style.animationDelay = (Math.random() * 3) + "s";
