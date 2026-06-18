@@ -2032,6 +2032,34 @@ function walkRange(p) {
   return p.row === 0 ? floorExtent(p.row) : floorSegment(p.row, p.col);
 }
 
+// ---- Trip destinations ----
+// Transit (stairs/elevators) is only for getting from one real room to another,
+// so a sim never rides or climbs to a floor that is nothing but transit.
+const VERTICAL_TRANSIT = ["stair", "elevator", "expresselevator"];
+function isTripDestination(u) {
+  // Rooms, lobbies, amenities, outdoor, infra — anything that isn't bare floor
+  // structure or a pure vertical-transit shaft.
+  return u.type !== "floor" && !VERTICAL_TRANSIT.includes(u.type);
+}
+// The walkable run reachable from `col` on floor f (the whole ground floor, else
+// the connected occupied segment).
+function reachableSegment(f, col) {
+  return f === 0 ? floorExtent(f) : floorSegment(f, Math.round(col));
+}
+// A column to head for: the center of a random real room on floor f reachable
+// from the transit column `col`, or null if that floor offers no real room.
+function pickRoomCol(f, col) {
+  const seg = reachableSegment(f, col);
+  if (!seg) return null;
+  const cols = [];
+  for (const u of state.units) {
+    if (u.row !== f || !isTripDestination(u)) continue;
+    if (u.col + u.w - 1 < seg.min || u.col > seg.max) continue;   // off the reachable run
+    cols.push(Math.max(seg.min, Math.min(seg.max, u.col + (u.w - 1) / 2)));
+  }
+  return cols.length ? cols[Math.floor(Math.random() * cols.length)] : null;
+}
+
 function spawnPerson() {
   // Scale the strolling crowd to the tower's population so a small tower doesn't
   // look as busy as a skyscraper (was a flat cap of 60 regardless of size).
@@ -2063,7 +2091,7 @@ function spawnPerson() {
   world.appendChild(el);
   state.people.push({ el, col: startCol, row: u.row, life: 200 + Math.random()*200,
     mode: "walk", goCol: null, targetRow: null, transitCol: 0, y: u.row, shaft: null,
-    baseColor: ROLE_COLOR[role], patience: 0, patience0: 1 });
+    destCol: null, baseColor: ROLE_COLOR[role], patience: 0, patience0: 1 });
 }
 
 // Time-of-day traffic: morning rush goes up, evening rush goes down, lunch is busy.
@@ -2088,14 +2116,14 @@ function maybeCommute(p) {
   for (const r of state.transitRuns) {
     if (r.lo <= p.row && p.row <= r.hi && reachable(r.col)) {
       const dests = [];
-      for (let f = r.lo; f <= r.hi; f++) if (f !== p.row && floorExtent(f)) dests.push(f);
+      for (let f = r.lo; f <= r.hi; f++) if (f !== p.row && pickRoomCol(f, r.col) !== null) dests.push(f);
       if (dests.length) candidates.push({ col: r.col, dests, express: false });
     }
   }
   // Express runs: only usable when standing on one of its stop floors, to another stop.
   for (const r of state.expressRuns) {
     if (r.stops.includes(p.row) && reachable(r.col)) {
-      const dests = r.stops.filter(f => f !== p.row && floorExtent(f));
+      const dests = r.stops.filter(f => f !== p.row && pickRoomCol(f, r.col) !== null);
       if (dests.length) candidates.push({ col: r.col, dests, express: true });
     }
   }
@@ -2113,6 +2141,7 @@ function maybeCommute(p) {
   const lo = Math.min(p.row, target), hi = Math.max(p.row, target);
   p.targetRow = target;
   p.goCol = cand.col;
+  p.destCol = pickRoomCol(target, cand.col);   // the room to walk into after arriving
   p.shaft = state.shafts.find(s => s.col === cand.col && s.lo <= lo && s.hi >= hi && !!s.express === cand.express) || null;
   p.mode = "approach";
 }
@@ -2138,14 +2167,37 @@ function movepeople() {
       }
     }
 
-    if (p.mode === "climb") { // taking the stairs: move vertically along the column
+    if (p.mode === "climb") { // taking the stairs: move diagonally along the flight
       const dir = p.targetRow >= p.y ? 1 : -1;
       p.y += dir * 0.14;
-      if ((dir > 0 && p.y >= p.targetRow) || (dir < 0 && p.y <= p.targetRow)) {
-        p.y = p.targetRow; p.row = p.targetRow; p.col = p.transitCol; p.mode = "walk"; p.goCol = null;
+      const done = (dir > 0 && p.y >= p.targetRow) || (dir < 0 && p.y <= p.targetRow);
+      if (done) {
+        p.y = p.targetRow; p.row = p.targetRow; p.col = p.transitCol;
+        p.mode = "toRoom"; p.goCol = p.destCol;   // head into a room, don't loiter on the stairs
+        p.el.style.left = colLeft(p.transitCol) + "px";
+      } else {
+        // Follow the drawn staircase: even rows go bottom-left -> top-right, odd
+        // rows are mirrored (switchback). frac is 0 at the floor and 1 at the
+        // ceiling, so descending retraces the same diagonal in reverse.
+        const baseRow = Math.floor(p.y);
+        const frac = p.y - baseRow;
+        const flipped = (baseRow % 2 === 1);              // matches the .stair-flip drawing
+        const t = flipped ? (1 - frac) : frac;            // not-flipped: left(bottom) -> right(top)
+        p.el.style.left = (colLeft(p.transitCol) + 6 + t * 20 - 2.5) + "px"; // sweep across the cell
       }
-      p.el.style.left = (colLeft(p.transitCol) + CELL_W / 2 - 2.5) + "px";
       p.el.style.top = (rowTop(p.y) + CELL_H - 12) + "px";
+      continue;
+    }
+
+    if (p.mode === "toRoom") { // just left transit — walk to a real room, then resume strolling
+      const seg = walkRange(p);
+      if (!seg) { p.el.remove(); state.people.splice(i, 1); continue; }
+      const goal = (p.destCol == null) ? p.col : Math.max(seg.min, Math.min(seg.max, p.destCol));
+      const d = goal - p.col;
+      if (Math.abs(d) <= 0.6) { p.mode = "walk"; p.goCol = null; p.destCol = null; }
+      else p.col += Math.sign(d) * 0.6;
+      p.el.style.left = colLeft(p.col) + "px";
+      p.el.style.top = (rowTop(p.row) + CELL_H - 12) + "px";
       continue;
     }
 
@@ -2265,7 +2317,7 @@ function serveFloor(s, floor, waits) {
     const p = s.riders[i];
     if (p.targetRow === floor) {
       s.riders.splice(i, 1);
-      p.el.style.display = ""; p.el.style.background = ""; p.mode = "walk"; p.row = floor; p.col = s.col; p.shaft = null; p.goCol = null;
+      p.el.style.display = ""; p.el.style.background = ""; p.mode = "toRoom"; p.row = floor; p.col = s.col; p.shaft = null; p.goCol = p.destCol;
       p.el.style.left = colLeft(s.col) + "px";
       p.el.style.top = (rowTop(floor) + CELL_H - 12) + "px";
     }
