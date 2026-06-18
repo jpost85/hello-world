@@ -900,12 +900,23 @@ const CELL_H = 36;          // px per floor
 const CITY_ASPECT = 1536 / 803;   // microtower-skyline.webp (sharper background4, checkerboard removed)
 const CITY_ROOF_FRAC = 0.20;
 const CITY_VSCALE = 0.95;   // scale the skyline height to 95% (slightly shorter) — width unchanged
-// Tower grid is a FIXED size, pre-allocated to the maximum the game can ever
-// reach, so the world (and the backdrop that spans it) never resize. "Keep
-// Building" raises the build limits within this fixed world instead of growing it.
-const NATIVE_COLS = 60;          // buildable width at start (centered in the board)
-const KEEP_BUILDING_COLS = 40;   // extra width unlocked by the "Keep Building" bonus
-const COLS_CAP = NATIVE_COLS + KEEP_BUILDING_COLS; // fixed world width (backdrop spans this)
+// Tower grid: the world is a FIXED max size (so the world + backdrop never resize
+// and "Keep Building" just opens more of it). The NATIVE buildable window is sized
+// to fill the screen, centered, with the reserved side flanks opened by the bonus.
+const COLS_CAP = 120;            // fixed max board width (world + backdrop span this)
+const NATIVE_COLS = (() => {
+  const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
+  let n = Math.max(64, Math.ceil(vw / CELL_W) + 12);   // fill the viewport + a little build room each side
+  // Never shrink the buildable window below what a saved tower already occupies.
+  const center = COLS_CAP / 2;
+  try {
+    const raw = localStorage.getItem("microtower.save.v1");
+    if (raw) (JSON.parse(raw).units || []).forEach(u => {
+      n = Math.max(n, 2 * Math.abs((u.col == null ? center : u.col) + 4 - center) + 6);
+    });
+  } catch (e) {}
+  return Math.min(COLS_CAP, n);
+})();
 let COLS = COLS_CAP;             // full grid width (fixed); the buildable window is a subset
 // Buildable column window — centered; widened to the full board by "Keep Building".
 let buildMinCol = Math.floor((COLS_CAP - NATIVE_COLS) / 2);
@@ -1057,7 +1068,7 @@ const skyEl = document.getElementById("sky");
 
 const MIN_ROW = -BASEMENT_FLOORS;     // deepest buildable basement row
 let worldWidth = COLS * CELL_W;
-const OFFMAP_MARGIN = 1400;           // how far the ground/earth extend past the world (no off-map blue)
+const OFFMAP_MARGIN = 200;            // small ground/earth overrun past the world edge (covers the scroll margin; scrolling is capped to the buildable area anyway)
 let earthEl = null, groundEl = null;  // background refs, widened on resize
 // World is pre-sized to the fixed cap (75 floors) once; the top anchor never
 // moves, so "Keep Building" just raises MAX_FLOORS without resizing/repositioning.
@@ -1085,12 +1096,38 @@ function setZoom(z, cx, cy) {
   applyZoom();
   scroller.scrollLeft = (scroller.scrollLeft + cx) * k - cx;
   scroller.scrollTop = (scroller.scrollTop + cy) * k - cy;
+  clampScroll();   // a zoom-out can expose out-of-bounds area; pull it back in
   if (typeof layoutBackdrop === "function") layoutBackdrop();
   if (typeof positionCelestial === "function") positionCelestial();
 }
-// No scroll handler needed: the backdrop lives inside the scroller and moves with
-// it natively (in lockstep with the tower), so there's nothing to reposition.
+// The backdrop lives inside the scroller and moves with it natively, so there's
+// nothing to reposition on scroll. The only scroll work is a cheap clamp that
+// keeps panning inside the buildable area (no heavy per-scroll layout work).
 applyZoom(); // size the wrapper from the start
+
+// ---- Keep panning inside the buildable area ----
+// You can't scroll off into the empty sky, the deep earth below, or the side
+// flanks you can't build in yet — only a small margin of each shows at the edge.
+// The bounds grow automatically when "Keep Building" widens/raises the limits.
+function scrollBounds() {
+  const mx = CELL_W * 1.5, mTop = CELL_H * 1.5, mBot = CELL_H * 0.5;
+  const left = Math.max(0, (colLeft(buildMinCol) - mx) * zoom);
+  const right = (colLeft(buildMaxCol) + mx) * zoom;
+  const top = Math.max(0, (rowTop(MAX_FLOORS) - mTop) * zoom);
+  const bottom = (rowTop(MIN_ROW) + CELL_H + mBot) * zoom;
+  return {
+    minX: left, maxX: Math.max(left, right - scroller.clientWidth),
+    minY: top,  maxY: Math.max(top, bottom - scroller.clientHeight),
+  };
+}
+function clampScroll() {
+  const b = scrollBounds();
+  const x = Math.min(b.maxX, Math.max(b.minX, scroller.scrollLeft));
+  const y = Math.min(b.maxY, Math.max(b.minY, scroller.scrollTop));
+  if (x !== scroller.scrollLeft) scroller.scrollLeft = x;
+  if (y !== scroller.scrollTop) scroller.scrollTop = y;
+}
+scroller.addEventListener("scroll", clampScroll, { passive: true });
 
 // Zoom buttons + pinch gesture (touch). Pinch suppresses native page zoom.
 function touchDist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
@@ -2860,6 +2897,7 @@ if (typeof window !== "undefined" && window.addEventListener) {
     _resizeT = setTimeout(() => {
       cacheSkyDims();
       layoutBackdrop(); positionCelestial();
+      clampScroll();   // viewport changed — keep the view inside the buildable area
     }, 200);
   });
 }
