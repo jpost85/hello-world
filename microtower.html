@@ -886,7 +886,8 @@ let COLS = (() => {
 })();
 const NATIVE_MAX_FLOORS = 50;   // buildable floors above ground (native ceiling — extra is sky)
 const KEEP_BUILDING_BONUS = 25; // extra floors unlocked by the "Keep Building" bonus at 5 stars
-let MAX_FLOORS = NATIVE_MAX_FLOORS;
+const MAX_FLOORS_CAP = NATIVE_MAX_FLOORS + KEEP_BUILDING_BONUS; // fixed world ceiling (top anchor never moves)
+let MAX_FLOORS = NATIVE_MAX_FLOORS; // current BUILD limit (cells exist only up to here)
 const BASEMENT_FLOORS = 4;  // below ground (for parking-ish / future)
 const START_CASH = 120000;
 
@@ -1032,8 +1033,10 @@ const MIN_ROW = -BASEMENT_FLOORS;     // deepest buildable basement row
 let worldWidth = COLS * CELL_W;
 const OFFMAP_MARGIN = 1400;           // how far the ground/earth extend past the world (no off-map blue)
 let earthEl = null, groundEl = null;  // background refs, widened on resize
-let totalRows = MAX_FLOORS - MIN_ROW + 1;
-let worldHeight = totalRows * CELL_H;
+// World is pre-sized to the fixed cap (75 floors) once; the top anchor never
+// moves, so "Keep Building" just raises MAX_FLOORS without resizing/repositioning.
+const totalRows = MAX_FLOORS_CAP - MIN_ROW + 1;
+const worldHeight = totalRows * CELL_H;
 let zoom = 1;  // tower view scale (pinch / buttons)
 world.style.width = worldWidth + "px";
 world.style.height = worldHeight + "px";
@@ -1089,7 +1092,7 @@ if (_isTouchDev) document.addEventListener("gesturestart", (e) => e.preventDefau
 // Convert logical row (0=ground, positive=up) to a pixel top.
 // Higher floors are visually higher => smaller top value.
 function rowTop(row) {
-  return (MAX_FLOORS - row) * CELL_H;
+  return (MAX_FLOORS_CAP - row) * CELL_H;
 }
 function colLeft(col) { return col * CELL_W; }
 
@@ -1159,30 +1162,15 @@ function growWorld(newCols) {
   positionCelestial();
 }
 
-// Grow the world UPWARD by `extra` floors (the "Keep Building" bonus). The top
-// anchor (rowTop) shifts, so existing content slides down by extra*CELL_H — we
-// reposition it from each element's stored row, add the new sky rows of cells,
-// and bump the scroll so the view doesn't jump.
-function growHeight(extra) {
-  if (extra <= 0) return;
+// Raise the BUILD limit to the fixed cap (the "Keep Building" bonus at 5 stars).
+// The world is already sized to the cap and the top anchor (rowTop) is fixed, so
+// nothing moves: we only add empty cells for the newly-buildable sky rows.
+function unlockKeepBuilding() {
+  if (MAX_FLOORS >= MAX_FLOORS_CAP) return;
   const oldMax = MAX_FLOORS;
-  MAX_FLOORS += extra;
-  totalRows += extra;
-  worldHeight += extra * CELL_H;
-  world.style.height = worldHeight + "px";
-  // existing cells + units carry their row, so re-derive their top from the new rowTop
-  world.querySelectorAll(".cell").forEach(c => { c.style.top = rowTop(+c.dataset.row) + "px"; });
-  state.units.forEach(u => { if (u.el) u.el.style.top = rowTop(u.row + u.h - 1) + "px"; });
-  const surface = rowTop(-1);
-  if (groundEl) groundEl.style.top = surface + "px";
-  if (earthEl) { earthEl.style.top = (surface + 14) + "px"; earthEl.style.height = (worldHeight - surface - 14 + OFFMAP_MARGIN) + "px"; }
-  // add the new sky rows of cells at the top
+  MAX_FLOORS = MAX_FLOORS_CAP;
   for (let row = oldMax + 1; row <= MAX_FLOORS; row++)
     for (let col = 0; col < COLS; col++) addEmptyCell(col, row);
-  applyZoom();                                   // wrapper tracks the taller world
-  scroller.scrollTop += extra * CELL_H * zoom;   // keep the same view (content slid down)
-  layoutBackdrop();                              // skyline/star band ride the new ground line
-  positionCelestial();
 }
 
 // ---------- Tools UI ----------
@@ -1974,7 +1962,7 @@ function recomputeStars() {
   // Bonus "Keep Building" level: hitting 5 stars opens the sky higher (one-time).
   if (s >= 5 && !state.keepBuilding) {
     state.keepBuilding = true;
-    growHeight(KEEP_BUILDING_BONUS);
+    unlockKeepBuilding();
     banner("🏗️ KEEP BUILDING — the sky's the limit!");
     log(`🏗️ Keep Building unlocked! +${KEEP_BUILDING_BONUS} floors of headroom to build into.`, "good");
     updateObjective();
@@ -2776,7 +2764,7 @@ function init() {
     log("Welcome to MicroTower. Build stairs/elevators, then offices & apartments above the lobby.", "good");
   }
   // Restore the "Keep Building" expansion if it was earned in a saved game.
-  if (state.keepBuilding) growHeight(KEEP_BUILDING_BONUS);
+  if (state.keepBuilding) unlockKeepBuilding();
   rebuildFacade();
   applyFacade();
   updateLobbyLabel();
