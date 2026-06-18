@@ -313,8 +313,10 @@
   .unit.win { background: transparent; }            /* openings are see-through day AND night */
   .win .u-face {
     background: var(--wall);
+    /* one window per 32px grid cell, centered (6px wall each side of a 20px
+       opening), so windows never straddle a cell boundary. */
     --win-mask:
-      repeating-linear-gradient(90deg, #000 0 6px, rgba(0,0,0,.1) 6px 20px),
+      repeating-linear-gradient(90deg, #000 0 6px, rgba(0,0,0,.1) 6px 26px, #000 26px 32px),
       linear-gradient(180deg, #000 0 6px, rgba(0,0,0,.1) 6px 22px, #000 22px 100%);
     -webkit-mask: var(--win-mask);
     mask: var(--win-mask);
