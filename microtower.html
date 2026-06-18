@@ -1554,7 +1554,9 @@ function updateSky(force) {
   bot = lerpColor(bot, SKY.dusk[1], duskAmt);
   stage.style.background = `linear-gradient(${top}, ${bot})`; // open sky above the city
   // City image: darken + desaturate toward night; tint overlay washes in dusk/night hue.
-  if (cityBgEl) cityBgEl.style.filter = `brightness(${(0.5 + bright * 0.72).toFixed(3)}) saturate(${(0.7 + bright * 0.35).toFixed(3)})`;
+  // Atmospheric distance: a slight blur + extra desaturation + a touch of haze
+  // (lower contrast) so the skyline recedes and the sharp tower reads as foreground.
+  if (cityBgEl) cityBgEl.style.filter = `blur(1px) brightness(${(0.55 + bright * 0.7).toFixed(3)}) saturate(${(0.5 + bright * 0.3).toFixed(3)}) contrast(0.9)`;
   if (skyTintEl) {
     skyTintEl.style.background = `linear-gradient(${top}, ${bot})`;
     skyTintEl.style.opacity = String(clamp01(0.5 - bright * 0.48 + duskAmt * 0.35));
