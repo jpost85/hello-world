@@ -900,30 +900,16 @@ const CELL_H = 36;          // px per floor
 const CITY_ASPECT = 1536 / 803;   // microtower-skyline.webp (sharper background4, checkerboard removed)
 const CITY_ROOF_FRAC = 0.20;
 const CITY_VSCALE = 0.95;   // scale the skyline height to 95% (slightly shorter) — width unchanged
-// Tower grid: the world is a FIXED max size (so the world + backdrop never resize
-// and "Keep Building" just opens more of it). The NATIVE buildable window is sized
-// to fill the screen, centered, with the reserved side flanks opened by the bonus.
-const COLS_CAP = 120;            // fixed max board width (world + backdrop span this)
-const NATIVE_COLS = (() => {
-  const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
-  let n = Math.max(64, Math.ceil(vw / CELL_W) + 12);   // fill the viewport + a little build room each side
-  // Never shrink the buildable window below what a saved tower already occupies.
-  const center = COLS_CAP / 2;
-  try {
-    const raw = localStorage.getItem("microtower.save.v1");
-    if (raw) (JSON.parse(raw).units || []).forEach(u => {
-      n = Math.max(n, 2 * Math.abs((u.col == null ? center : u.col) + 4 - center) + 6);
-    });
-  } catch (e) {}
-  return Math.min(COLS_CAP, n);
-})();
-let COLS = COLS_CAP;             // full grid width (fixed); the buildable window is a subset
-// Buildable column window — centered; widened to the full board by "Keep Building".
-let buildMinCol = Math.floor((COLS_CAP - NATIVE_COLS) / 2);
-let buildMaxCol = buildMinCol + NATIVE_COLS;
-const NATIVE_MAX_FLOORS = 50;   // buildable floors above ground (native ceiling — extra is sky)
-const KEEP_BUILDING_BONUS = 25; // extra floors unlocked by the "Keep Building" bonus at 5 stars
-const MAX_FLOORS_CAP = NATIVE_MAX_FLOORS + KEEP_BUILDING_BONUS; // fixed world ceiling (top anchor never moves)
+// Tower grid: the world is a FIXED size (so the world + backdrop never resize).
+// Almost the whole board is buildable from the start — the full WIDTH and most of
+// the height. "Keep Building" (5 stars) only opens the topmost sky floors.
+const COLS_CAP = 90;             // board width — buildable in full from the start (no reserved side flanks)
+let COLS = COLS_CAP;             // full grid width
+let buildMinCol = 0;             // the entire width is buildable immediately
+let buildMaxCol = COLS_CAP;
+const NATIVE_MAX_FLOORS = 60;   // buildable floors above ground from the start
+const KEEP_BUILDING_BONUS = 15; // extra top floors unlocked by the "Keep Building" bonus at 5 stars
+const MAX_FLOORS_CAP = NATIVE_MAX_FLOORS + KEEP_BUILDING_BONUS; // 75 — fixed world ceiling (top anchor never moves)
 let MAX_FLOORS = NATIVE_MAX_FLOORS; // current BUILD limit (cells exist only up to here)
 const BASEMENT_FLOORS = 4;  // below ground (for parking-ish / future)
 const START_CASH = 120000;
@@ -1201,24 +1187,16 @@ function buildBackground() {
 }
 
 
-// Raise the BUILD limits to the fixed cap (the "Keep Building" bonus at 5 stars):
-// taller (more sky rows) AND wider (the centered build window opens to the full
-// board). The world is already sized to the cap and rowTop/colLeft are fixed, so
-// nothing moves — we only add empty cells for the newly-buildable space.
+// Raise the BUILD ceiling to the fixed cap (the "Keep Building" bonus at 5 stars):
+// the topmost sky floors open up. The full width is already buildable, and the
+// world is pre-sized to the cap with a fixed top anchor, so nothing moves — we
+// only add empty cells for the newly-buildable sky rows.
 function unlockKeepBuilding() {
-  if (MAX_FLOORS >= MAX_FLOORS_CAP && buildMinCol === 0 && buildMaxCol === COLS_CAP) return;
-  const oldMax = MAX_FLOORS, oldMin = buildMinCol, oldRight = buildMaxCol;
+  if (MAX_FLOORS >= MAX_FLOORS_CAP) return;
+  const oldMax = MAX_FLOORS;
   MAX_FLOORS = MAX_FLOORS_CAP;
-  buildMinCol = 0;
-  buildMaxCol = COLS_CAP;
-  // New sky rows span the now-full width.
   for (let row = oldMax + 1; row <= MAX_FLOORS; row++)
     for (let col = 0; col < COLS_CAP; col++) addEmptyCell(col, row);
-  // New flank columns fill in on either side of the previously-centered window.
-  for (let row = MIN_ROW; row <= oldMax; row++) {
-    for (let col = 0; col < oldMin; col++) addEmptyCell(col, row);
-    for (let col = oldRight; col < COLS_CAP; col++) addEmptyCell(col, row);
-  }
 }
 
 // ---------- Tools UI ----------
