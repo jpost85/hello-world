@@ -303,14 +303,14 @@
   /* Window facade: an OPAQUE back wall with window openings punched out of it via
      a CSS mask. The wall (mullions between windows + the lintel/sill above and
      below them) stays fully opaque; only the window cells are semi-transparent,
-     so the city reads through the glass by day. Edges are hard (no gradient ramp)
-     so the openings read as crisp glass, not a soft glaze. At night the wall
-     fills the openings back in.
+     so the city reads through the glass. Edges are hard (no gradient ramp) so the
+     openings read as crisp glass, not a soft glaze. The openings stay see-through
+     at night too — the backdrop behind them is already darkened by the day/night
+     cycle, so the windows darken naturally without refilling to wall.
        - horizontal layer: repeating mullions across the width.
        - vertical layer: a single window band (lintel above, sill/wall below) — a
          row of windows rather than floor-to-ceiling glazing. */
-  .unit.win { background: transparent; }            /* day: window cells reveal the city behind */
-  .night .unit.win { background: var(--wall); }      /* night: cells fill back to (brighter) wall — lit look */
+  .unit.win { background: transparent; }            /* openings are see-through day AND night */
   .win .u-face {
     background: var(--wall);
     --win-mask:
@@ -318,6 +318,12 @@
       linear-gradient(180deg, #000 0 6px, rgba(0,0,0,.1) 6px 22px, #000 22px 100%);
     -webkit-mask: var(--win-mask);
     mask: var(--win-mask);
+    /* a thin 1px casing/frame around every opening (drop-shadows auto-align to
+       the mask edges, so each window gets a crisp frame on all four sides) */
+    --win-frame:
+      drop-shadow(1px 0 0 var(--frame)) drop-shadow(-1px 0 0 var(--frame))
+      drop-shadow(0 1px 0 var(--frame)) drop-shadow(0 -1px 0 var(--frame));
+    filter: var(--win-frame);
   }
   /* Apartments: two ~20x20 square windows — one centered per 32px grid cell —
      set high in the room with solid wall below the sill. */
@@ -327,10 +333,12 @@
       linear-gradient(180deg, #000 0 5px, rgba(0,0,0,.1) 5px 25px, #000 25px 100%);
   }
   .win.lit::after { content:none; }   /* no glow blob on the glass buildings */
-  /* At night, dim the building structure + ground so the scene reads as night
-     (the glass windows simply show the darkened backdrop through them). */
+  /* At night, dim the building structure + ground so the scene reads as night.
+     The window openings stay see-through (they show the already-darkened
+     backdrop), so we only dim the wall — not the glass. */
   .night .u-face, .night .u-extra,
   .night .fe-top, .night .fe-left, .night .fe-right, .night .fe-base { filter: brightness(0.62); }
+  .night .win .u-face { filter: var(--win-frame) brightness(0.62); }  /* keep the casing; dim the wall */
   .night .ground { filter: brightness(0.5); }
 
   .unit-office    { --wall:#7f93a6; --glass:#bfe0f5; --frame:#52677d; }
