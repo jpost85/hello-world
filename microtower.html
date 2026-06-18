@@ -872,18 +872,16 @@ const CELL_H = 36;          // px per floor
 const CITY_ASPECT = 1536 / 803;   // microtower-skyline.webp (sharper background4, checkerboard removed)
 const CITY_ROOF_FRAC = 0.20;
 const CITY_VSCALE = 0.95;   // scale the skyline height to 95% (slightly shorter) — width unchanged
-// Tower width in cells: wide enough to fill the screen (so the ground spans the
-// whole view) and to contain any saved tower; minimum 40.
-let COLS = (() => {
-  let need = 40;
-  try {
-    const raw = localStorage.getItem("microtower.save.v1");
-    if (raw) (JSON.parse(raw).units || []).forEach(u => { need = Math.max(need, (u.col || 0) + 8); });
-  } catch (e) {}
-  const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
-  const byScreen = Math.min(120, Math.ceil(vw / CELL_W) + 2);
-  return Math.max(40, byScreen, need);
-})();
+// Tower grid is a FIXED size, pre-allocated to the maximum the game can ever
+// reach, so the world (and the backdrop that spans it) never resize. "Keep
+// Building" raises the build limits within this fixed world instead of growing it.
+const NATIVE_COLS = 60;          // buildable width at start (centered in the board)
+const KEEP_BUILDING_COLS = 40;   // extra width unlocked by the "Keep Building" bonus
+const COLS_CAP = NATIVE_COLS + KEEP_BUILDING_COLS; // fixed world width (backdrop spans this)
+let COLS = COLS_CAP;             // full grid width (fixed); the buildable window is a subset
+// Buildable column window — centered; widened to the full board by "Keep Building".
+let buildMinCol = Math.floor((COLS_CAP - NATIVE_COLS) / 2);
+let buildMaxCol = buildMinCol + NATIVE_COLS;
 const NATIVE_MAX_FLOORS = 50;   // buildable floors above ground (native ceiling — extra is sky)
 const KEEP_BUILDING_BONUS = 25; // extra floors unlocked by the "Keep Building" bonus at 5 stars
 const MAX_FLOORS_CAP = NATIVE_MAX_FLOORS + KEEP_BUILDING_BONUS; // fixed world ceiling (top anchor never moves)
@@ -1131,46 +1129,31 @@ function buildBackground() {
   groundEl.style.height = "18px";
   world.appendChild(groundEl);
 
-  // buildable empty cells (basements through the top), one element per (col,row)
+  // buildable empty cells (basements through the top, within the centered build
+  // window), one element per (col,row). The flanks open up with "Keep Building".
   for (let row = MIN_ROW; row <= MAX_FLOORS; row++)
-    for (let col = 0; col < COLS; col++) addEmptyCell(col, row);
+    for (let col = buildMinCol; col < buildMaxCol; col++) addEmptyCell(col, row);
 }
 
-// How wide the world should be, given the current viewport and existing tower.
-function desiredCols() {
-  let need = 40;
-  for (const u of state.units) need = Math.max(need, u.col + u.w + 6);
-  const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
-  const byScreen = Math.min(120, Math.ceil(vw / CELL_W) + 2);
-  return Math.max(40, byScreen, need);
-}
 
-// Grow the grid (and ground) to a wider column count; never shrinks.
-function growWorld(newCols) {
-  if (newCols <= COLS) return;
-  const oldCols = COLS;
-  COLS = newCols;
-  worldWidth = COLS * CELL_W;
-  world.style.width = worldWidth + "px";
-  if (earthEl) earthEl.style.width = (worldWidth + OFFMAP_MARGIN) + "px";
-  if (groundEl) groundEl.style.width = (worldWidth + OFFMAP_MARGIN) + "px";
-  for (let row = MIN_ROW; row <= MAX_FLOORS; row++)
-    for (let col = oldCols; col < COLS; col++) addEmptyCell(col, row);
-  buildStars();      // restock the starfield across the now-wider board
-  applyZoom();       // wrapper must track the new world width
-  layoutBackdrop();  // re-span the skyline + starfield to the new width
-  positionCelestial();
-}
-
-// Raise the BUILD limit to the fixed cap (the "Keep Building" bonus at 5 stars).
-// The world is already sized to the cap and the top anchor (rowTop) is fixed, so
-// nothing moves: we only add empty cells for the newly-buildable sky rows.
+// Raise the BUILD limits to the fixed cap (the "Keep Building" bonus at 5 stars):
+// taller (more sky rows) AND wider (the centered build window opens to the full
+// board). The world is already sized to the cap and rowTop/colLeft are fixed, so
+// nothing moves — we only add empty cells for the newly-buildable space.
 function unlockKeepBuilding() {
-  if (MAX_FLOORS >= MAX_FLOORS_CAP) return;
-  const oldMax = MAX_FLOORS;
+  if (MAX_FLOORS >= MAX_FLOORS_CAP && buildMinCol === 0 && buildMaxCol === COLS_CAP) return;
+  const oldMax = MAX_FLOORS, oldMin = buildMinCol, oldRight = buildMaxCol;
   MAX_FLOORS = MAX_FLOORS_CAP;
+  buildMinCol = 0;
+  buildMaxCol = COLS_CAP;
+  // New sky rows span the now-full width.
   for (let row = oldMax + 1; row <= MAX_FLOORS; row++)
-    for (let col = 0; col < COLS; col++) addEmptyCell(col, row);
+    for (let col = 0; col < COLS_CAP; col++) addEmptyCell(col, row);
+  // New flank columns fill in on either side of the previously-centered window.
+  for (let row = MIN_ROW; row <= oldMax; row++) {
+    for (let col = 0; col < oldMin; col++) addEmptyCell(col, row);
+    for (let col = oldRight; col < COLS_CAP; col++) addEmptyCell(col, row);
+  }
 }
 
 // ---------- Tools UI ----------
@@ -1274,7 +1257,7 @@ function selectTool(key) {
 function key(col, row) { return col + "," + row; }
 
 function cellsFree(col, row, w, h) {
-  if (col < 0 || col + w > COLS) return false;
+  if (col < buildMinCol || col + w > buildMaxCol) return false;
   if (row < MIN_ROW || row + h - 1 > MAX_FLOORS) return false;
   for (let dr = 0; dr < h; dr++)
     for (let dc = 0; dc < w; dc++)
@@ -1608,7 +1591,7 @@ function pointFromEvent(e) {
   const x = (e.clientX - rect.left) / zoom;
   const y = (e.clientY - rect.top) / zoom;
   const col = Math.floor(x / CELL_W);
-  const row = MAX_FLOORS - Math.floor(y / CELL_H);
+  const row = MAX_FLOORS_CAP - Math.floor(y / CELL_H);  // rowTop is anchored at the fixed cap
   return { col, row };
 }
 
@@ -2790,13 +2773,14 @@ function init() {
   requestAnimationFrame((t) => { lastTs = t; requestAnimationFrame(tick); });
 }
 
-// Re-extend the grid if the window is resized wider (debounced; grow-only).
+// The grid is a fixed size now, so resize only needs to re-cache sky dimensions
+// and re-lay the backdrop (debounced).
 if (typeof window !== "undefined" && window.addEventListener) {
   let _resizeT;
   window.addEventListener("resize", () => {
     clearTimeout(_resizeT);
     _resizeT = setTimeout(() => {
-      cacheSkyDims(); growWorld(desiredCols());
+      cacheSkyDims();
       layoutBackdrop(); positionCelestial();
     }, 200);
   });
