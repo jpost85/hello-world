@@ -129,7 +129,7 @@
   #scroller {
     position: absolute; top: 42px; left: 0; right: 0; bottom: 0; z-index: 1;
     overflow: auto; -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;   /* keep scroll/overscroll inside the tower view */
+    overscroll-behavior: none;   /* no rubber-band bounce past the edges (no off-map blue) */
   }
   #worldWrap { position: relative; }
   #world { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
@@ -1027,6 +1027,7 @@ const skyEl = document.getElementById("sky");
 
 const MIN_ROW = -BASEMENT_FLOORS;     // deepest buildable basement row
 let worldWidth = COLS * CELL_W;
+const OFFMAP_MARGIN = 1400;           // how far the ground/earth extend past the world (no off-map blue)
 let earthEl = null, groundEl = null;  // background refs, widened on resize
 const totalRows = MAX_FLOORS - MIN_ROW + 1;
 const worldHeight = totalRows * CELL_H;
@@ -1104,20 +1105,23 @@ function addEmptyCell(col, row) {
 
 function buildBackground() {
   const surface = rowTop(-1); // street level = bottom of the ground floor
-  // earth fill behind the basements (starts below the grass)
+  // The ground + earth extend past the world (right + below) so panning/zooming
+  // out shows a continued landscape (sky above the horizon, dirt below) instead of
+  // bare blue "off the map".
+  // earth fill behind the basements (starts below the grass), extended down + right
   earthEl = document.createElement("div");
   earthEl.className = "earth";
   earthEl.style.left = "0px";
   earthEl.style.top = (surface + 14) + "px";
-  earthEl.style.width = worldWidth + "px";
-  earthEl.style.height = (worldHeight - surface - 14) + "px";
+  earthEl.style.width = (worldWidth + OFFMAP_MARGIN) + "px";
+  earthEl.style.height = (worldHeight - surface - 14 + OFFMAP_MARGIN) + "px";
   world.appendChild(earthEl);
-  // green grass band at street level (the ground)
+  // green grass band at street level (the ground), extended right
   groundEl = document.createElement("div");
   groundEl.className = "ground";
   groundEl.style.left = "0px";
   groundEl.style.top = surface + "px";
-  groundEl.style.width = worldWidth + "px";
+  groundEl.style.width = (worldWidth + OFFMAP_MARGIN) + "px";
   groundEl.style.height = "18px";
   world.appendChild(groundEl);
 
@@ -1142,8 +1146,8 @@ function growWorld(newCols) {
   COLS = newCols;
   worldWidth = COLS * CELL_W;
   world.style.width = worldWidth + "px";
-  if (earthEl) earthEl.style.width = worldWidth + "px";
-  if (groundEl) groundEl.style.width = worldWidth + "px";
+  if (earthEl) earthEl.style.width = (worldWidth + OFFMAP_MARGIN) + "px";
+  if (groundEl) groundEl.style.width = (worldWidth + OFFMAP_MARGIN) + "px";
   for (let row = MIN_ROW; row <= MAX_FLOORS; row++)
     for (let col = oldCols; col < COLS; col++) addEmptyCell(col, row);
   buildStars();      // restock the starfield across the now-wider board
