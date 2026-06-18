@@ -319,12 +319,12 @@
     -webkit-mask: var(--win-mask);
     mask: var(--win-mask);
   }
-  /* Apartments: roughly-square windows set into the TOP HALF of the room (solid
-     wall below the sill), rather than the wider office-style band. */
+  /* Apartments: two ~20x20 square windows — one centered per 32px grid cell —
+     set high in the room with solid wall below the sill. */
   .unit-apartment .u-face {
     --win-mask:
-      repeating-linear-gradient(90deg, #000 0 7px, rgba(0,0,0,.1) 7px 18px),
-      linear-gradient(180deg, #000 0 5px, rgba(0,0,0,.1) 5px 16px, #000 16px 100%);
+      repeating-linear-gradient(90deg, #000 0 6px, rgba(0,0,0,.1) 6px 26px, #000 26px 32px),
+      linear-gradient(180deg, #000 0 5px, rgba(0,0,0,.1) 5px 25px, #000 25px 100%);
   }
   .win.lit::after { content:none; }   /* no glow blob on the glass buildings */
   /* At night, dim the building structure + ground so the scene reads as night
