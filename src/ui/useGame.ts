@@ -50,6 +50,8 @@ export interface UseGame {
   ) => void;
   /** Resume a previously saved game; returns false if there was none. */
   resume: () => boolean;
+  /** Leave the current game and return to the setup screen (save is kept). */
+  quit: () => void;
   clickTerritory: (id: string) => void;
   doAttack: () => void;
   doFortify: () => void;
@@ -111,6 +113,15 @@ export function useGame(): UseGame {
     setLastResult(null);
     setError(null);
     return true;
+  }, []);
+
+  const quit = useCallback(() => {
+    // Return to the setup screen; the autosave is left intact for Continue.
+    setState(null);
+    setFrom(null);
+    setTo(null);
+    setLastResult(null);
+    setError(null);
   }, []);
 
   const isAITurn =
@@ -259,6 +270,7 @@ export function useGame(): UseGame {
     setSelectedGeneralId,
     start,
     resume,
+    quit,
     clickTerritory,
     doAttack,
     doFortify,

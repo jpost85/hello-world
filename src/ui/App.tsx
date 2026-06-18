@@ -40,6 +40,7 @@ export function App() {
   return (
     <div className="app">
       <div className="topbar">
+        <button title="Return to the main menu" onClick={g.quit}>☰ Menu</button>
         <h1>DOMINION · BALANCE OF POWER</h1>
         {g.isAITurn && <span className="badge">🤖 {active.name} is planning…</span>}
         <div className="spacer" />
