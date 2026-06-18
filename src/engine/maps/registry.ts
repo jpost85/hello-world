@@ -101,6 +101,16 @@ export const MAP_REGISTRY: MapInfo[] = [
     name: "Crimean War",
     description: "The Black Sea littoral, 1853-56 — 14 territories.",
     factionIds: ["russia", "ottoman", "britain", "france", "sardinia", "austria"],
+    startPositions: {
+      crimea: "russia",
+      don: "russia",
+      ukraine: "russia",
+      georgia: "russia",
+      armenia: "russia",
+      anatolia: "ottoman",
+      "eastern-anatolia": "ottoman",
+      thrace: "ottoman",
+    },
     load: () => import("./crimea.ts").then((m) => m.crimeaMap),
   },
   {

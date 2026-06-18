@@ -5,6 +5,7 @@ import { mapInfo } from "../maps/registry.ts";
 import { indiaMap } from "../maps/indiaSubcontinent.ts";
 import { nearEastMap } from "../maps/nearEast.ts";
 import { caribbeanMap } from "../maps/caribbean.ts";
+import { crimeaMap } from "../maps/crimea.ts";
 
 describe("India colonial scenario", () => {
   it("starts each European enclave under its historical power", () => {
@@ -75,6 +76,29 @@ describe("Caribbean colonial scenario", () => {
     expect(ownerFaction("belize")).toBe("britain");
     expect(ownerFaction("haiti")).toBe("france");
     // Every player still receives at least one territory (no empty seats).
+    for (const p of game.players) {
+      expect(Object.values(game.territories).some((t) => t.ownerId === p.id)).toBe(true);
+    }
+  });
+});
+
+describe("Crimean War scenario", () => {
+  it("entrenches Russia and the Ottomans, with no empty seats", () => {
+    const info = mapInfo("crimea");
+    const factionIds = info.factionIds!;
+    const factions = factionIds.map((id) => FACTION_POOL[id]);
+    const game = createGame({
+      map: crimeaMap,
+      factions,
+      players: factionIds.map((id) => ({ name: id, factionId: id, isAI: true })),
+      seed: 9,
+      startPositions: info.startPositions,
+    });
+    const ownerFaction = (terr: string) =>
+      game.players.find((p) => p.id === game.territories[terr].ownerId)!.factionId;
+    expect(ownerFaction("crimea")).toBe("russia");
+    expect(ownerFaction("ukraine")).toBe("russia");
+    expect(ownerFaction("anatolia")).toBe("ottoman");
     for (const p of game.players) {
       expect(Object.values(game.territories).some((t) => t.ownerId === p.id)).toBe(true);
     }
