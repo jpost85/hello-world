@@ -200,6 +200,15 @@ function buildPath(projectedRings, eps) {
   return { d, centroid: best };
 }
 
+/** Rough lng/lat centroid of a feature (average of its ring vertices). */
+function featureCentroid(f) {
+  let sx = 0;
+  let sy = 0;
+  let n = 0;
+  for (const r of ringsOf(f.geometry)) for (const p of r) (sx += p[0]), (sy += p[1]), n++;
+  return n ? [sx / n, sy / n] : [0, 0];
+}
+
 function minDegDistance(ringsA, ringsB) {
   let min = Infinity;
   for (const ra of ringsA)
@@ -265,6 +274,27 @@ function generateMap(cfg, byName, provIndex) {
       const f = provIndex?.get(`${spec.admin}|${province}`);
       if (f) features.push(f);
       else console.warn(`!! [${cfg.id}] missing province: ${spec.admin}/${province} (${spec.id})`);
+    }
+    // Collect all of a country's provinces whose centroid falls in a lng/lat band.
+    // The grouping is by band but the territory's borders follow the real
+    // province outlines (organic), not a straight clip line.
+    if (spec.provincesOf) {
+      const pf = spec.provincesOf;
+      let matched = 0;
+      for (const f of provIndex?.values() ?? []) {
+        if (f.properties.admin !== pf.admin) continue;
+        const [clng, clat] = featureCentroid(f);
+        if (
+          clng >= (pf.lngMin ?? -1e9) &&
+          clng < (pf.lngMax ?? 1e9) &&
+          clat >= (pf.latMin ?? -1e9) &&
+          clat < (pf.latMax ?? 1e9)
+        ) {
+          features.push(f);
+          matched++;
+        }
+      }
+      if (!matched) console.warn(`!! [${cfg.id}] no provinces matched ${pf.admin} band (${spec.id})`);
     }
     for (const feature of features) {
       for (let ring of ringsOf(feature.geometry)) {
@@ -693,9 +723,10 @@ const NEAR_EAST = {
   exportName: "nearEastMap",
   outFile: "nearEast.ts",
   crop: { lngMin: 13, lngMax: 60, latMin: 12, latMax: 42 },
-  pad: 2,
+  pad: 5,
   landThreshold: 0.2,
   simplifyTerritory: 0.5,
+  provinceDataset: "10m",
   regions: [
     { id: "egypt-sudan", name: "Egypt & Sudan" },
     { id: "levant", name: "The Levant" },
@@ -705,8 +736,10 @@ const NEAR_EAST = {
     { id: "persia", name: "Persia" },
   ],
   spec: [
-    { id: "lower-egypt", name: "Lower Egypt", region: "egypt-sudan", countries: ["Egypt"], clip: { latMin: 27 } },
-    { id: "upper-egypt", name: "Upper Egypt", region: "egypt-sudan", countries: ["Egypt"], clip: { latMax: 27 } },
+    // Egypt — Nile district plus the Eastern and Western deserts (real governorates).
+    { id: "egypt-nile", name: "The Nile", region: "egypt-sudan", admin: "Egypt", provinces: ["Ad Daqahliyah", "Al Buhayrah", "Al Gharbiyah", "Al Minufiyah", "Al Qalyubiyah", "Ash Sharqiyah", "Kafr ash Shaykh", "Dumyat", "Al Iskandariyah", "Al Qahirah", "Al Jizah", "Bur Sa`id", "Al Isma`iliyah", "As Suways", "Bani Suwayf", "Al Fayyum", "Al Minya", "Asyut", "Suhaj", "Qina", "Luxor", "Aswan"] },
+    { id: "egypt-east", name: "Eastern Desert", region: "egypt-sudan", admin: "Egypt", provinces: ["Al Bahr al Ahmar", "Janub Sina'", "Shamal Sina'"] },
+    { id: "egypt-west", name: "Western Desert", region: "egypt-sudan", admin: "Egypt", provinces: ["Al Wadi at Jadid", "Matruh"] },
     { id: "cyrenaica", name: "Cyrenaica", region: "egypt-sudan", countries: ["Libya"] },
     { id: "sudan", name: "Sudan", region: "egypt-sudan", countries: ["Sudan", "South Sudan"] },
     { id: "alexandria", name: "Alexandria", region: "egypt-sudan", point: [29.92, 31.2], radiusDeg: 0.55 },
@@ -714,28 +747,32 @@ const NEAR_EAST = {
     { id: "syria", name: "Syria", region: "levant", countries: ["Syria", "Lebanon"] },
     { id: "mesopotamia", name: "Mesopotamia", region: "levant", countries: ["Iraq"] },
     { id: "acre", name: "Acre", region: "levant", point: [35.07, 32.92], radiusDeg: 0.45 },
-    { id: "anatolia-west", name: "Anatolia", region: "anatolia", countries: ["Turkey"], clip: { lngMax: 35 } },
-    { id: "anatolia-east", name: "Eastern Anatolia", region: "anatolia", countries: ["Turkey"], clip: { lngMin: 35 } },
+    // Anatolia — western / central / eastern, grouped from real Turkish provinces.
+    { id: "western-anatolia", name: "Western Anatolia", region: "anatolia", provincesOf: { admin: "Turkey", lngMax: 31 } },
+    { id: "central-anatolia", name: "Central Anatolia", region: "anatolia", provincesOf: { admin: "Turkey", lngMin: 31, lngMax: 37 } },
+    { id: "eastern-anatolia", name: "Eastern Anatolia", region: "anatolia", provincesOf: { admin: "Turkey", lngMin: 37 } },
     { id: "caucasus", name: "Caucasus", region: "anatolia", countries: ["Georgia", "Armenia", "Azerbaijan"] },
     { id: "greece", name: "Greece", region: "mediterranean", countries: ["Greece"] },
     { id: "cyprus", name: "Cyprus", region: "mediterranean", countries: ["Cyprus", "Northern Cyprus"] },
     { id: "malta", name: "Malta", region: "mediterranean", point: [14.45, 35.9], radiusDeg: 0.55 },
-    { id: "hejaz", name: "Hejaz", region: "arabia", countries: ["Saudi Arabia"], clip: { lngMax: 44 } },
-    { id: "nejd", name: "Nejd", region: "arabia", countries: ["Saudi Arabia"], clip: { lngMin: 44 } },
+    // Arabia — Hejaz (west coast) and Nejd (interior) from real Saudi provinces.
+    { id: "hejaz", name: "Hejaz", region: "arabia", admin: "Saudi Arabia", provinces: ["Makkah", "Al Madinah", "Tabuk", "Al Bahah", "`Asir", "Jizan", "Najran"] },
+    { id: "nejd", name: "Nejd", region: "arabia", admin: "Saudi Arabia", provinces: ["Ar Riyad", "Al Quassim", "Ha'il", "Al Jawf", "Al Hudud ash Shamaliyah", "Ash Sharqiyah"] },
     { id: "yemen", name: "Yemen", region: "arabia", countries: ["Yemen"] },
     { id: "oman", name: "Oman", region: "arabia", countries: ["Oman", "United Arab Emirates"] },
     { id: "gulf", name: "Persian Gulf", region: "arabia", countries: ["Kuwait", "Qatar"] },
     { id: "aden", name: "Aden", region: "arabia", point: [45.03, 12.85], radiusDeg: 0.5 },
-    { id: "persia-west", name: "Persia", region: "persia", countries: ["Iran"], clip: { lngMax: 54 } },
-    { id: "persia-east", name: "Eastern Persia", region: "persia", countries: ["Iran"], clip: { lngMin: 54 } },
+    // Persia — western / central / eastern, grouped from real Iranian provinces.
+    { id: "western-persia", name: "Western Persia", region: "persia", provincesOf: { admin: "Iran", lngMax: 49 } },
+    { id: "central-persia", name: "Central Persia", region: "persia", provincesOf: { admin: "Iran", lngMin: 49, lngMax: 57 } },
+    { id: "eastern-persia", name: "Eastern Persia", region: "persia", provincesOf: { admin: "Iran", lngMin: 57 } },
   ],
   seaLinks: [
-    ["lower-egypt", "hejaz"],
-    ["upper-egypt", "hejaz"],
-    ["greece", "anatolia-west"],
+    ["egypt-east", "hejaz"],
+    ["greece", "western-anatolia"],
     ["cyprus", "syria"],
-    ["cyprus", "anatolia-west"],
-    ["oman", "persia-east"],
+    ["cyprus", "western-anatolia"],
+    ["oman", "eastern-persia"],
     ["malta", "greece"],
     ["malta", "alexandria"],
     ["malta", "cyprus"],
@@ -745,7 +782,7 @@ const NEAR_EAST = {
     ["aden", "oman"],
   ],
   links: [
-    ["alexandria", "lower-egypt"],
+    ["alexandria", "egypt-nile"],
     ["acre", "palestine"],
     ["acre", "syria"],
     ["aden", "yemen"],

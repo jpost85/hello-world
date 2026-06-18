@@ -51,7 +51,7 @@ describe("Near East colonial scenario", () => {
     expect(ownerFaction("aden")).toBe("britain");
     expect(ownerFaction("alexandria")).toBe("france");
     expect(ownerFaction("acre")).toBe("ottoman");
-    expect(ownerFaction("lower-egypt")).toBe("mamluks");
+    expect(ownerFaction("egypt-nile")).toBe("mamluks");
   });
 });
 
