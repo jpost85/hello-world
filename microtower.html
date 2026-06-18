@@ -300,20 +300,31 @@
   kbd { background:#000; border-radius:3px; padding:0 4px; font-size:10px; }
 
   /* ---------- Unit interiors ---------- */
-  /* Window facade: an OPAQUE back wall with a grid of window openings punched out
-     of it via a CSS mask. The wall (the mullions + spandrels between cells) stays
-     fully opaque; only the window cells are semi-transparent, so the city reads
-     through the glass by day. At night the wall fills the openings back in. */
+  /* Window facade: an OPAQUE back wall with window openings punched out of it via
+     a CSS mask. The wall (mullions between windows + the lintel/sill above and
+     below them) stays fully opaque; only the window cells are semi-transparent,
+     so the city reads through the glass by day. Edges are hard (no gradient ramp)
+     so the openings read as crisp glass, not a soft glaze. At night the wall
+     fills the openings back in.
+       - horizontal layer: repeating mullions across the width.
+       - vertical layer: a single window band (lintel above, sill/wall below) — a
+         row of windows rather than floor-to-ceiling glazing. */
   .unit.win { background: transparent; }            /* day: window cells reveal the city behind */
   .night .unit.win { background: var(--wall); }      /* night: cells fill back to (brighter) wall — lit look */
   .win .u-face {
     background: var(--wall);
-    -webkit-mask:
-      repeating-linear-gradient(90deg, #000 0 7px, rgba(0,0,0,.12) 13px 24px),
-      repeating-linear-gradient(180deg, #000 0 7px, rgba(0,0,0,.12) 14px 36px);
-    mask:
-      repeating-linear-gradient(90deg, #000 0 7px, rgba(0,0,0,.12) 13px 24px),
-      repeating-linear-gradient(180deg, #000 0 7px, rgba(0,0,0,.12) 14px 36px);
+    --win-mask:
+      repeating-linear-gradient(90deg, #000 0 6px, rgba(0,0,0,.1) 6px 20px),
+      linear-gradient(180deg, #000 0 6px, rgba(0,0,0,.1) 6px 22px, #000 22px 100%);
+    -webkit-mask: var(--win-mask);
+    mask: var(--win-mask);
+  }
+  /* Apartments: roughly-square windows set into the TOP HALF of the room (solid
+     wall below the sill), rather than the wider office-style band. */
+  .unit-apartment .u-face {
+    --win-mask:
+      repeating-linear-gradient(90deg, #000 0 7px, rgba(0,0,0,.1) 7px 18px),
+      linear-gradient(180deg, #000 0 5px, rgba(0,0,0,.1) 5px 16px, #000 16px 100%);
   }
   .win.lit::after { content:none; }   /* no glow blob on the glass buildings */
   /* At night, dim the building structure + ground so the scene reads as night
