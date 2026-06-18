@@ -884,7 +884,9 @@ let COLS = (() => {
   const byScreen = Math.min(120, Math.ceil(vw / CELL_W) + 2);
   return Math.max(40, byScreen, need);
 })();
-const MAX_FLOORS = 30;      // floors above ground you may build
+const NATIVE_MAX_FLOORS = 50;   // buildable floors above ground (native ceiling — extra is sky)
+const KEEP_BUILDING_BONUS = 25; // extra floors unlocked by the "Keep Building" bonus at 5 stars
+let MAX_FLOORS = NATIVE_MAX_FLOORS;
 const BASEMENT_FLOORS = 4;  // below ground (for parking-ish / future)
 const START_CASH = 120000;
 
@@ -1001,6 +1003,7 @@ const state = {
   isNight: false,
   pending: null,
   won: false,
+  keepBuilding: false,  // "Keep Building" bonus (5 stars) — world grown +KEEP_BUILDING_BONUS floors
   frustration: 0,   // builds when sims give up waiting for elevators; hurts tenants
   reputation: 0,    // temporary appeal modifier from VIP inspections / events (decays)
   cleanliness: 100, // tower-wide; falls as population outgrows housekeeping
@@ -1029,8 +1032,8 @@ const MIN_ROW = -BASEMENT_FLOORS;     // deepest buildable basement row
 let worldWidth = COLS * CELL_W;
 const OFFMAP_MARGIN = 1400;           // how far the ground/earth extend past the world (no off-map blue)
 let earthEl = null, groundEl = null;  // background refs, widened on resize
-const totalRows = MAX_FLOORS - MIN_ROW + 1;
-const worldHeight = totalRows * CELL_H;
+let totalRows = MAX_FLOORS - MIN_ROW + 1;
+let worldHeight = totalRows * CELL_H;
 let zoom = 1;  // tower view scale (pinch / buttons)
 world.style.width = worldWidth + "px";
 world.style.height = worldHeight + "px";
@@ -1153,6 +1156,32 @@ function growWorld(newCols) {
   buildStars();      // restock the starfield across the now-wider board
   applyZoom();       // wrapper must track the new world width
   layoutBackdrop();  // re-span the skyline + starfield to the new width
+  positionCelestial();
+}
+
+// Grow the world UPWARD by `extra` floors (the "Keep Building" bonus). The top
+// anchor (rowTop) shifts, so existing content slides down by extra*CELL_H — we
+// reposition it from each element's stored row, add the new sky rows of cells,
+// and bump the scroll so the view doesn't jump.
+function growHeight(extra) {
+  if (extra <= 0) return;
+  const oldMax = MAX_FLOORS;
+  MAX_FLOORS += extra;
+  totalRows += extra;
+  worldHeight += extra * CELL_H;
+  world.style.height = worldHeight + "px";
+  // existing cells + units carry their row, so re-derive their top from the new rowTop
+  world.querySelectorAll(".cell").forEach(c => { c.style.top = rowTop(+c.dataset.row) + "px"; });
+  state.units.forEach(u => { if (u.el) u.el.style.top = rowTop(u.row + u.h - 1) + "px"; });
+  const surface = rowTop(-1);
+  if (groundEl) groundEl.style.top = surface + "px";
+  if (earthEl) { earthEl.style.top = (surface + 14) + "px"; earthEl.style.height = (worldHeight - surface - 14 + OFFMAP_MARGIN) + "px"; }
+  // add the new sky rows of cells at the top
+  for (let row = oldMax + 1; row <= MAX_FLOORS; row++)
+    for (let col = 0; col < COLS; col++) addEmptyCell(col, row);
+  applyZoom();                                   // wrapper tracks the taller world
+  scroller.scrollTop += extra * CELL_H * zoom;   // keep the same view (content slid down)
+  layoutBackdrop();                              // skyline/star band ride the new ground line
   positionCelestial();
 }
 
@@ -1942,6 +1971,15 @@ function recomputeStars() {
     buildHotbar();
     updateObjective();
   }
+  // Bonus "Keep Building" level: hitting 5 stars opens the sky higher (one-time).
+  if (s >= 5 && !state.keepBuilding) {
+    state.keepBuilding = true;
+    growHeight(KEEP_BUILDING_BONUS);
+    banner("🏗️ KEEP BUILDING — the sky's the limit!");
+    log(`🏗️ Keep Building unlocked! +${KEEP_BUILDING_BONUS} floors of headroom to build into.`, "good");
+    updateObjective();
+    saveGame(true);
+  }
 }
 
 function winGame() {
@@ -2480,7 +2518,7 @@ function clearWorld() {
 function saveGame(silent) {
   const data = {
     cash: state.cash, pop: state.pop, day: state.day, minutes: state.minutes,
-    stars: state.stars, nextId: state.nextId, won: state.won,
+    stars: state.stars, nextId: state.nextId, won: state.won, keepBuilding: state.keepBuilding,
     cleanliness: state.cleanliness, upkeep: state.upkeep,
     units: state.units.map(u => ({
       id: u.id, type: u.type, col: u.col, row: u.row,
@@ -2504,6 +2542,7 @@ function loadGame(silent) {
   clearWorld();
   state.cash = d.cash; state.pop = d.pop; state.day = d.day;
   state.minutes = d.minutes; state.stars = d.stars; state.nextId = d.nextId || 1; state.won = !!d.won;
+  state.keepBuilding = !!d.keepBuilding;
   state.cleanliness = d.cleanliness == null ? 100 : d.cleanliness;
   state.upkeep = d.upkeep == null ? 100 : d.upkeep;
   (d.units || []).forEach(su => {
@@ -2736,6 +2775,8 @@ function init() {
     }
     log("Welcome to MicroTower. Build stairs/elevators, then offices & apartments above the lobby.", "good");
   }
+  // Restore the "Keep Building" expansion if it was earned in a saved game.
+  if (state.keepBuilding) growHeight(KEEP_BUILDING_BONUS);
   rebuildFacade();
   applyFacade();
   updateLobbyLabel();
