@@ -54,6 +54,8 @@
   .stats { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; font-size: 13px; }
   .stats .k { color: var(--muted); }
   .stats .v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  /* Day/Time also shows in the top HUD; hide the sidebar copy on desktop (shown on mobile, where the HUD time is hidden). */
+  .time-stat { display: none; }
 
   .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 6px 0 2px; }
 
@@ -163,6 +165,7 @@
     #stage { left: 0 !important; }
     #sidebar { width: 84%; max-width: 300px; box-shadow: 6px 0 20px rgba(0,0,0,.55); }
     #hud .hud-item.time { display: none; }
+    .time-stat { display: block; }   /* HUD time is hidden on mobile, so show the sidebar Day/Time here */
   }
   @media (max-width: 420px) {
     #hud .hud-item.stars { display: none; }
@@ -762,7 +765,7 @@
       <span class="k">Cash</span><span class="v" id="s-cash">$0</span>
       <span class="k">Population</span><span class="v" id="s-pop">0</span>
       <span class="k">Floors</span><span class="v" id="s-floors">0</span>
-      <span class="k">Day / Time</span><span class="v" id="s-time">1 · 6:00</span>
+      <span class="k time-stat">Day / Time</span><span class="v time-stat" id="s-time">1 · 6:00</span>
       <span class="k">Star Rating</span><span class="v" id="s-stars">☆☆☆☆☆</span>
       <span class="k">Next ★</span><span class="v" id="s-next">—</span>
       <span class="k">Cleanliness</span><span class="v" id="s-clean">100%</span>
