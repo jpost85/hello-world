@@ -253,6 +253,18 @@
   const def = (id) => REGION_DEFS.find((r) => r.id === id);
   const $ = (sel) => document.querySelector(sel);
 
+  // Touch device? Used for finger-friendly tap targets and the mobile sheet.
+  const IS_TOUCH = typeof window !== "undefined" &&
+    ("ontouchstart" in window || (navigator.maxTouchPoints || 0) > 0);
+
+  // Mobile bottom sheet (no-op styling on desktop, where the class is inert).
+  function setSheet(open) {
+    const sheet = $("#sidebar"), grip = $("#sheet-grip");
+    if (!sheet) return;
+    sheet.classList.toggle("sheet-open", open);
+    if (grip) grip.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
   function rng(min, max) { return min + Math.random() * (max - min); }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
@@ -430,6 +442,13 @@
       if (movable.attack.includes(d.id)) shape.classList.add("attackable");
       shape.addEventListener("click", () => onRegionClick(d.id));
       map.appendChild(shape);
+      // On touch, give the small city markers a larger invisible tap target.
+      if (IS_TOUCH && geo.point) {
+        const hit = svgEl("circle", { cx: geo.cx, cy: geo.cy, r: 19, fill: "transparent",
+          class: "region-shape city-hit", "data-id": d.id });
+        hit.addEventListener("click", () => onRegionClick(d.id));
+        map.appendChild(hit);
+      }
       if (r.acted && r.owner === "patriot") {
         const dim = geo.point
           ? svgEl("rect", { x: geo.cx - CITY_R, y: geo.cy - CITY_R, width: CITY_R * 2, height: CITY_R * 2, rx: 3, class: "acted-mark" })
@@ -822,6 +841,7 @@
     // Otherwise just select/inspect.
     selected = id;
     renderAll();
+    setSheet(true); // surface the region panel on mobile
   }
 
   // Clear the current selection (e.g. clicked off, or pressed Escape).
@@ -829,6 +849,7 @@
     if (selected === null) return;
     selected = null;
     renderAll();
+    setSheet(false); // tuck the sheet away so the map is unobstructed
   }
 
   /* ------------------------------- Recruit -------------------------------- */
@@ -1402,6 +1423,8 @@
     $("#btn-howto-back").addEventListener("click", () => show("title-screen"));
     $("#btn-end-turn").addEventListener("click", endTurn);
     $("#btn-menu").addEventListener("click", () => { save(); show("title-screen"); refreshContinue(); });
+    if (IS_TOUCH) document.body.classList.add("touch");
+    $("#sheet-grip").addEventListener("click", () => setSheet(!$("#sidebar").classList.contains("sheet-open")));
 
     $("#modal-cancel").addEventListener("click", closeTroopDialog);
     $("#modal-confirm").addEventListener("click", confirmTroopDialog);

@@ -26,7 +26,8 @@ html, body {
 #app { height: 100%; }
 
 .screen {
-  height: 100vh;
+  height: 100vh;       /* fallback */
+  height: 100dvh;      /* track mobile browser chrome so the bottom isn't clipped */
   width: 100%;
 }
 .hidden { display: none !important; }
@@ -143,7 +144,10 @@ html, body {
   background: linear-gradient(135deg, #a9c6cf, #7ba6b3);
   overflow: hidden;
 }
-#map { width: 100%; height: 100%; max-height: calc(100vh - 70px); }
+#map { width: 100%; height: 100%; max-height: calc(100dvh - 70px); }
+
+/* The bottom-sheet grip is only used on the mobile layout (shown below). */
+.sheet-grip { display: none; }
 
 /* Map elements */
 .terrain { fill: #d9c79c; stroke: #b7a276; stroke-width: 0.8; }
@@ -305,8 +309,66 @@ html, body {
 }
 .banner.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, -10px); }
 
+/* ===================== Mobile / narrow portrait layout ===================== */
 @media (max-width: 820px) {
-  #board { flex-direction: column; }
-  #sidebar { width: 100%; max-height: 40vh; }
-  .stat-group { gap: 12px; }
+  /* Title / how-to screens fit a phone. */
+  .title-card { padding: 30px 22px; max-width: 92vw; }
+  .title-card h1 { font-size: 40px; }
+  .subtitle { font-size: 15px; }
+  .panel.howto { max-width: 92vw; }
+
+  /* Condensed top bar: drop the brand, shrink everything, let stats wrap. */
+  #topbar { gap: 10px 14px; padding: 7px 12px; flex-wrap: wrap; }
+  .brand { display: none; }
+  .stat-group { gap: 10px 16px; }
+  .stat-value { font-size: 16px; }
+  .stat-label { font-size: 10px; }
+  .morale { min-width: 84px; flex: 1; }
+  .btn-small { padding: 6px 10px; }
+
+  /* The map takes the whole board; the sidebar becomes a bottom sheet. The
+     bottom padding keeps the southern map clear of the collapsed sheet peek. */
+  #board { flex-direction: column; position: relative; }
+  #map-wrap { flex: 1; padding: 4px 4px 88px; }
+
+  #sidebar {
+    --peek: 86px;
+    position: absolute; left: 0; right: 0; bottom: 0;
+    width: 100%; max-height: 70dvh;
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 0 12px calc(12px + env(safe-area-inset-bottom)) 12px;
+    background: #2a2012;
+    border-top: 2px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 26px rgba(0, 0, 0, 0.5);
+    transform: translateY(calc(100% - var(--peek)));
+    transition: transform 0.26s ease;
+    z-index: 40;
+    overflow: hidden;
+  }
+  #sidebar.sheet-open { transform: translateY(0); overflow-y: auto; }
+
+  /* Peek row = grip handle + End Turn, always reachable; details sit below. */
+  .sheet-grip {
+    order: 0; display: flex; align-items: center; gap: 10px;
+    background: none; border: none; color: var(--parchment);
+    padding: 10px 4px 4px; cursor: pointer; font: inherit; text-align: left;
+  }
+  .sheet-grip-handle { width: 34px; height: 5px; border-radius: 3px; background: var(--border); flex: none; }
+  .sheet-grip-label { font-size: 14px; font-weight: bold; letter-spacing: 0.3px; }
+  .sheet-grip-label::after { content: " \25B4"; opacity: 0.8; }
+  #sidebar.sheet-open .sheet-grip-label::after { content: " \25BE"; }
+
+  #btn-end-turn { order: 1; margin: 0 0 6px; }
+  #region-info { order: 2; }
+  .log-panel { order: 3; min-height: 90px; }
+}
+
+/* Short viewports (e.g. landscape phones): compact the top bar for more board. */
+@media (max-height: 480px) {
+  #topbar { padding: 5px 12px; gap: 8px 14px; }
+  .brand { display: none; }
+  .stat-value { font-size: 15px; }
+  .stat-label { font-size: 9px; }
+  .morale { min-width: 80px; }
 }
