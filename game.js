@@ -784,8 +784,133 @@
     }
   }
 
+  /* --------------------- Map zoom & pan (touch, Phase 2) ------------------- */
+  const MAP_BASE = (() => { const [x, y, w, h] = MAPDATA.viewBox.split(" ").map(Number); return { x, y, w, h }; })();
+  let mapView = null;          // current viewBox rect, or null = full map (desktop)
+  let suppressClickUntil = 0;  // ignore the click that ends a pan/pinch/double-tap
+
+  const isMobileLayout = () => typeof window !== "undefined" &&
+    window.matchMedia && window.matchMedia("(max-width: 820px)").matches;
+
+  function mapAspect() {
+    const el = $("#map"); if (!el) return MAP_BASE.w / MAP_BASE.h;
+    const r = el.getBoundingClientRect();
+    return (r.width > 0 && r.height > 0) ? r.width / r.height : MAP_BASE.w / MAP_BASE.h;
+  }
+  // Match the view's aspect to the element (fills with no bars), bound the zoom,
+  // and stop panning off the map.
+  function clampView(v) {
+    const asp = mapAspect();
+    const fitW = Math.max(MAP_BASE.w, MAP_BASE.h * asp); // whole map visible
+    v.w = clamp(v.w, fitW * 0.22, fitW);                 // up to ~4.5x zoom
+    v.h = v.w / asp;
+    v.x = v.w >= MAP_BASE.w ? (MAP_BASE.w - v.w) / 2 : clamp(v.x, 0, MAP_BASE.w - v.w);
+    v.y = v.h >= MAP_BASE.h ? (MAP_BASE.h - v.h) / 2 : clamp(v.y, 0, MAP_BASE.h - v.h);
+    return v;
+  }
+  function applyMapView() {
+    const el = $("#map"); if (!el || !mapView) return;
+    el.setAttribute("viewBox", `${mapView.x.toFixed(1)} ${mapView.y.toFixed(1)} ${mapView.w.toFixed(1)} ${mapView.h.toFixed(1)}`);
+  }
+  function screenToMap(cx, cy, v) {
+    const r = $("#map").getBoundingClientRect();
+    return { x: v.x + (cx - r.left) / r.width * v.w, y: v.y + (cy - r.top) / r.height * v.h };
+  }
+  function initMapView() {
+    const asp = mapAspect(); // default: a full-height strip biased over the seaboard
+    mapView = clampView({ w: MAP_BASE.h * asp, h: MAP_BASE.h, x: MAP_BASE.w * 0.60 - (MAP_BASE.h * asp) / 2, y: 0 });
+    applyMapView();
+  }
+  // Enable mobile zoom when the phone layout is active; otherwise full map.
+  function refreshMapView() {
+    if (IS_TOUCH && isMobileLayout()) {
+      if (!mapView) initMapView();
+      else {
+        const cx = mapView.x + mapView.w / 2, cy = mapView.y + mapView.h / 2;
+        clampView(mapView); mapView.x = cx - mapView.w / 2; mapView.y = cy - mapView.h / 2;
+        clampView(mapView); applyMapView();
+      }
+    } else {
+      mapView = null;
+      const el = $("#map"); if (el) el.setAttribute("viewBox", MAPDATA.viewBox);
+    }
+  }
+  function zoomMap(factor, cx, cy) {
+    if (!mapView) return;
+    const r = $("#map").getBoundingClientRect();
+    if (cx == null) { cx = r.left + r.width / 2; cy = r.top + r.height / 2; }
+    const anchor = screenToMap(cx, cy, mapView);
+    mapView.w = mapView.w / factor;
+    clampView(mapView);
+    mapView.x = anchor.x - (cx - r.left) / r.width * mapView.w;
+    mapView.y = anchor.y - (cy - r.top) / r.height * mapView.h;
+    clampView(mapView); applyMapView();
+  }
+  function enableMapGestures() {
+    const el = $("#map");
+    if (!el || !IS_TOUCH) return;
+    let mode = null, moved = false, startMid = null, startDist = 0, startView = null, panStart = null;
+    let lastTap = 0, lastTapPt = null;
+    const P = (t) => ({ x: t.clientX, y: t.clientY });
+    const D = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const Mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+    el.addEventListener("touchstart", (e) => {
+      if (!mapView) return;
+      if (e.touches.length === 1) {
+        mode = "pan"; moved = false; startMid = P(e.touches[0]); panStart = { x: mapView.x, y: mapView.y };
+      } else if (e.touches.length === 2) {
+        mode = "pinch"; moved = true;
+        startDist = D(P(e.touches[0]), P(e.touches[1]));
+        startMid = Mid(P(e.touches[0]), P(e.touches[1]));
+        startView = { ...mapView };
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    el.addEventListener("touchmove", (e) => {
+      if (!mapView || !mode) return;
+      if (mode === "pan" && e.touches.length === 1) {
+        const p = P(e.touches[0]), dx = p.x - startMid.x, dy = p.y - startMid.y;
+        if (!moved && Math.hypot(dx, dy) > 8) moved = true;
+        if (!moved) return;
+        const r = el.getBoundingClientRect();
+        mapView.x = panStart.x - dx / r.width * mapView.w;
+        mapView.y = panStart.y - dy / r.height * mapView.h;
+        clampView(mapView); applyMapView(); e.preventDefault();
+      } else if (mode === "pinch" && e.touches.length >= 2) {
+        const a = P(e.touches[0]), b = P(e.touches[1]), d = D(a, b);
+        if (d <= 0) return;
+        const m = Mid(a, b), anchor = screenToMap(startMid.x, startMid.y, startView);
+        mapView.w = startView.w * (startDist / d);
+        clampView(mapView);
+        const r = el.getBoundingClientRect();
+        mapView.x = anchor.x - (m.x - r.left) / r.width * mapView.w;
+        mapView.y = anchor.y - (m.y - r.top) / r.height * mapView.h;
+        clampView(mapView); applyMapView(); e.preventDefault();
+      }
+    }, { passive: false });
+
+    el.addEventListener("touchend", (e) => {
+      if (mode === "pan" && !moved) { // a tap: check for double-tap zoom
+        const now = Date.now(), p = startMid;
+        if (now - lastTap < 300 && lastTapPt && D(p, lastTapPt) < 30) {
+          zoomMap(2, p.x, p.y); suppressClickUntil = now + 350; lastTap = 0;
+        } else { lastTap = now; lastTapPt = p; }
+      }
+      if (moved) suppressClickUntil = Date.now() + 350;
+      if (e.touches.length === 0) mode = null;
+      else if (e.touches.length === 1) { mode = "pan"; moved = true; startMid = P(e.touches[0]); panStart = { x: mapView.x, y: mapView.y }; }
+    });
+
+    el.addEventListener("click", (e) => {
+      if (Date.now() < suppressClickUntil) { suppressClickUntil = 0; e.stopPropagation(); e.preventDefault(); }
+    }, true);
+  }
+
   function renderAll() {
     renderMap();
+    applyMapView();
     renderTopbar();
     renderSidebar();
   }
@@ -1403,6 +1528,7 @@
     show("game-screen");
     renderLog();
     renderAll();
+    refreshMapView();
     if (!state) {
       const intro = S.playerSide === "crown"
         ? "You take command of His Majesty's forces — crush the rebellion."
@@ -1425,6 +1551,11 @@
     $("#btn-menu").addEventListener("click", () => { save(); show("title-screen"); refreshContinue(); });
     if (IS_TOUCH) document.body.classList.add("touch");
     $("#sheet-grip").addEventListener("click", () => setSheet(!$("#sidebar").classList.contains("sheet-open")));
+    $("#zoom-in").addEventListener("click", () => zoomMap(1.5));
+    $("#zoom-out").addEventListener("click", () => zoomMap(1 / 1.5));
+    enableMapGestures();
+    let resizeT;
+    window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(refreshMapView, 180); });
 
     $("#modal-cancel").addEventListener("click", closeTroopDialog);
     $("#modal-confirm").addEventListener("click", confirmTroopDialog);

@@ -136,6 +136,7 @@ html, body {
 
 #map-wrap {
   flex: 1;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -144,10 +145,23 @@ html, body {
   background: linear-gradient(135deg, #a9c6cf, #7ba6b3);
   overflow: hidden;
 }
-#map { width: 100%; height: 100%; max-height: calc(100dvh - 70px); }
+#map { width: 100%; height: 100%; max-height: calc(100dvh - 70px); touch-action: none; }
 
 /* The bottom-sheet grip is only used on the mobile layout (shown below). */
 .sheet-grip { display: none; }
+
+/* Zoom controls: shown only on the touch phone layout (pinch/double-tap also work). */
+.zoom-controls {
+  display: none; flex-direction: column; gap: 8px;
+  position: absolute; left: 12px; bottom: 12px; z-index: 35;
+}
+.zoom-btn {
+  width: 44px; height: 44px; border-radius: 8px;
+  border: 2px solid var(--border); background: rgba(42, 32, 18, 0.86);
+  color: var(--parchment); font-size: 24px; font-weight: bold; line-height: 1;
+  cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.zoom-btn:active { background: rgba(58, 44, 24, 0.95); }
 
 /* Map elements */
 .terrain { fill: #d9c79c; stroke: #b7a276; stroke-width: 0.8; }
@@ -330,6 +344,8 @@ html, body {
      bottom padding keeps the southern map clear of the collapsed sheet peek. */
   #board { flex-direction: column; position: relative; }
   #map-wrap { flex: 1; padding: 4px 4px 88px; }
+  /* Show the zoom buttons here (phone layout), clear of the bottom-sheet peek. */
+  body.touch .zoom-controls { display: flex; bottom: 96px; left: 10px; }
 
   #sidebar {
     --peek: 86px;

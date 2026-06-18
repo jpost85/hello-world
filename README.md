@@ -19,6 +19,11 @@ python3 -m http.server 8000
 Click **New Campaign** to begin. Your progress autosaves to the browser, so
 **Continue** resumes where you left off.
 
+**On a phone** the map fills the screen and the region/dispatch panel becomes a
+bottom sheet (tap a region to open it, or use the grip handle). Pinch, double-tap,
+or use the on-screen **+ / −** buttons to zoom, and drag to pan the map. The
+desktop layout is unchanged.
+
 ## How it plays
 
 - **Treasury (gold):** collected each turn from the regions you hold. Spend it
