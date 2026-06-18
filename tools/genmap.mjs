@@ -800,6 +800,7 @@ const CRIMEA = {
   pad: 2,
   landThreshold: 0.25,
   simplifyTerritory: 0.4,
+  provinceDataset: "10m",
   regions: [
     { id: "danube", name: "The Danube" },
     { id: "south-russia", name: "South Russia" },
@@ -811,8 +812,10 @@ const CRIMEA = {
     { id: "bulgaria", name: "Bulgaria", region: "danube", countries: ["Bulgaria"] },
     { id: "moldavia", name: "Moldavia", region: "danube", countries: ["Moldova"] },
     { id: "serbia", name: "Serbia", region: "danube", countries: ["Republic of Serbia"] },
-    { id: "ukraine", name: "Ukraine", region: "south-russia", countries: ["Ukraine"], clip: { latMin: 46.3 } },
-    { id: "crimea", name: "Crimea", region: "south-russia", countries: ["Ukraine"], clip: { latMax: 46.3, lngMin: 32.5 } },
+    { id: "ukraine", name: "Ukraine", region: "south-russia", countries: ["Ukraine"] },
+    // Natural Earth assigns the Crimean peninsula to Russia (de facto, post-2014),
+    // so source it from the real Crimea + Sevastopol provinces.
+    { id: "crimea", name: "Crimea", region: "south-russia", admin: "Russia", provinces: ["Crimea", "Sevastopol"] },
     { id: "don", name: "Don Steppe", region: "south-russia", countries: ["Russia"], clip: { lngMin: 36, lngMax: 50, latMin: 46 } },
     { id: "circassia", name: "Circassia", region: "caucasus", countries: ["Russia"], clip: { lngMin: 36, lngMax: 50, latMax: 46 } },
     { id: "georgia", name: "Georgia", region: "caucasus", countries: ["Georgia"] },
@@ -827,6 +830,7 @@ const CRIMEA = {
     ["crimea", "circassia"],
     ["greece", "anatolia"],
   ],
+  links: [["crimea", "ukraine"]], // the Perekop isthmus
 };
 
 // Indian Subcontinent — India grouped from real states (admin-1) into historical
