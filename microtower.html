@@ -300,28 +300,25 @@
   kbd { background:#000; border-radius:3px; padding:0 4px; font-size:10px; }
 
   /* ---------- Unit interiors ---------- */
-  /* Window facade: a solid back wall with discrete window panes (elements), so
-     individual windows can light up at night. */
-  /* Each room has a solid BACK WALL; semi-transparent glass window panes are set
-     into it, flanked by wall (the margins + gaps between panes show the wall). The
-     glass shows the (night-dimmed) wall through it, so the windows darken at night too. */
-  /* Glass panes set into a wall frame + mullions. The wall BEHIND the glass is
-     see-through by day (so the city skyline reads through the windows) and fills
-     back in at night, when the glass shows the dimmed wall instead. */
-  .unit.win { background: transparent; }
-  .win .u-face { background: transparent; }
-  .night .win .u-face { background: var(--wall); }
-  .u-windows {
-    position:absolute; inset:7px 6px 8px 6px;
-    display:flex; gap:0; pointer-events:none;
-    border:4px solid var(--wall); border-radius:2px;
+  /* Window facade: an OPAQUE back wall with a grid of window openings punched out
+     of it via a CSS mask. The wall (the mullions + spandrels between cells) stays
+     fully opaque; only the window cells are semi-transparent, so the city reads
+     through the glass by day. At night the wall fills the openings back in. */
+  .unit.win { background: transparent; }            /* day: window cells reveal the city behind */
+  .night .unit.win { background: var(--wall); }      /* night: cells fill back to (brighter) wall — lit look */
+  .win .u-face {
+    background: var(--wall);
+    -webkit-mask:
+      repeating-linear-gradient(90deg, #000 0 7px, rgba(0,0,0,.12) 13px 24px),
+      repeating-linear-gradient(180deg, #000 0 7px, rgba(0,0,0,.12) 14px 36px);
+    mask:
+      repeating-linear-gradient(90deg, #000 0 7px, rgba(0,0,0,.12) 13px 24px),
+      repeating-linear-gradient(180deg, #000 0 7px, rgba(0,0,0,.12) 14px 36px);
   }
-  .u-windows span { flex:1; background: rgba(150,180,205,0.22); border-right:4px solid var(--wall); }
-  .u-windows span:last-child { border-right:0; }
   .win.lit::after { content:none; }   /* no glow blob on the glass buildings */
   /* At night, dim the building structure + ground so the scene reads as night
      (the glass windows simply show the darkened backdrop through them). */
-  .night .u-face, .night .u-extra, .night .u-windows,
+  .night .u-face, .night .u-extra,
   .night .fe-top, .night .fe-left, .night .fe-right, .night .fe-base { filter: brightness(0.62); }
   .night .ground { filter: brightness(0.5); }
 
@@ -1393,16 +1390,13 @@ function unitInnerHTML(type) {
   const t = TYPES[type];
   const tag = (type === "floor" || type === "lobby") ? "" : `<div class="u-tag">${shortLabel(type)}</div>`;
   const vac = (t.cap > 0) ? `<div class="u-vac">FOR LEASE</div>` : "";
-  let windows = "";
-  if (type === "office" || type === "apartment" || type === "condo" || type === "hotel") {
-    let spans = "";
-    for (let i = 0; i < t.w; i++) spans += `<span></span>`;   // fewer windows (~1 per cell), all glass on the back wall
-    windows = `<div class="u-windows">${spans}</div>`;
-  }
+  // Window units (office/apartment/condo/hotel) get the .win class; their window
+  // grid is masked out of the opaque back wall in CSS (.win .u-face), so no
+  // per-pane elements are needed here.
   // Enclosed units carry façade edge elements (shown only on exposed sides).
   const facade = (t.kind === "outdoor" || t.kind === "landmark") ? ""
     : `<div class="fe-left"></div><div class="fe-right"></div><div class="fe-base"></div><div class="fe-top"></div>`;
-  return `<div class="u-face"></div>${windows}<div class="u-extra"></div>${tag}${vac}<div class="occ"></div>${facade}`;
+  return `<div class="u-face"></div><div class="u-extra"></div>${tag}${vac}<div class="occ"></div>${facade}`;
 }
 
 function shortLabel(type) {
