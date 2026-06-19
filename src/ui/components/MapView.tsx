@@ -355,6 +355,11 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
         {/* The map layers pan/zoom INSIDE the fixed frame (clipped to the window). */}
         <g clipPath="url(#mapWindow)">
         <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
+        {/* Backdrop: all world landmasses in a dull colour so non-playable land
+            shows instead of bare ocean when panning near the map edges. */}
+        {state.map.backdrop && (
+          <path d={state.map.backdrop} fill="#9e9272" stroke="#7a7058" strokeWidth={0.5} />
+        )}
         {state.map.decorations?.map((d, i) => (
           <g key={`decor-${i}`} className="decoration">
             <path d={d.path} fill={d.fill} />

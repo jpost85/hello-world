@@ -51,6 +51,9 @@ export interface GameMap {
   connectors?: [string, string][];
   /** Non-playable landmasses drawn for realism (e.g. Antarctica) — not territories. */
   decorations?: MapDecoration[];
+  /** Single merged SVG path of all world landmasses visible in the padded viewBox,
+   * rendered as a dull backdrop layer so non-playable land shows behind the ocean. */
+  backdrop?: string;
 }
 
 /** A purely cosmetic landmass: rendered, but never owned or fought over. */
