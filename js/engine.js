@@ -10,9 +10,11 @@
 window.Engine = (function () {
   // ---- Build the player's three line ratings from their chosen XI ----
   // squad: { [slotKey]: playerObject }
-  function rateSquad(squad) {
+  // slots: the active slot template (all-time tiers or a 4-3-3 formation)
+  function rateSquad(squad, slots) {
+    slots = slots || window.SLOTS;
     var lines = { GK: [], DEF: [], MID: [], FWD: [] };
-    window.SLOTS.forEach(function (slot) {
+    slots.forEach(function (slot) {
       var player = squad[slot.key];
       if (player) lines[slot.line].push(player.pwr);
     });

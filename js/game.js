@@ -2,15 +2,17 @@
  * Game controller — screens, state and rendering for the
  * All-Time World Cup Simulator.
  *
- * Flow:  Start  →  Draft (tier picks)  →  Team review  →  Gauntlet  →  Win/Lose
+ * Flow:  Start → Mode select → (Decade/Nation pick) → Draft → Team → Gauntlet → Win/Lose
  */
 (function () {
   var app = document.getElementById("app");
 
   var state = {
-    squad: {},     // slotKey -> player object
-    slotIndex: 0,  // which draft slot we're on
-    round: 0,      // current gauntlet round (index into OPPONENTS)
+    mode: { type: "all-time", value: null }, // see js/modes.js
+    slots: window.SLOTS,                      // active slot template
+    squad: {},                               // slotKey -> player object
+    slotIndex: 0,                            // which draft slot we're on
+    round: 0,                               // current gauntlet round
   };
 
   // ---------------------------------------------------------------- helpers
@@ -18,6 +20,12 @@
     var t = document.createElement("template");
     t.innerHTML = html.trim();
     return t.content.firstElementChild;
+  }
+
+  function buttonEl(text, cls, onclick) {
+    var b = el('<button class="btn ' + cls + '">' + text + "</button>");
+    b.onclick = onclick;
+    return b;
   }
 
   function pdCard(player, opts) {
@@ -37,11 +45,13 @@
   }
 
   function squadComplete() {
-    return window.SLOTS.every(function (s) { return state.squad[s.key]; });
+    return state.slots.every(function (s) { return state.squad[s.key]; });
   }
 
   // ---------------------------------------------------------------- start
   function renderStart() {
+    state.mode = { type: "all-time", value: null };
+    state.slots = window.SLOTS;
     state.squad = {};
     state.slotIndex = 0;
     state.round = 0;
@@ -53,22 +63,100 @@
         "<h1>All-Time World Cup</h1>" +
         '<p class="tagline">Draft a team of legends. Run the gauntlet of the greatest sides ever to play. Lose once and it\'s over.</p>' +
         '<div class="how">' +
-          '<div class="how-step"><span class="num">1</span> Pick one legend for each of 11 themed positions.</div>' +
+          '<div class="how-step"><span class="num">1</span> Choose a squad style, then pick a legend for each position.</div>' +
           '<div class="how-step"><span class="num">2</span> Face ' + window.OPPONENTS.length + " all-time great teams, one by one.</div>" +
           '<div class="how-step"><span class="num">3</span> Win every match to be crowned champion of history.</div>' +
         "</div>" +
         '<button class="btn primary big" id="startBtn">Start the Gauntlet</button>' +
       "</section>"
     ));
-    document.getElementById("startBtn").onclick = renderDraft;
+    document.getElementById("startBtn").onclick = renderModeSelect;
+  }
+
+  // ---------------------------------------------------------------- mode select
+  function renderModeSelect() {
+    app.innerHTML = "";
+    var section = el(
+      '<section class="screen modes">' +
+        "<h2>Choose your squad</h2>" +
+        '<p class="slot-blurb">How do you want to build your team?</p>' +
+        '<div class="mode-grid">' +
+          modeCard("all-time", "🌍", "All-Time", "Themed tiers — pit the very best of every era against each other.") +
+          modeCard("decade", "📅", "By Decade", "Field the greatest XI of a single decade.") +
+          modeCard("nation", "🏳️", "By Nation", "Build an all-time team from one country.") +
+        "</div>" +
+        '<div class="team-nav"><button class="btn ghost" id="backStart">← Back</button></div>' +
+      "</section>"
+    );
+    app.appendChild(section);
+
+    section.querySelector('[data-mode="all-time"]').onclick = function () {
+      state.mode = { type: "all-time", value: null };
+      state.slots = window.SLOTS;
+      state.squad = {};
+      state.slotIndex = 0;
+      renderDraft();
+    };
+    section.querySelector('[data-mode="decade"]').onclick = function () { renderFilterSelect("decade"); };
+    section.querySelector('[data-mode="nation"]').onclick = function () { renderFilterSelect("nation"); };
+    document.getElementById("backStart").onclick = renderStart;
+  }
+
+  function modeCard(key, icon, title, desc) {
+    return (
+      '<div class="mode-card" data-mode="' + key + '" role="button" tabindex="0">' +
+        '<div class="mode-icon">' + icon + "</div>" +
+        '<div class="mode-title">' + title + "</div>" +
+        '<div class="mode-desc">' + desc + "</div>" +
+      "</div>"
+    );
+  }
+
+  // ---------------------------------------------------------------- decade / nation pick
+  function renderFilterSelect(type) {
+    var options = type === "decade" ? window.Modes.availableDecades() : window.Modes.availableNations();
+    app.innerHTML = "";
+
+    var cards = options.map(function (o) {
+      var face = type === "decade" ? '<div class="filter-decade">' + o.label + "</div>"
+                                   : '<div class="filter-flag">' + o.flag + "</div>";
+      var name = type === "decade" ? "" : '<div class="filter-name">' + o.value + "</div>";
+      return (
+        '<div class="filter-card" data-value="' + o.value + '" role="button" tabindex="0">' +
+          face + name +
+          '<div class="filter-count">' + o.count + " legends</div>" +
+        "</div>"
+      );
+    }).join("");
+
+    var section = el(
+      '<section class="screen filter">' +
+        "<h2>" + (type === "decade" ? "Pick a decade" : "Pick a nation") + "</h2>" +
+        '<p class="slot-blurb">Only teams with a full squad of legends are shown.</p>' +
+        '<div class="filter-grid">' + cards + "</div>" +
+        '<div class="team-nav"><button class="btn ghost" id="backModes">← Back</button></div>' +
+      "</section>"
+    );
+    app.appendChild(section);
+
+    section.querySelectorAll(".filter-card").forEach(function (node) {
+      node.onclick = function () {
+        state.mode = { type: type, value: node.getAttribute("data-value") };
+        state.slots = window.FORMATION;
+        state.squad = {};
+        state.slotIndex = 0;
+        renderDraft();
+      };
+    });
+    document.getElementById("backModes").onclick = renderModeSelect;
   }
 
   // ---------------------------------------------------------------- draft
   function renderDraft() {
-    var slot = window.SLOTS[state.slotIndex];
+    var slot = state.slots[state.slotIndex];
     app.innerHTML = "";
 
-    var cards = slot.pool
+    var cards = window.Modes.poolFor(state.mode, slot, state.squad)
       .map(function (id) { return window.PLAYER_BY_ID[id]; })
       .filter(Boolean)
       .map(function (p) {
@@ -79,16 +167,20 @@
       })
       .join("");
 
+    var context = state.mode.type === "all-time" ? "" :
+      '<div class="draft-context">' + window.Modes.label(state.mode) + "</div>";
+
     var section = el(
       '<section class="screen draft">' +
         '<div class="draft-head">' +
-          '<div class="draft-progress">Pick ' + (state.slotIndex + 1) + " of " + window.SLOTS.length + "</div>" +
+          context +
+          '<div class="draft-progress">Pick ' + (state.slotIndex + 1) + " of " + state.slots.length + "</div>" +
           "<h2>" + slot.label + "</h2>" +
           '<p class="slot-blurb">' + slot.blurb + "</p>" +
         "</div>" +
         '<div class="pick-grid">' + cards + "</div>" +
         '<div class="draft-nav">' +
-          '<button class="btn ghost" id="backBtn"' + (state.slotIndex === 0 ? " disabled" : "") + ">← Back</button>" +
+          '<button class="btn ghost" id="backBtn">← Back</button>' +
           '<div class="pitch-dots">' + dotsHTML() + "</div>" +
         "</div>" +
       "</section>"
@@ -107,34 +199,35 @@
     });
     document.getElementById("backBtn").onclick = function () {
       if (state.slotIndex > 0) { state.slotIndex--; renderDraft(); }
+      else renderModeSelect();
     };
   }
 
   function dotsHTML() {
-    return window.SLOTS.map(function (s, i) {
+    return state.slots.map(function (s, i) {
       var cls = state.squad[s.key] ? "dot filled" : (i === state.slotIndex ? "dot active" : "dot");
       return '<span class="' + cls + '"></span>';
     }).join("");
   }
 
   function advanceDraft() {
-    if (state.slotIndex < window.SLOTS.length - 1) {
+    if (state.slotIndex < state.slots.length - 1) {
       state.slotIndex++;
       renderDraft();
     } else if (squadComplete()) {
       renderTeam();
     } else {
-      // jump to first unfilled slot
-      state.slotIndex = window.SLOTS.findIndex(function (s) { return !state.squad[s.key]; });
+      state.slotIndex = state.slots.findIndex(function (s) { return !state.squad[s.key]; });
       renderDraft();
     }
   }
 
   // ---------------------------------------------------------------- team review
   function lineRow(label, line) {
-    var players = window.SLOTS
+    var players = state.slots
       .filter(function (s) { return s.line === line; })
-      .map(function (s) { return state.squad[s.key]; });
+      .map(function (s) { return state.squad[s.key]; })
+      .filter(Boolean);
     var chips = players.map(function (p) {
       return '<span class="xi-chip">' + p.flag + " " + p.name + "</span>";
     }).join("");
@@ -142,11 +235,12 @@
   }
 
   function renderTeam() {
-    var r = window.Engine.rateSquad(state.squad);
+    var r = window.Engine.rateSquad(state.squad, state.slots);
     app.innerHTML = "";
     app.appendChild(el(
       '<section class="screen team">' +
-        "<h2>Your All-Time XI</h2>" +
+        '<div class="draft-context">' + window.Modes.label(state.mode) + "</div>" +
+        "<h2>Your Starting XI</h2>" +
         '<div class="ratings">' +
           ratingBox("Attack", r.att) +
           ratingBox("Midfield", r.mid) +
@@ -165,7 +259,7 @@
       "</section>"
     ));
     document.getElementById("redraftBtn").onclick = function () {
-      state.slotIndex = 0; renderDraft();
+      state.squad = {}; state.slotIndex = 0; renderDraft();
     };
     document.getElementById("toGauntletBtn").onclick = renderGauntlet;
   }
@@ -182,7 +276,7 @@
   // ---------------------------------------------------------------- gauntlet
   function renderGauntlet() {
     var opp = window.OPPONENTS[state.round];
-    var me = window.Engine.rateSquad(state.squad);
+    var me = window.Engine.rateSquad(state.squad, state.slots);
     var oppRating = { att: opp.att, mid: opp.mid, def: opp.def };
     var odds = window.Engine.winProbability(me, oppRating);
 
@@ -193,7 +287,7 @@
         '<div class="matchup">' +
           '<div class="side me">' +
             '<div class="side-flag">⭐</div>' +
-            '<div class="side-name">Your Legends</div>' +
+            '<div class="side-name">' + window.Modes.label(state.mode) + "</div>" +
             '<div class="side-sub">ATT ' + Math.round(me.att) + " · MID " + Math.round(me.mid) + " · DEF " + Math.round(me.def) + "</div>" +
           "</div>" +
           '<div class="vs">VS</div>' +
@@ -258,12 +352,6 @@
     }
   }
 
-  function buttonEl(text, cls, onclick) {
-    var b = el('<button class="btn ' + cls + '">' + text + "</button>");
-    b.onclick = onclick;
-    return b;
-  }
-
   function commentary(res, opp) {
     var gf = res.home, ga = res.away;
     if (res.penalties) {
@@ -283,12 +371,12 @@
   // ---------------------------------------------------------------- win
   function renderWin() {
     app.innerHTML = "";
-    var names = window.SLOTS.map(function (s) { return state.squad[s.key].name; }).join(", ");
+    var names = state.slots.map(function (s) { return state.squad[s.key].name; }).join(", ");
     app.appendChild(el(
       '<section class="screen win">' +
         '<div class="trophy big-trophy">🏆</div>' +
         "<h1>CHAMPIONS OF HISTORY</h1>" +
-        "<p class=\"tagline\">Your legends ran the gauntlet and beat every great team ever assembled. Immortal.</p>" +
+        '<p class="tagline">Your ' + window.Modes.label(state.mode) + " ran the gauntlet and beat every great team ever assembled. Immortal.</p>" +
         '<div class="winners">' + names + "</div>" +
         '<button class="btn primary big" id="againBtn">Play Again</button>' +
       "</section>"

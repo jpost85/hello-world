@@ -106,6 +106,62 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   font-weight: 800;
 }
 
+/* ---------- mode select ---------- */
+.modes { text-align: center; }
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.mode-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.08s, background 0.15s;
+}
+.mode-card:hover { border-color: var(--gold); transform: translateY(-3px); }
+.mode-icon { font-size: 2.4rem; }
+.mode-title { font-weight: 800; font-size: 1.15rem; margin: 8px 0 6px; }
+.mode-desc { color: var(--muted); font-size: 0.85rem; line-height: 1.45; }
+
+/* ---------- decade / nation pick ---------- */
+.filter { text-align: center; }
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.filter-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.08s, background 0.15s;
+}
+.filter-card:hover { border-color: var(--gold); transform: translateY(-3px); }
+.filter-flag { font-size: 2.4rem; line-height: 1; }
+.filter-decade { font-size: 1.5rem; font-weight: 800; color: var(--gold); }
+.filter-name { font-weight: 700; margin-top: 6px; }
+.filter-count { color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
+
+.draft-context {
+  display: inline-block;
+  background: rgba(245, 197, 66, 0.12);
+  color: var(--gold);
+  border: 1px solid rgba(245, 197, 66, 0.28);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
 /* ---------- draft ---------- */
 .draft-head { text-align: center; margin-bottom: 16px; }
 .draft-progress {
