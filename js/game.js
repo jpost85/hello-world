@@ -13,6 +13,7 @@
     squad: {},                               // slotKey -> player object
     slotIndex: 0,                            // which draft slot we're on
     round: 0,                               // current gauntlet round
+    history: [],                           // per-match results for sharing
   };
 
   // ---------------------------------------------------------------- helpers
@@ -55,6 +56,7 @@
     state.squad = {};
     state.slotIndex = 0;
     state.round = 0;
+    state.history = [];
 
     app.innerHTML = "";
     app.appendChild(el(
@@ -222,18 +224,110 @@
     }
   }
 
-  // ---------------------------------------------------------------- team review
-  function lineRow(label, line) {
-    var players = state.slots
-      .filter(function (s) { return s.line === line; })
-      .map(function (s) { return state.squad[s.key]; })
-      .filter(Boolean);
-    var chips = players.map(function (p) {
-      return '<span class="xi-chip">' + p.flag + " " + p.name + "</span>";
-    }).join("");
-    return '<div class="line-row"><div class="line-label">' + label + "</div><div class="line-chips">" + chips + "</div></div>";
+  // ---------------------------------------------------------------- pitch view
+  // Lay the chosen XI out on a 4-3-3 pitch (GK at the bottom, attack on top).
+  var LINE_Y = { FWD: 17, MID: 43, DEF: 69, GK: 89 };
+
+  function pitchTokens() {
+    var byLine = { GK: [], DEF: [], MID: [], FWD: [] };
+    state.slots.forEach(function (s) { byLine[s.line].push(s); });
+
+    var tokens = [];
+    Object.keys(byLine).forEach(function (line) {
+      var arr = byLine[line];
+      arr.forEach(function (slot, i) {
+        var p = state.squad[slot.key];
+        if (!p) return;
+        var x = ((i + 1) / (arr.length + 1)) * 100;
+        var surname = p.name.split(" ").slice(-1)[0];
+        tokens.push(
+          '<div class="pitch-token" style="left:' + x.toFixed(1) + "%;top:" + LINE_Y[line] + '%" ' +
+            'title="' + p.name + " — " + p.club + " (" + p.decade + ')">' +
+            '<div class="token-badge">' + p.flag + '<span class="token-ovr">' + p.ovr + "</span></div>" +
+            '<div class="token-name">' + surname + "</div>" +
+          "</div>"
+        );
+      });
+    });
+    return tokens.join("");
   }
 
+  function pitchHTML() {
+    return (
+      '<div class="pitch">' +
+        '<div class="m-circle"></div>' +
+        '<div class="m-halfway"></div>' +
+        '<div class="m-box top"></div>' +
+        '<div class="m-box bottom"></div>' +
+        pitchTokens() +
+      "</div>"
+    );
+  }
+
+  // ---------------------------------------------------------------- sharing
+  function resultSquares() {
+    return window.OPPONENTS.map(function (o, i) {
+      if (i < state.history.length) return state.history[i].result === "win" ? "🟩" : "🟥";
+      return "⬜";
+    }).join("");
+  }
+
+  function buildShareText() {
+    var beaten = state.history.filter(function (h) { return h.result === "win"; }).length;
+    var total = window.OPPONENTS.length;
+    var champion = beaten === total;
+    var lines = [
+      "🏆 All-Time World Cup Simulator",
+      window.Modes.label(state.mode) + " — " +
+        (champion ? "CHAMPIONS! " + total + "/" + total
+                  : beaten + "/" + total + " · out in round " + (beaten + 1)),
+      resultSquares(),
+    ];
+    var last = state.history[state.history.length - 1];
+    if (!champion && last) {
+      lines.push("Fell to " + last.flag + " " + last.name + " " + last.year + " (" + last.home + "–" + last.away + ")");
+    }
+    lines.push("", window.location.href);
+    return lines.join("\n");
+  }
+
+  function toast(msg) {
+    var t = el('<div class="toast">' + msg + "</div>");
+    document.body.appendChild(t);
+    var raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
+    raf(function () { t.classList.add("show"); });
+    setTimeout(function () {
+      t.classList.remove("show");
+      setTimeout(function () { t.remove(); }, 300);
+    }, 1600);
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); toast("Result copied!"); }
+    catch (e) { toast("Copy failed — select and copy manually"); }
+    ta.remove();
+  }
+
+  function shareResult() {
+    var text = buildShareText();
+    if (navigator.share) {
+      navigator.share({ title: "All-Time World Cup Simulator", text: text }).catch(function () {});
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast("Result copied!"); }).catch(function () { fallbackCopy(text); });
+    } else {
+      fallbackCopy(text);
+    }
+  }
+
+  // ---------------------------------------------------------------- team review
   function renderTeam() {
     var r = window.Engine.rateSquad(state.squad, state.slots);
     app.innerHTML = "";
@@ -246,12 +340,7 @@
           ratingBox("Midfield", r.mid) +
           ratingBox("Defence", r.def) +
         "</div>" +
-        '<div class="lineup">' +
-          lineRow("FWD", "FWD") +
-          lineRow("MID", "MID") +
-          lineRow("DEF", "DEF") +
-          lineRow("GK", "GK") +
-        "</div>" +
+        pitchHTML() +
         '<div class="team-nav">' +
           '<button class="btn ghost" id="redraftBtn">↺ Re-draft</button>' +
           '<button class="btn primary big" id="toGauntletBtn">Enter the Gauntlet →</button>' +
@@ -317,6 +406,10 @@
   // ---------------------------------------------------------------- match
   function playMatch(me, oppRating, opp) {
     var res = window.Engine.simulateMatch(me, oppRating);
+    state.history[state.round] = {
+      name: opp.name, year: opp.year, flag: opp.flag,
+      result: res.result, home: res.home, away: res.away,
+    };
     var scoreline = res.home + " – " + res.away;
     var pens = res.penalties
       ? '<div class="pens">(' + res.penalties.home + " – " + res.penalties.away + " on penalties)</div>"
@@ -348,6 +441,8 @@
         }));
       }
     } else {
+      app.querySelector(".result").appendChild(el('<div class="share-track">' + resultSquares() + "</div>"));
+      nav.appendChild(buttonEl("📋 Share", "ghost", shareResult));
       nav.appendChild(buttonEl("Try Again", "primary big", renderStart));
     }
   }
@@ -371,16 +466,20 @@
   // ---------------------------------------------------------------- win
   function renderWin() {
     app.innerHTML = "";
-    var names = state.slots.map(function (s) { return state.squad[s.key].name; }).join(", ");
     app.appendChild(el(
       '<section class="screen win">' +
         '<div class="trophy big-trophy">🏆</div>' +
         "<h1>CHAMPIONS OF HISTORY</h1>" +
         '<p class="tagline">Your ' + window.Modes.label(state.mode) + " ran the gauntlet and beat every great team ever assembled. Immortal.</p>" +
-        '<div class="winners">' + names + "</div>" +
-        '<button class="btn primary big" id="againBtn">Play Again</button>' +
+        '<div class="share-track">' + resultSquares() + "</div>" +
+        pitchHTML() +
+        '<div class="team-nav">' +
+          '<button class="btn ghost" id="shareWin">📋 Share</button>' +
+          '<button class="btn primary big" id="againBtn">Play Again</button>' +
+        "</div>" +
       "</section>"
     ));
+    document.getElementById("shareWin").onclick = shareResult;
     document.getElementById("againBtn").onclick = renderStart;
   }
 
