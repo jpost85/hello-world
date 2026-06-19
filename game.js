@@ -1387,12 +1387,18 @@
       }
     }
 
-    // 3) Contest the seas: build ships where the foe matches or leads.
-    for (const z of SEA_IDS) {
-      const node = S.regions[z]; let guard = 0;
-      while (node.ships[side] <= node.ships[foe] && goldOf(side) >= CONFIG.shipCost
-             && SEA_ZONES[z].cities.some((c) => S.regions[c].owner === side) && guard++ < 3) {
-        node.ships[side] += 1; addGold(side, -CONFIG.shipCost);
+    // 3) Contest the seas: build at most ONE ship per port per turn — the same
+    //    cap the player has — and only where the foe matches or leads that
+    //    port's sea zone. (No more spamming a whole fleet from one port.)
+    for (const portId of ownedRegions(side).map((rg) => rg.id).filter(isHarbor)) {
+      const port = S.regions[portId];
+      const z = nodeOfPort(portId);
+      if (!z || port.shipBuilt || goldOf(side) < CONFIG.shipCost) continue;
+      const node = S.regions[z];
+      if (node.ships[side] <= node.ships[foe]) {
+        node.ships[side] += 1;
+        port.shipBuilt = true;
+        addGold(side, -CONFIG.shipCost);
       }
     }
     refreshSeaControl();
