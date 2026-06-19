@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { GameState } from "../../engine/index.ts";
+import { FlagBadge } from "./Flag.tsx";
 
 // Fallback canvas size for legacy maps whose positions are normalised to [0, 1].
 const NORM_W = 1000;
@@ -27,6 +28,17 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
       if (!ownerId) return "#444";
       const player = state.players.find((p) => p.id === ownerId);
       return factionColor.get(player?.factionId ?? "") ?? "#444";
+    };
+  }, [state.factions, state.players]);
+
+  // Map ownerId → { factionId, color } for the FlagBadge.
+  const factionOf = useMemo(() => {
+    const colorMap = new Map(state.factions.map((f) => [f.id, f.color]));
+    return (ownerId: string | null): { id: string; color: string } => {
+      if (!ownerId) return { id: "__none__", color: "#444" };
+      const player = state.players.find((p) => p.id === ownerId);
+      const fid = player?.factionId ?? "__none__";
+      return { id: fid, color: colorMap.get(fid) ?? "#444" };
     };
   }, [state.factions, state.players]);
 
@@ -372,20 +384,15 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
               ) : (
                 <circle cx={p.x} cy={p.y} r={R} fill={colorOf(ts.ownerId)} />
               )}
-              {/* Army-count badge sits at the territory centroid. */}
+              {/* Flag badge sits at the territory centroid. */}
               <g transform={`translate(${p.x},${p.y}) scale(${badgeScale})`}>
-                <circle className="badge-bg" r={11} />
-                <text className="badge-text">{ts.armies}</text>
-                {ts.hasFortress && (
-                  <text className="marker" x={-13} y={-9}>
-                    🏰
-                  </text>
-                )}
-                {generalAt.has(t.id) && (
-                  <text className="marker" x={5} y={-9}>
-                    ⭐
-                  </text>
-                )}
+                <FlagBadge
+                  id={factionOf(ts.ownerId).id}
+                  color={factionOf(ts.ownerId).color}
+                  armies={ts.armies}
+                  hasFortress={ts.hasFortress}
+                  hasGeneral={generalAt.has(t.id)}
+                />
               </g>
             </g>
           );

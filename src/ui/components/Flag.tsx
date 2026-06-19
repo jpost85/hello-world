@@ -224,3 +224,82 @@ export function Flag({
     </svg>
   );
 }
+
+/**
+ * SVG-native flag badge for use inside a MapView `<svg>`.
+ *
+ * Renders a 3:2 flag rectangle centered at (0,0), scaled to `width` px wide,
+ * with the army count overlaid and tiny markers for fortress / general.
+ * Must be placed inside a `<g transform="translate(cx,cy) scale(s)">`.
+ */
+export function FlagBadge({
+  id,
+  color,
+  armies,
+  hasFortress,
+  hasGeneral,
+}: {
+  id: string;
+  color: string;
+  armies: number;
+  hasFortress: boolean;
+  hasGeneral: boolean;
+}) {
+  // Flag rect: 36 × 24 SVG units, centered at origin.
+  const fw = 36;
+  const fh = 24;
+  const fx = -fw / 2;
+  const fy = -fh / 2;
+
+  return (
+    <>
+      {/* Flag fill */}
+      <svg x={fx} y={fy} width={fw} height={fh} viewBox={`0 0 ${W} ${H}`} overflow="hidden">
+        {FLAGS[id] ?? <rect width={W} height={H} fill={color} />}
+      </svg>
+      {/* Rounded border on the flag */}
+      <rect
+        x={fx}
+        y={fy}
+        width={fw}
+        height={fh}
+        rx={3}
+        fill="none"
+        stroke="rgba(0,0,0,0.55)"
+        strokeWidth={1.5}
+      />
+      {/* Translucent pill behind the number for readability */}
+      <rect
+        x={-8}
+        y={-6}
+        width={16}
+        height={12}
+        rx={6}
+        fill="rgba(0,0,0,0.55)"
+      />
+      {/* Army count */}
+      <text
+        textAnchor="middle"
+        dominantBaseline="central"
+        fill="#fff"
+        fontSize={9}
+        fontWeight="700"
+        style={{ pointerEvents: "none" }}
+      >
+        {armies}
+      </text>
+      {/* Fortress marker — upper-left corner */}
+      {hasFortress && (
+        <text fontSize={11} x={fx - 2} y={fy - 2} style={{ pointerEvents: "none" }}>
+          🏰
+        </text>
+      )}
+      {/* General marker — upper-right corner */}
+      {hasGeneral && (
+        <text fontSize={11} x={fx + fw - 10} y={fy - 2} style={{ pointerEvents: "none" }}>
+          ⭐
+        </text>
+      )}
+    </>
+  );
+}
