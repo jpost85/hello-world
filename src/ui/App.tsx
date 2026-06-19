@@ -30,6 +30,7 @@ import { Flag } from "./components/Flag.tsx";
 
 export function App() {
   const g = useGame();
+  const [panelOpen, setPanelOpen] = useState(true);
 
   if (!g.state) {
     return <Setup onStart={g.start} onResume={g.resume} />;
@@ -38,12 +39,20 @@ export function App() {
   const active = currentPlayer(g.state);
 
   return (
-    <div className="app">
+    <div className={`app${panelOpen ? "" : " panel-collapsed"}`}>
       <div className="topbar">
         <button title="Return to the main menu" onClick={g.quit}>☰ Menu</button>
+        <button
+          className="panel-toggle"
+          onClick={() => setPanelOpen((o) => !o)}
+          title="Show or hide the controls"
+        >
+          {panelOpen ? "▾ Map" : "▴ Controls"}
+        </button>
         <h1>DOMINION · BALANCE OF POWER</h1>
         {g.isAITurn && <span className="badge">🤖 {active.name} is planning…</span>}
         <div className="spacer" />
+        <div className="players">
         {g.state.players.map((p) => {
           const faction = g.state!.factions.find((f) => f.id === p.factionId)!;
           return (
@@ -62,6 +71,7 @@ export function App() {
             </span>
           );
         })}
+        </div>
       </div>
       <MapView
         state={g.state}

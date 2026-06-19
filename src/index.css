@@ -84,6 +84,11 @@ select {
 .topbar .spacer {
   flex: 1;
 }
+.players {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
 .badge {
   display: inline-flex;
   align-items: center;
@@ -345,23 +350,55 @@ select {
 }
 
 /* --- Mobile / narrow screens: stack the panel under the map --- */
+/* Hidden on desktop; becomes the bottom-sheet toggle on mobile. */
+.panel-toggle {
+  display: none;
+}
+
+/* --- Mobile / narrow screens: full-screen map, panel as a bottom sheet --- */
 @media (max-width: 760px) {
   .app {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto 1fr; /* topbar + full-height map; panel overlays */
   }
   .topbar {
     flex-wrap: wrap;
-    padding: 8px 12px;
+    padding: 8px 10px;
+    gap: 8px;
   }
   .topbar h1 {
-    font-size: 13px;
+    font-size: 12px;
+  }
+  .panel-toggle {
+    display: inline-flex;
+  }
+  .players {
+    order: 5;
+    flex-basis: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .players .badge {
+    flex: 0 0 auto;
   }
   .panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 60dvh;
     border-left: none;
     border-top: 1px solid var(--border);
-    max-height: 46dvh;
+    border-radius: 12px 12px 0 0;
     overflow-y: auto;
+    z-index: 30;
+    box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.5);
+    transition: transform 0.25s ease;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .app.panel-collapsed .panel {
+    transform: translateY(110%); /* slide the sheet off-screen */
   }
   .setup {
     margin: 4vh 12px;
