@@ -298,9 +298,10 @@
   .unit.grimy  { filter: brightness(.95) sepia(.14); }
   .unit.filthy { filter: brightness(.86) sepia(.30) saturate(.9); }
   .unit.worn   { box-shadow: inset 0 0 0 2px rgba(120,90,50,.4), inset 0 0 8px rgba(80,55,25,.3); }
-  .u-state { position:absolute; top:0; right:1px; font-size:8px; line-height:1; z-index:6; pointer-events:none; }
-  .unit.roachy .u-state::after { content:"\1FAB3"; }            /* cockroach */
-  .unit.worn:not(.roachy) .u-state::after { content:"\1F527"; } /* wrench */
+  .u-state { position:absolute; top:0; right:1px; font-size:8px; line-height:1; z-index:6; pointer-events:none; } /* icon set by applyRoomState */
+  /* A hotel room awaiting turnover reads distinctly (cool grey-blue) and softly pulses. */
+  .unit-hotel.needs-cleaning { filter: brightness(.9) saturate(.4); animation: needsturn 1.3s ease-in-out infinite alternate; }
+  @keyframes needsturn { to { filter: brightness(1) saturate(.55); } }
   .unit.servicing { animation: servicing .7s ease-in-out infinite alternate; }
   @keyframes servicing { to { filter: brightness(1.18) saturate(1.12); } }
 
@@ -1757,11 +1758,16 @@ function simHotels() {
   hotelUnits().forEach(u => {
     const t = TYPES[u.type];
     u.satisfaction += (satisfactionTarget(u) - u.satisfaction) * 0.05;
-    if (evening && u.occupants < t.cap) {
+    const needsTurnover = (u.dirt || 0) >= 0.5; // a room awaiting housekeeping can't be re-let
+    if (evening && u.occupants < t.cap && !needsTurnover) {
       const appeal = (0.05 + state.stars * 0.012 + amenityBonus(u) * 0.0009) * cleanFactor;
       if (Math.random() < appeal) { u.occupants++; state.pop++; updateUnitVisual(u); }
     } else if (morning && u.occupants > 0) {
-      if (Math.random() < 0.25) { u.occupants--; state.pop--; updateUnitVisual(u); }
+      if (Math.random() < 0.25) {
+        u.occupants--; state.pop--;
+        u.dirt = Math.min(1, (u.dirt || 0) + 0.22); // checkout leaves a room to be made up
+        applyRoomState(u); updateUnitVisual(u);
+      }
     }
   });
 }
@@ -2155,14 +2161,21 @@ function serviceable(u) {
   const k = TYPES[u.type].kind;
   return k === "work" || k === "home" || k === "hotel" || k === "shop";
 }
-// Reflect a room's dirt/wear on its element (grime tint, roaches, disrepair).
+// Reflect a room's dirt/wear on its element (grime tint, disrepair, and a corner
+// badge: 🧹 a hotel room awaiting turnover, 🪳 a filthy restaurant, 🔧 disrepair).
 function applyRoomState(u) {
   if (!u.el) return;
   const dirt = u.dirt || 0, wear = u.wear || 0;
+  const needsTurnover = u.type === "hotel" && dirt > 0.45;
   u.el.classList.toggle("grimy", dirt > 0.34);
   u.el.classList.toggle("filthy", dirt > 0.62);
-  u.el.classList.toggle("roachy", dirt > 0.6 && u.type === "restaurant");
   u.el.classList.toggle("worn", wear > 0.45);
+  u.el.classList.toggle("needs-cleaning", needsTurnover);
+  const badge = u.el.querySelector(".u-state");
+  if (badge) badge.textContent =
+    needsTurnover ? "\u{1F9F9}"                                   // broom: make up the room
+    : (dirt > 0.6 && u.type === "restaurant") ? "\u{1FAB3}"       // cockroach
+    : (wear > 0.45) ? "\u{1F527}" : "";                           // wrench
 }
 // The dirtiest / most-worn serviceable room a staff member can reach right now —
 // on the current floor, or a floor on a transit run they can board — above the
