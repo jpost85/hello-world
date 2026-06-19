@@ -129,10 +129,12 @@ select {
 .vignette {
   pointer-events: none;
 }
-/* The scorched edge of the drawn map (ragged via the SVG 'torn' filter). */
-.burnt-edge {
-  fill: #3d2812;
-  opacity: 0.92;
+/* The fixed scorched border framing the map window (ragged via the 'torn' filter). */
+.burnt-frame {
+  stroke: #3d2812;
+  stroke-width: 18;
+  opacity: 0.95;
+  pointer-events: none;
 }
 .board svg {
   width: 100%;

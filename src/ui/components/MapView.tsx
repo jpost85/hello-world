@@ -318,6 +318,9 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
             <feDisplacementMap in="SourceGraphic" in2="n" scale="16" />
             <feDropShadow dx="0" dy="2" stdDeviation="5" floodColor="#000" floodOpacity="0.55" />
           </filter>
+          <clipPath id="mapWindow">
+            <rect x={area.x} y={area.y} width={area.width} height={area.height} />
+          </clipPath>
         </defs>
         {/* Dark backdrop (the desk) behind the torn parchment sheet. */}
         <rect x={0} y={0} width="100%" height="100%" fill="#15110b" />
@@ -333,17 +336,11 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
             filter="url(#paperGrain)"
           />
         </g>
-        <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
-        {/* Scorched edge around the drawn map, then the ocean over the parchment. */}
-        <rect
-          className="burnt-edge"
-          x={area.x - 10}
-          y={area.y - 10}
-          width={area.width + 20}
-          height={area.height + 20}
-          filter="url(#torn)"
-        />
+        {/* Fixed ocean window — the sea showing through the frame. */}
         <rect className="ocean" x={area.x} y={area.y} width={area.width} height={area.height} />
+        {/* The map layers pan/zoom INSIDE the fixed frame (clipped to the window). */}
+        <g clipPath="url(#mapWindow)">
+        <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
         {state.map.decorations?.map((d, i) => (
           <g key={`decor-${i}`} className="decoration">
             <path d={d.path} fill={d.fill} />
@@ -392,6 +389,17 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
           );
         })}
         </g>
+        </g>
+        {/* Fixed scorched border framing the window (hides the clip edge). */}
+        <rect
+          className="burnt-frame"
+          x={area.x}
+          y={area.y}
+          width={area.width}
+          height={area.height}
+          fill="none"
+          filter="url(#torn)"
+        />
         {/* Aged darkening at the sheet's edges (fixed). */}
         <rect className="vignette" x={0} y={0} width="100%" height="100%" fill="url(#vignette)" />
       </svg>
