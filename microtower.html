@@ -191,11 +191,6 @@
     #app:not(.nav-closed) #backdrop { opacity: 1; pointer-events: auto; }
   }
 
-  /* Night-time lit windows */
-  .unit.lit::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: radial-gradient(circle at 50% 38%, rgba(255,214,120,.45), transparent 72%);
-  }
 
   /* Tap-to-build confirm bar (touch devices): info stacked above the buttons,
      bottom-centered so it only grows upward and the cost never gets clipped. */
@@ -337,13 +332,10 @@
       repeating-linear-gradient(90deg, #000 0 6px, rgba(0,0,0,.1) 6px 26px, #000 26px 32px),
       linear-gradient(180deg, #000 0 5px, rgba(0,0,0,.1) 5px 25px, #000 25px 100%);
   }
-  .win.lit::after { content:none; }   /* no glow blob on the glass buildings */
-  /* At night, dim the building structure + ground so the scene reads as night.
-     The window openings stay see-through (they show the already-darkened
-     backdrop), so we only dim the wall — not the glass. */
-  .night .u-face, .night .u-extra,
+  /* Room INTERIORS stay identical day and night — only the exterior facade edges
+     and the ground dim, while the sky/backdrop (and the windows that look onto it)
+     carry the day/night cycle. */
   .night .fe-top, .night .fe-left, .night .fe-right, .night .fe-base { filter: brightness(0.62); }
-  .night .win .u-face { filter: var(--win-frame) brightness(0.62); }  /* keep the casing; dim the wall */
   .night .ground { filter: brightness(0.5); }
 
   .unit-office    { --wall:#7f93a6; --glass:#bfe0f5; --frame:#52677d; }
