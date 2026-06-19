@@ -95,7 +95,9 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
     return segs;
   }, [state.map.connectors, pos, vbW]);
 
-  const badgeScale = isGeo ? 0.55 : 1;
+  // Army-count badges are scaled ~25% larger than the original sizes for
+  // legibility (geo maps draw them smaller relative to their dense regions).
+  const badgeScale = isGeo ? 0.6875 : 1.25;
 
   // --- Pan & zoom ----------------------------------------------------------
   const svgRef = useRef<SVGSVGElement>(null);
