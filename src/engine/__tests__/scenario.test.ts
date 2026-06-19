@@ -6,6 +6,7 @@ import { indiaMap } from "../maps/indiaSubcontinent.ts";
 import { nearEastMap } from "../maps/nearEast.ts";
 import { caribbeanMap } from "../maps/caribbean.ts";
 import { crimeaMap } from "../maps/crimea.ts";
+import { africaMap } from "../maps/africaScramble.ts";
 
 describe("India colonial scenario", () => {
   it("starts each European enclave under its historical power", () => {
@@ -99,6 +100,31 @@ describe("Crimean War scenario", () => {
     expect(ownerFaction("crimea")).toBe("russia");
     expect(ownerFaction("ukraine")).toBe("russia");
     expect(ownerFaction("anatolia")).toBe("ottoman");
+    for (const p of game.players) {
+      expect(Object.values(game.territories).some((t) => t.ownerId === p.id)).toBe(true);
+    }
+  });
+});
+
+describe("Scramble for Africa scenario", () => {
+  it("partitions Africa among the colonial powers", () => {
+    const info = mapInfo("africa-scramble");
+    const factionIds = info.factionIds!.slice(0, 6); // britain, france, germany, italy, portugal, belgium
+    const factions = factionIds.map((id) => FACTION_POOL[id]);
+    const game = createGame({
+      map: africaMap,
+      factions,
+      players: factionIds.map((id) => ({ name: id, factionId: id, isAI: true })),
+      seed: 4,
+      startPositions: info.startPositions,
+    });
+    const ownerFaction = (terr: string) =>
+      game.players.find((p) => p.id === game.territories[terr].ownerId)!.factionId;
+    expect(ownerFaction("algeria")).toBe("france");
+    expect(ownerFaction("nigeria")).toBe("britain");
+    expect(ownerFaction("tanzania")).toBe("germany");
+    expect(ownerFaction("congo")).toBe("belgium");
+    expect(ownerFaction("angola")).toBe("portugal");
     for (const p of game.players) {
       expect(Object.values(game.territories).some((t) => t.ownerId === p.id)).toBe(true);
     }
