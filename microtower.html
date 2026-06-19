@@ -289,6 +289,20 @@
     width:9px; height:9px; border-radius:50%; background:#e0463a; box-shadow:0 0 3px rgba(224,70,58,.85); }
   .person.happy::after { content:"\2665"; font-size:9px; line-height:1; color:#ff5a7a; }
   @keyframes bob { from{ transform:translateY(0);} to{ transform:translateY(-1.5px);} }
+  /* Service staff: housekeeper (cyan) and maintenance (amber), each carrying a tool. */
+  .person.staff-clean { background:#3fb6d6; }
+  .person.staff-fix   { background:#d69a3f; }
+  .person.staff::after { content:""; position:absolute; left:50%; top:-4px; width:2px; height:5px;
+    transform:translateX(-50%); background:#3a3a3a; border-radius:1px; pointer-events:none; }
+  /* Room lifecycle: grime, roaches, disrepair, and a "being serviced" sparkle. */
+  .unit.grimy  { filter: brightness(.95) sepia(.14); }
+  .unit.filthy { filter: brightness(.86) sepia(.30) saturate(.9); }
+  .unit.worn   { box-shadow: inset 0 0 0 2px rgba(120,90,50,.4), inset 0 0 8px rgba(80,55,25,.3); }
+  .u-state { position:absolute; top:0; right:1px; font-size:8px; line-height:1; z-index:6; pointer-events:none; }
+  .unit.roachy .u-state::after { content:"\1FAB3"; }            /* cockroach */
+  .unit.worn:not(.roachy) .u-state::after { content:"\1F527"; } /* wrench */
+  .unit.servicing { animation: servicing .7s ease-in-out infinite alternate; }
+  @keyframes servicing { to { filter: brightness(1.18) saturate(1.12); } }
 
   #ghost {
     position: absolute; pointer-events: none; border: 2px dashed #fff;
@@ -1449,7 +1463,9 @@ function unitInnerHTML(type) {
   // Enclosed units carry façade edge elements (shown only on exposed sides).
   const facade = (t.kind === "outdoor" || t.kind === "landmark") ? ""
     : `<div class="fe-left"></div><div class="fe-right"></div><div class="fe-base"></div><div class="fe-top"></div>`;
-  return `<div class="u-face"></div><div class="u-extra"></div>${tag}${vac}<div class="occ"></div>${facade}`;
+  // serviceable rooms carry a small state badge (roaches / disrepair) set by applyRoomState
+  const stateBadge = (t.kind === "work" || t.kind === "home" || t.kind === "hotel" || t.kind === "shop") ? `<div class="u-state"></div>` : "";
+  return `<div class="u-face"></div><div class="u-extra"></div>${tag}${vac}<div class="occ"></div>${facade}${stateBadge}`;
 }
 
 function shortLabel(type) {
@@ -1808,6 +1824,18 @@ function updateServices() {
   state.cleanliness += (cleanTarget - state.cleanliness) * 0.08;
   const upTarget = Math.max(0, Math.min(100, 100 - Math.max(0, roomCount() - 8 - serviceCapacity("upkeep")) * 2));
   state.upkeep += (upTarget - state.upkeep) * 0.08;
+  // Per-room lifecycle: rooms gather grime and wear over time (faster when the
+  // tower's services can't keep up); staff (movepeople) clean/repair them back.
+  const dirtRate = 0.006 + 0.024 * (1 - state.cleanliness / 100);
+  const wearRate = 0.004 + 0.016 * (1 - state.upkeep / 100);
+  for (const u of state.units) {
+    if (!serviceable(u)) continue;
+    const t = TYPES[u.type];
+    const occ = t.cap > 0 ? Math.min(1, u.occupants / Math.max(1, t.cap)) : (t.draw ? 0.7 : 0.4);
+    u.dirt = Math.min(1, (u.dirt || 0) + dirtRate * (0.5 + 0.7 * occ));
+    u.wear = Math.min(1, (u.wear || 0) + wearRate);
+    applyRoomState(u);
+  }
 }
 
 // Satisfaction is a sum of distinct needs (each capped), so the player can read
@@ -2121,6 +2149,91 @@ function chooseGoal(p) {
   return null;
 }
 
+// ---------- Room lifecycle & service staff ----------
+// Rooms that get dirty / wear out over time and can be serviced by staff.
+function serviceable(u) {
+  const k = TYPES[u.type].kind;
+  return k === "work" || k === "home" || k === "hotel" || k === "shop";
+}
+// Reflect a room's dirt/wear on its element (grime tint, roaches, disrepair).
+function applyRoomState(u) {
+  if (!u.el) return;
+  const dirt = u.dirt || 0, wear = u.wear || 0;
+  u.el.classList.toggle("grimy", dirt > 0.34);
+  u.el.classList.toggle("filthy", dirt > 0.62);
+  u.el.classList.toggle("roachy", dirt > 0.6 && u.type === "restaurant");
+  u.el.classList.toggle("worn", wear > 0.45);
+}
+// The dirtiest / most-worn serviceable room a staff member can reach right now —
+// on the current floor, or a floor on a transit run they can board — above the
+// "needs service" threshold. Returns { unit, run } (run null = same floor) or null.
+function bestServiceTarget(p) {
+  const meter = p.job === "fix" ? "wear" : "dirt";
+  const seg = walkRange(p);
+  if (!seg) return null;
+  let best = null, bestVal = 0.3;
+  for (const u of state.units) {                       // current floor (walk over)
+    if (u.row !== p.row || !serviceable(u) || (u[meter] || 0) <= bestVal) continue;
+    if (u.col + u.w - 1 < seg.min || u.col > seg.max) continue;
+    bestVal = u[meter]; best = { unit: u, run: null };
+  }
+  const reachable = c => c >= seg.min && c <= seg.max;
+  for (const r of state.transitRuns) {
+    if (!(r.lo <= p.row && p.row <= r.hi && reachable(r.col))) continue;
+    for (let f = r.lo; f <= r.hi; f++) {
+      if (f === p.row) continue;
+      const fseg = reachableSegment(f, r.col); if (!fseg) continue;
+      for (const u of state.units) {
+        if (u.row !== f || !serviceable(u) || (u[meter] || 0) <= bestVal) continue;
+        if (u.col + u.w - 1 < fseg.min || u.col > fseg.max) continue;
+        bestVal = u[meter]; best = { unit: u, run: r };
+      }
+    }
+  }
+  return best;
+}
+// Send a staff member to service their best target; false if nothing needs it.
+function dispatchStaff(p) {
+  const tgt = bestServiceTarget(p);
+  if (!tgt) return false;
+  const u = tgt.unit, cx = u.col + (u.w - 1) / 2;
+  p.destCol = cx; p.destUnit = u.id; p.purpose = "service";
+  if (!tgt.run) { p.goCol = null; p.mode = "toRoom"; }          // same floor: walk over
+  else {
+    const r = tgt.run, lo = Math.min(p.row, u.row), hi = Math.max(p.row, u.row);
+    p.targetRow = u.row; p.goCol = r.col;
+    p.shaft = state.shafts.find(s => s.col === r.col && s.lo <= lo && s.hi >= hi && !s.express) || null;
+    p.mode = "approach";
+  }
+  return true;
+}
+// Keep one worker per service unit (housekeeping = clean, maintenance = fix).
+function manageStaff() {
+  const units = state.units.filter(u => TYPES[u.type].kind === "service");
+  const ids = new Set(units.map(u => u.id));
+  for (let i = state.people.length - 1; i >= 0; i--) {       // cull orphaned workers
+    const p = state.people[i];
+    if (p.role === "staff" && !ids.has(p.homeUnit)) { p.el.remove(); state.people.splice(i, 1); }
+  }
+  const have = {};
+  state.people.forEach(p => { if (p.role === "staff") have[p.homeUnit] = (have[p.homeUnit] || 0) + 1; });
+  for (const u of units) if (!have[u.id]) spawnStaff(u);       // spawn missing workers
+}
+function spawnStaff(u) {
+  const job = TYPES[u.type].serves === "upkeep" ? "fix" : "clean";
+  const col = u.col + (u.w - 1) / 2;
+  const el = document.createElement("div");
+  el.className = "person staff staff-" + job;
+  el.style.left = colLeft(col) + "px";
+  el.style.top = (rowTop(u.row) + CELL_H - 12) + "px";
+  world.appendChild(el);
+  state.people.push({ el, col, row: u.row, life: 1e9, mode: "walk", goCol: null, targetRow: null,
+    transitCol: 0, y: u.row, shaft: null, destCol: null, destUnit: null, role: "staff", job,
+    homeUnit: u.id, homeRow: u.row, homeCol: col, purpose: "idle", dwell: 0, bubble: 0,
+    work: 0, seekCooldown: Math.floor(Math.random() * 8),
+    baseColor: job === "fix" ? "#d69a3f" : "#3fb6d6", patience: 0, patience0: 1 });
+}
+
 function spawnPerson() {
   // Scale the strolling crowd to the tower's population so a small tower doesn't
   // look as busy as a skyscraper (was a flat cap of 60 regardless of size).
@@ -2279,23 +2392,45 @@ function movepeople() {
       const goalCol = (p.destCol == null) ? p.col : Math.max(seg.min, Math.min(seg.max, p.destCol));
       const d = goalCol - p.col;
       if (Math.abs(d) <= 0.6) {                      // arrived at the destination room
-        if (p.purpose === "leave" && p.row === 0) {
-          p.life = Math.min(p.life, 16);             // they're leaving the building — exit soon
-        } else if (p.purpose === "errand" || p.purpose === "visit") {
-          p.dwell = 50 + Math.random() * 170;        // linger at the venue (~15-55s)
-          const du = p.destUnit && state.units.find(x => x.id === p.destUnit);
-          if (du && TYPES[du.type].draw) du.footfall = (du.footfall || 0) + 1;  // a paying visit
+        if (p.purpose === "service") {
+          p.mode = "work"; p.work = 24 + Math.random() * 24; p.goCol = null; p.destCol = null; // keep destUnit
+        } else {
+          if (p.purpose === "leave" && p.row === 0) {
+            p.life = Math.min(p.life, 16);           // they're leaving the building — exit soon
+          } else if (p.purpose === "errand" || p.purpose === "visit") {
+            p.dwell = 50 + Math.random() * 170;      // linger at the venue (~15-55s)
+            const du = p.destUnit && state.units.find(x => x.id === p.destUnit);
+            if (du && TYPES[du.type].draw) du.footfall = (du.footfall || 0) + 1;  // a paying visit
+          }
+          p.mode = "walk"; p.goCol = null; p.destCol = null; p.destUnit = null;
         }
-        p.mode = "walk"; p.goCol = null; p.destCol = null; p.destUnit = null;
       } else p.col += Math.sign(d) * Math.min(1.3, Math.abs(d));
       p.el.style.left = colLeft(p.col) + "px";
       p.el.style.top = (rowTop(p.row) + CELL_H - 12) + "px";
       continue;
     }
 
+    if (p.mode === "work") { // staff servicing a room: clean/repair it down, then re-seek
+      const u = state.units.find(x => x.id === p.destUnit);
+      if (!u || !u.el) { p.mode = "walk"; p.purpose = "idle"; p.destUnit = null; continue; }
+      const meter = p.job === "fix" ? "wear" : "dirt";
+      u[meter] = Math.max(0, (u[meter] || 0) - 0.03);
+      applyRoomState(u);
+      u.el.classList.add("servicing");
+      p.el.style.left = colLeft(p.col) + "px";
+      p.el.style.top = (rowTop(p.row) + CELL_H - 12) + "px";
+      if (--p.work <= 0 || (u[meter] || 0) <= 0.05) {
+        u.el.classList.remove("servicing");
+        if (p.job === "fix") state.upkeep = Math.min(100, state.upkeep + 0.5);
+        else state.cleanliness = Math.min(100, state.cleanliness + 0.5);
+        p.mode = "walk"; p.purpose = "idle"; p.destUnit = null; p.seekCooldown = 4;
+      }
+      continue;
+    }
+
     const ext = walkRange(p);
     if (!ext) { p.el.remove(); state.people.splice(i, 1); continue; }
-    if (p.mode === "walk" && p.life <= 0 && p.dwell <= 0) { p.el.remove(); state.people.splice(i, 1); continue; } // never despawn mid-visit
+    if (p.mode === "walk" && p.life <= 0 && p.dwell <= 0 && p.role !== "staff") { p.el.remove(); state.people.splice(i, 1); continue; } // never despawn mid-visit (staff persist)
 
     if (p.mode === "approach") { // walking to the transit column
       const d = p.goCol - p.col;
@@ -2309,6 +2444,14 @@ function movepeople() {
       p.col += (Math.random() - 0.5) * 0.6;
       p.col = Math.max(ext.min, Math.min(ext.max, p.col));
       if (p.dwell <= 0) { p.el.classList.remove("upset"); p.el.classList.add("happy"); p.bubble = 12; p.life = Math.max(p.life, 18); } // perk up, then stroll on
+    } else if (p.role === "staff") { // housekeeper / maintenance worker: find the next room to service, else idle near base
+      if (p.seekCooldown > 0) p.seekCooldown--;
+      if (!(p.seekCooldown <= 0 && dispatchStaff(p))) {
+        if (p.seekCooldown <= 0) p.seekCooldown = 6;          // nothing needs doing; retry soon
+        const hx = (p.homeCol == null) ? p.col : p.homeCol;   // drift back toward base
+        p.col += (Math.abs(hx - p.col) > 4) ? Math.sign(hx - p.col) * 0.8 : (Math.random() - 0.5) * 0.8;
+        p.col = Math.max(ext.min, Math.min(ext.max, p.col));
+      }
     } else { // walk: wander, occasionally decide to commute (more often at rush hour)
       p.col += (Math.random() - 0.5) * 2.6;
       p.col = Math.max(ext.min, Math.min(ext.max, p.col));
@@ -2491,7 +2634,7 @@ function tick(ts) {
 
 function advanceMinute() {
   state.minutes++;
-  if (state.minutes % 5 === 0) { simTenants(); simHotels(); }
+  if (state.minutes % 5 === 0) { simTenants(); simHotels(); manageStaff(); }
   if (state.minutes % 20 === 0) spawnPerson();
   if (state.minutes % 30 === 0) state.frustration = Math.max(0, state.frustration * 0.9 - 0.2); // service recovers
   if (state.minutes >= 24 * 60) {
@@ -2919,6 +3062,7 @@ function init() {
   }
   // Restore the "Keep Building" expansion if it was earned in a saved game.
   if (state.keepBuilding) unlockKeepBuilding();
+  manageStaff();   // staff the housekeeping/maintenance rooms of a loaded tower
   rebuildFacade();
   applyFacade();
   updateLobbyLabel();
