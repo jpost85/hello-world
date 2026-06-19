@@ -503,6 +503,19 @@
       linear-gradient(180deg, transparent 0 calc(100% - 7px), #e6cd83 calc(100% - 7px) calc(100% - 2px), #b89a4d calc(100% - 2px)); /* crown base */
   }
   .unit-spire .u-tag { color:#6b531c; }
+  /* Rooftop aircraft-warning beacon + spire uplighting at night. The spire is a
+     landmark with no occupants, so this keys off .night (always on after dark),
+     not .lit. The beacon flashes; the cone gets a warm uplit glow. */
+  .unit-spire .u-extra::before {
+    content:""; position:absolute; left:50%; top:-4px; width:5px; height:5px; margin-left:-2.5px;
+    border-radius:50%; background:#ff3b30; opacity:0;   /* off by day */
+  }
+  .night .unit-spire .u-extra::before {
+    animation: beacon 1.5s steps(1, end) infinite;
+    box-shadow:0 0 7px 2px rgba(255,59,48,.95);
+  }
+  @keyframes beacon { 0%, 14% { opacity:1; } 28%, 100% { opacity:0; } }
+  .night .unit-spire .u-face { filter: brightness(1.12) drop-shadow(0 0 4px rgba(255,221,140,.6)); }
 
   /* Underground: earth fill, transparent basement cells, metro & parking */
   .earth { position: absolute; background: linear-gradient(180deg, #5a4632 0 6px, #46341f 6px, #33260f); }
