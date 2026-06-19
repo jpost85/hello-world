@@ -284,7 +284,13 @@ function DiceResult({ g }: { g: UseGame }) {
         <span className="hint" style={{ width: 60 }}>Attack</span>
         <div className="dice">
           {round.attackerDice.map((d, i) => (
-            <span key={i} className="die atk">{d}</span>
+            <span
+              key={`${g.rollNonce}-a${i}`}
+              className="die atk rolling"
+              style={{ animationDelay: `${i * 70}ms` }}
+            >
+              {d}
+            </span>
           ))}
         </div>
       </div>
@@ -292,7 +298,13 @@ function DiceResult({ g }: { g: UseGame }) {
         <span className="hint" style={{ width: 60 }}>Defend</span>
         <div className="dice">
           {round.defenderDice.map((d, i) => (
-            <span key={i} className="die def">{d}</span>
+            <span
+              key={`${g.rollNonce}-d${i}`}
+              className="die def rolling"
+              style={{ animationDelay: `${i * 70}ms` }}
+            >
+              {d}
+            </span>
           ))}
         </div>
       </div>

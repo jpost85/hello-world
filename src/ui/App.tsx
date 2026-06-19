@@ -24,16 +24,31 @@ function resolveSeats(avail: Faction[], picks: Record<number, string>, count: nu
 }
 import { useGame } from "./useGame.ts";
 import { hasSavedGame } from "./persistence.ts";
+import { isMuted, setMuted } from "./sound.ts";
 import { MapView } from "./components/MapView.tsx";
 import { ControlPanel } from "./components/ControlPanel.tsx";
+import { HowToPlay } from "./components/HowToPlay.tsx";
 import { Flag } from "./components/Flag.tsx";
 
 export function App() {
   const g = useGame();
   const [panelOpen, setPanelOpen] = useState(true);
+  const [showRules, setShowRules] = useState(false);
+  const [muted, setMutedState] = useState(isMuted());
+
+  const toggleMute = () => {
+    const next = !muted;
+    setMuted(next);
+    setMutedState(next);
+  };
 
   if (!g.state) {
-    return <Setup onStart={g.start} onResume={g.resume} />;
+    return (
+      <>
+        <Setup onStart={g.start} onResume={g.resume} onHelp={() => setShowRules(true)} />
+        {showRules && <HowToPlay onClose={() => setShowRules(false)} />}
+      </>
+    );
   }
 
   const active = currentPlayer(g.state);
@@ -48,6 +63,10 @@ export function App() {
           title="Show or hide the controls"
         >
           {panelOpen ? "▾ Map" : "▴ Controls"}
+        </button>
+        <button title="How to play" onClick={() => setShowRules(true)}>? Help</button>
+        <button title={muted ? "Unmute sound" : "Mute sound"} onClick={toggleMute}>
+          {muted ? "🔇" : "🔊"}
         </button>
         <h1>DOMINION · BALANCE OF POWER</h1>
         {g.isAITurn && <span className="badge">🤖 {active.name} is planning…</span>}
@@ -81,6 +100,7 @@ export function App() {
         onClick={g.clickTerritory}
       />
       <ControlPanel {...g} />
+      {showRules && <HowToPlay onClose={() => setShowRules(false)} />}
     </div>
   );
 }
@@ -88,6 +108,7 @@ export function App() {
 function Setup({
   onStart,
   onResume,
+  onHelp,
 }: {
   onStart: (
     map: GameMap,
@@ -97,6 +118,7 @@ function Setup({
     startPositions?: Record<string, string>,
   ) => void;
   onResume: () => boolean;
+  onHelp: () => void;
 }) {
   const [count, setCount] = useState(3);
   const [mapId, setMapId] = useState(DEFAULT_MAP_ID);
@@ -211,6 +233,9 @@ function Setup({
         </button>
         <button disabled={loadingMap} onClick={() => begin(12345)}>
           New game (fixed seed)
+        </button>
+        <button disabled={loadingMap} onClick={onHelp}>
+          ? How to play
         </button>
       </div>
     </div>

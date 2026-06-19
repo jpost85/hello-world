@@ -16,6 +16,7 @@ import {
   connectedByOwnership,
 } from "../engine/index.ts";
 import { loadGame, saveGame } from "./persistence.ts";
+import { playSound } from "./sound.ts";
 import type {
   AttackResult,
   AttackStyle,
@@ -32,6 +33,8 @@ export interface UseGame {
   to: string | null;
   error: string | null;
   lastResult: AttackResult | null;
+  /** Increments on every attack roll so the dice can replay their animation. */
+  rollNonce: number;
   attackStyle: AttackStyle;
   defenseStyle: DefenseStyle;
   fortifyCount: number;
@@ -75,6 +78,7 @@ export function useGame(): UseGame {
   const [to, setTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<AttackResult | null>(null);
+  const [rollNonce, setRollNonce] = useState(0);
   const [attackStyle, setAttackStyle] = useState<AttackStyle>("standard");
   const [defenseStyle, setDefenseStyle] = useState<DefenseStyle>("standard");
   const [fortifyCount, setFortifyCount] = useState(1);
@@ -228,7 +232,15 @@ export function useGame(): UseGame {
       const res = attack(state, { from, to, attackStyle, defenseStyle });
       setState(res.state);
       setLastResult(res.result);
+      setRollNonce((n) => n + 1);
       setError(null);
+      playSound("roll");
+      // A fanfare on capture; a thud only when the exchange clearly went badly.
+      if (res.result.captured) {
+        setTimeout(() => playSound("capture"), 220);
+      } else if (res.result.round.attackerLosses > res.result.round.defenderLosses) {
+        setTimeout(() => playSound("lose"), 220);
+      }
       // If the target was captured, anchor on it for follow-up moves.
       if (res.result.captured) {
         setFrom(to);
@@ -289,6 +301,7 @@ export function useGame(): UseGame {
     to,
     error,
     lastResult,
+    rollNonce,
     attackStyle,
     defenseStyle,
     fortifyCount,

@@ -310,6 +310,28 @@ select {
   font-weight: 700;
   font-size: 14px;
 }
+.die.rolling {
+  animation: die-land 0.42s cubic-bezier(0.22, 1.3, 0.4, 1) both;
+}
+@keyframes die-land {
+  0% {
+    transform: translateY(-10px) rotate(-120deg) scale(0.4);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(2px) rotate(8deg) scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) rotate(0) scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .die.rolling {
+    animation: none;
+  }
+}
 .die.atk {
   background: #d64550;
   color: #fff;
@@ -373,6 +395,66 @@ select {
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+  animation: fade-in 0.15s ease both;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: min(620px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.modal-body {
+  overflow-y: auto;
+  padding: 6px 22px 20px;
+}
+.modal-body h3 {
+  color: var(--accent);
+  font-size: 14px;
+  margin: 18px 0 4px;
+}
+.modal-body p,
+.modal-body li {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.modal-body ul {
+  margin: 4px 0;
+  padding-left: 20px;
 }
 
 .setup {
