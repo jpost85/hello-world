@@ -279,6 +279,15 @@
   .person.role-home    { background:#56c271; }
   .person.role-hotel   { background:#d9b36b; }
   .person.role-visitor { background:#b4bfca; }
+  /* Mood pips: a brief frustration "!" (gave up on a slow elevator) or a happy
+     heart (just enjoyed a venue), floating over the sim's head for a moment. */
+  .person.upset::after, .person.happy::after {
+    content:""; position:absolute; left:50%; top:-11px; transform:translateX(-50%);
+    pointer-events:none; z-index:3; text-align:center; white-space:nowrap;
+  }
+  .person.upset::after { content:"!"; font:700 6px/9px system-ui; color:#fff;
+    width:9px; height:9px; border-radius:50%; background:#e0463a; box-shadow:0 0 3px rgba(224,70,58,.85); }
+  .person.happy::after { content:"\2665"; font-size:9px; line-height:1; color:#ff5a7a; }
   @keyframes bob { from{ transform:translateY(0);} to{ transform:translateY(-1.5px);} }
 
   #ghost {
@@ -1863,12 +1872,17 @@ function collectRent() {
     total += Math.round((TYPES[u.type].rent || 0) * u.occupants);
   });
   // shops and admission venues (rooftop bar) earn from foot traffic, scaled by draw
+  // AND by how many sims actually visited this period — a well-placed, busy venue
+  // earns a premium, an ignored one (poor placement, no transit nearby) earns less.
   state.units.filter(u => TYPES[u.type].draw).forEach(u => {
     const draw = TYPES[u.type].draw || 1;
-    const nearbyPop = state.pop; // simplified: whole tower foot traffic
-    const earn = Math.min(8000 * draw, Math.round((nearbyPop * 120 + Math.random() * 1000) * draw));
+    const visits = u.footfall || 0;
+    const factor = 0.55 + Math.min(1, visits / 8) * 0.85;   // ~0.55 (dead) .. 1.4 (bustling)
+    const nearbyPop = state.pop; // tower-wide demand
+    const earn = Math.min(8000 * draw, Math.round((nearbyPop * 120 + Math.random() * 1000) * draw * factor));
     total += earn;
     u.occupants = Math.min(99, Math.round(earn / 100));
+    u.footfall = Math.round(visits * 0.25);   // decay; a busy day carries a little into the next
   });
   if (total !== 0) {
     state.cash += total;
@@ -2069,18 +2083,42 @@ function isTripDestination(u) {
 function reachableSegment(f, col) {
   return f === 0 ? floorExtent(f) : floorSegment(f, Math.round(col));
 }
-// A column to head for: the center of a random real room on floor f reachable
-// from the transit column `col`, or null if that floor offers no real room.
-function pickRoomCol(f, col) {
+// A destination on floor f reachable from the transit column `col`: a random real
+// room (optionally restricted to rooms matching `filter`), returned as { col, id }
+// — the room's center column and unit id — or null if none.
+function pickRoomCol(f, col, filter) {
   const seg = reachableSegment(f, col);
   if (!seg) return null;
-  const cols = [];
+  const hits = [];
   for (const u of state.units) {
     if (u.row !== f || !isTripDestination(u)) continue;
+    if (filter && !filter(u)) continue;
     if (u.col + u.w - 1 < seg.min || u.col > seg.max) continue;   // off the reachable run
-    cols.push(Math.max(seg.min, Math.min(seg.max, u.col + (u.w - 1) / 2)));
+    hits.push({ col: Math.max(seg.min, Math.min(seg.max, u.col + (u.w - 1) / 2)), id: u.id });
   }
-  return cols.length ? cols[Math.floor(Math.random() * cols.length)] : null;
+  return hits.length ? hits[Math.floor(Math.random() * hits.length)] : null;
+}
+
+// What a sim wants to do right now, by role and time of day — drives a purposeful
+// trip instead of a random floor-hop. Returns { filter, purpose } or null (roam).
+function chooseGoal(p) {
+  const h = state.minutes / 60, r = Math.random();
+  const leisure = u => { const k = TYPES[u.type].kind; return k === "shop" || k === "outdoor" || k === "amenity"; };
+  const homeRoom = u => TYPES[u.type].kind === "home";
+  if (p.role === "work") {
+    if (h >= 11.5 && h < 13.5) return { filter: leisure, purpose: "errand" };   // lunch out
+    if (h >= 17) return { filter: null, purpose: "leave" };                      // clock out, head home
+    if (r < 0.45) return { filter: leisure, purpose: "errand" };
+  } else if (p.role === "home") {
+    if (h >= 7 && h < 9.5) return { filter: null, purpose: "leave" };            // off to work
+    if (h >= 17) return r < 0.5 ? { filter: leisure, purpose: "errand" } : { filter: homeRoom, purpose: "home" };
+    if (r < 0.5) return { filter: leisure, purpose: "errand" };
+  } else if (p.role === "hotel") {
+    if (h >= 17 || (h >= 7 && h < 10)) return { filter: leisure, purpose: "errand" };
+  } else { // visitor
+    if (r < 0.7) return { filter: leisure, purpose: "errand" };
+  }
+  return null;
 }
 
 function spawnPerson() {
@@ -2114,7 +2152,8 @@ function spawnPerson() {
   world.appendChild(el);
   state.people.push({ el, col: startCol, row: u.row, life: 200 + Math.random()*200,
     mode: "walk", goCol: null, targetRow: null, transitCol: 0, y: u.row, shaft: null,
-    destCol: null, baseColor: ROLE_COLOR[role], patience: 0, patience0: 1 });
+    destCol: null, destUnit: null, role, purpose: "idle", dwell: 0, bubble: 0,
+    baseColor: ROLE_COLOR[role], patience: 0, patience0: 1 });
 }
 
 // Time-of-day traffic: morning rush goes up, evening rush goes down, lunch is busy.
@@ -2136,19 +2175,34 @@ function maybeCommute(p) {
   const reachable = c => c >= seg.min && c <= seg.max;
   const candidates = [];
   // Local runs (stairs / local elevators): board on any floor, alight on any floor.
+  // What this sim is after (lunch out, head home, return home...) — biases the
+  // destination toward a matching room, but falls back to any room if none fits.
+  const goal = chooseGoal(p);
+  const wantLeave = goal && goal.purpose === "leave";
+  const filter = goal && goal.filter ? goal.filter : null;
+  // Each boardable run contributes its reachable destination floors; floors that
+  // match the goal are preferred, otherwise any floor with a real room.
+  const addRun = (col, express, floors) => {
+    const pref = [], any = [];
+    for (const f of floors) {
+      if (f === p.row) continue;
+      if (wantLeave) { if (f === 0 && floorExtent(0)) pref.push(f); continue; }
+      if (!pickRoomCol(f, col)) continue;                  // some real room reachable
+      any.push(f);
+      if (filter && pickRoomCol(f, col, filter)) pref.push(f);
+    }
+    const dests = pref.length ? pref : any;
+    if (dests.length) candidates.push({ col, dests, express });
+  };
   for (const r of state.transitRuns) {
     if (r.lo <= p.row && p.row <= r.hi && reachable(r.col)) {
-      const dests = [];
-      for (let f = r.lo; f <= r.hi; f++) if (f !== p.row && pickRoomCol(f, r.col) !== null) dests.push(f);
-      if (dests.length) candidates.push({ col: r.col, dests, express: false });
+      const floors = []; for (let f = r.lo; f <= r.hi; f++) floors.push(f);
+      addRun(r.col, false, floors);
     }
   }
   // Express runs: only usable when standing on one of its stop floors, to another stop.
   for (const r of state.expressRuns) {
-    if (r.stops.includes(p.row) && reachable(r.col)) {
-      const dests = r.stops.filter(f => f !== p.row && pickRoomCol(f, r.col) !== null);
-      if (dests.length) candidates.push({ col: r.col, dests, express: true });
-    }
+    if (r.stops.includes(p.row) && reachable(r.col)) addRun(r.col, true, r.stops);
   }
   if (!candidates.length) return;
   // Prefer the express when available (it's faster).
@@ -2162,9 +2216,13 @@ function maybeCommute(p) {
   else if (phase.dir < 0) { const dn = cand.dests.filter(f => f < p.row); if (dn.length && Math.random() < 0.8) pool = dn; }
   const target = pool[Math.floor(Math.random() * pool.length)];
   const lo = Math.min(p.row, target), hi = Math.max(p.row, target);
+  // Walk to a matching room if the goal can be met on this floor, else any room.
+  const m = (filter && pickRoomCol(target, cand.col, filter)) || pickRoomCol(target, cand.col);
   p.targetRow = target;
   p.goCol = cand.col;
-  p.destCol = pickRoomCol(target, cand.col);   // the room to walk into after arriving
+  p.destCol = m ? m.col : null;       // the room to walk into after arriving
+  p.destUnit = m ? m.id : null;       // which unit (for foot-traffic / dwelling)
+  p.purpose = goal ? goal.purpose : "visit";
   p.shaft = state.shafts.find(s => s.col === cand.col && s.lo <= lo && s.hi >= hi && !!s.express === cand.express) || null;
   p.mode = "approach";
 }
@@ -2173,6 +2231,7 @@ function movepeople() {
   for (let i = state.people.length - 1; i >= 0; i--) {
     const p = state.people[i];
     p.life--;
+    if (p.bubble > 0 && --p.bubble === 0) p.el.classList.remove("upset", "happy"); // mood pip expires
 
     if (p.mode === "ride") continue; // hidden aboard a car; the elevator controls them
 
@@ -2180,6 +2239,7 @@ function movepeople() {
       if (--p.patience <= 0) { // gave up: wander off, and ding building service quality
         p.mode = "walk"; p.shaft = null; p.goCol = null;
         p.el.style.background = "";
+        p.el.classList.remove("happy"); p.el.classList.add("upset"); p.bubble = 14;  // shows their frustration
         state.frustration = Math.min(25, state.frustration + 1);
       } else {
         const stress = clamp01(1 - p.patience / p.patience0);
@@ -2216,10 +2276,18 @@ function movepeople() {
     if (p.mode === "toRoom") { // just left transit — walk to a real room, then resume strolling
       const seg = walkRange(p);
       if (!seg) { p.el.remove(); state.people.splice(i, 1); continue; }
-      const goal = (p.destCol == null) ? p.col : Math.max(seg.min, Math.min(seg.max, p.destCol));
-      const d = goal - p.col;
-      if (Math.abs(d) <= 0.6) { p.mode = "walk"; p.goCol = null; p.destCol = null; }
-      else p.col += Math.sign(d) * Math.min(1.3, Math.abs(d));
+      const goalCol = (p.destCol == null) ? p.col : Math.max(seg.min, Math.min(seg.max, p.destCol));
+      const d = goalCol - p.col;
+      if (Math.abs(d) <= 0.6) {                      // arrived at the destination room
+        if (p.purpose === "leave" && p.row === 0) {
+          p.life = Math.min(p.life, 16);             // they're leaving the building — exit soon
+        } else if (p.purpose === "errand" || p.purpose === "visit") {
+          p.dwell = 50 + Math.random() * 170;        // linger at the venue (~15-55s)
+          const du = p.destUnit && state.units.find(x => x.id === p.destUnit);
+          if (du && TYPES[du.type].draw) du.footfall = (du.footfall || 0) + 1;  // a paying visit
+        }
+        p.mode = "walk"; p.goCol = null; p.destCol = null; p.destUnit = null;
+      } else p.col += Math.sign(d) * Math.min(1.3, Math.abs(d));
       p.el.style.left = colLeft(p.col) + "px";
       p.el.style.top = (rowTop(p.row) + CELL_H - 12) + "px";
       continue;
@@ -2227,7 +2295,7 @@ function movepeople() {
 
     const ext = walkRange(p);
     if (!ext) { p.el.remove(); state.people.splice(i, 1); continue; }
-    if (p.mode === "walk" && p.life <= 0) { p.el.remove(); state.people.splice(i, 1); continue; }
+    if (p.mode === "walk" && p.life <= 0 && p.dwell <= 0) { p.el.remove(); state.people.splice(i, 1); continue; } // never despawn mid-visit
 
     if (p.mode === "approach") { // walking to the transit column
       const d = p.goCol - p.col;
@@ -2236,6 +2304,11 @@ function movepeople() {
         if (p.shaft) { p.mode = "wait"; p.patience = p.patience0 = 90 + Math.random() * 90; }
         else { p.mode = "climb"; p.y = p.row; p.el.classList.add("climbing"); }
       } else p.col += Math.sign(d) * Math.min(1.3, Math.abs(d));
+    } else if (p.dwell > 0) { // lingering at a venue — shuffle in place, then perk up and move on
+      p.dwell--;
+      p.col += (Math.random() - 0.5) * 0.6;
+      p.col = Math.max(ext.min, Math.min(ext.max, p.col));
+      if (p.dwell <= 0) { p.el.classList.remove("upset"); p.el.classList.add("happy"); p.bubble = 12; p.life = Math.max(p.life, 18); } // perk up, then stroll on
     } else { // walk: wander, occasionally decide to commute (more often at rush hour)
       p.col += (Math.random() - 0.5) * 2.6;
       p.col = Math.max(ext.min, Math.min(ext.max, p.col));
