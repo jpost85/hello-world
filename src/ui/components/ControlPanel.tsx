@@ -2,10 +2,27 @@ import {
   currentPlayer,
   regionBonus,
   territoriesOf,
+  setValue,
+  isValidSet,
+  FORCED_TRADE_AT,
 } from "../../engine/index.ts";
-import type { AttackStyle, DefenseStyle } from "../../engine/index.ts";
+import type { AttackStyle, CardSymbol, DefenseStyle } from "../../engine/index.ts";
 import type { UseGame } from "../useGame.ts";
 import { Flag } from "./Flag.tsx";
+
+const CARD_GLYPH: Record<CardSymbol, string> = {
+  infantry: "🪖",
+  cavalry: "🐎",
+  artillery: "💣",
+  wild: "⭐",
+};
+
+const CARD_LABEL: Record<CardSymbol, string> = {
+  infantry: "Infantry",
+  cavalry: "Cavalry",
+  artillery: "Artillery",
+  wild: "Wild",
+};
 
 const ATTACK_STYLES: { value: AttackStyle; label: string }[] = [
   { value: "standard", label: "Standard — up to 3 dice, ties to defender" },
@@ -111,6 +128,9 @@ function PhaseControls({ g }: { g: UseGame }) {
     id ? state.map.territories.find((t) => t.id === id)!.name : "—";
 
   if (state.phase === "reinforce") {
+    const hand = currentPlayer(state).cards;
+    const mustTrade = hand.length >= FORCED_TRADE_AT;
+    const blocked = state.reinforcementsRemaining > 0 || mustTrade;
     return (
       <section>
         <h2>Reinforce</h2>
@@ -118,14 +138,13 @@ function PhaseControls({ g }: { g: UseGame }) {
           Armies to place: <b>{state.reinforcementsRemaining}</b>. Click any of your highlighted
           territories to drop one army.
         </p>
-        <button
-          className="primary"
-          onClick={g.nextPhase}
-          disabled={state.reinforcementsRemaining > 0}
-        >
+        <ConquestCards g={g} />
+        <button className="primary" onClick={g.nextPhase} disabled={blocked}>
           {state.reinforcementsRemaining > 0
             ? `Place ${state.reinforcementsRemaining} more`
-            : "Begin attacks →"}
+            : mustTrade
+              ? "Trade a set first"
+              : "Begin attacks →"}
         </button>
       </section>
     );
@@ -193,6 +212,66 @@ function PhaseControls({ g }: { g: UseGame }) {
         <button onClick={g.nextPhase}>End turn →</button>
       </div>
     </section>
+  );
+}
+
+function ConquestCards({ g }: { g: UseGame }) {
+  const state = g.state!;
+  const hand = currentPlayer(state).cards;
+  const reward = setValue(state.setsTradedIn);
+  const selected = g.selectedCards;
+  const picked = selected.map((i) => hand[i]).filter(Boolean);
+  const canTrade = selected.length === 3 && isValidSet(picked);
+  const mustTrade = hand.length >= FORCED_TRADE_AT;
+
+  const territoryName = (id: string | null) =>
+    id ? state.map.territories.find((t) => t.id === id)?.name ?? "" : "";
+
+  return (
+    <div className="cards">
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h3 style={{ margin: "8px 0 4px" }}>Conquest Cards ({hand.length})</h3>
+        <span className="badge">next set +{reward}</span>
+      </div>
+      {hand.length === 0 ? (
+        <p className="hint">
+          Win at least one territory this turn to earn a card. Collect a matching set of three to
+          cash in for armies.
+        </p>
+      ) : (
+        <>
+          <div className="card-hand">
+            {hand.map((card, i) => {
+              const on = selected.includes(i);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  className={`conquest-card${on ? " selected" : ""}`}
+                  onClick={() => g.toggleCard(i)}
+                  disabled={g.isAITurn}
+                  title={territoryName(card.territoryId)}
+                >
+                  <span className="card-glyph">{CARD_GLYPH[card.symbol]}</span>
+                  <span className="card-name">{CARD_LABEL[card.symbol]}</span>
+                  <span className="card-terr">{territoryName(card.territoryId) || "—"}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="row" style={{ marginTop: 6 }}>
+            <button onClick={g.tradeSelected} disabled={g.isAITurn || !canTrade}>
+              Trade set (+{reward})
+            </button>
+            <span className="hint">
+              {mustTrade
+                ? "You hold 5+ cards — you must trade a set this turn."
+                : "Pick 3 alike, 3 different, or any with a ⭐ wild."}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

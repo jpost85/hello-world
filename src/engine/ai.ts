@@ -19,8 +19,10 @@ import {
   endAttack,
   endReinforcement,
   endTurn,
+  findValidSet,
   fortify,
   placeReinforcements,
+  tradeInCards,
 } from "./game.ts";
 import { connectedByOwnership, getTerritory, territoriesOf } from "./map.ts";
 import type { AttackStyle, GameState } from "./types.ts";
@@ -35,6 +37,7 @@ export function playAITurn(state: GameState): GameState {
   const me = currentPlayer(s).id;
 
   if (s.phase === "reinforce") {
+    s = aiTradeCards(s);
     s = aiReinforce(s, me);
     s = endReinforcement(s);
   }
@@ -45,6 +48,16 @@ export function playAITurn(state: GameState): GameState {
   if (s.phase === "fortify") {
     s = aiFortify(s, me);
     if (s.phase === "fortify") s = endTurn(s);
+  }
+  return s;
+}
+
+/** Trade in every available card set for reinforcements (keeps the AI aggressive). */
+function aiTradeCards(s: GameState): GameState {
+  for (let guard = 0; guard < 12; guard++) {
+    const set = findValidSet(currentPlayer(s).cards);
+    if (!set) break;
+    s = tradeInCards(s, set);
   }
   return s;
 }

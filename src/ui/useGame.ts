@@ -11,6 +11,7 @@ import {
   moveGeneral,
   placeReinforcements,
   playAITurn,
+  tradeInCards,
   areAdjacent,
   connectedByOwnership,
 } from "../engine/index.ts";
@@ -35,12 +36,18 @@ export interface UseGame {
   defenseStyle: DefenseStyle;
   fortifyCount: number;
   selectedGeneralId: string | null;
+  /** Indices into the current player's hand currently picked for a trade-in. */
+  selectedCards: number[];
   /** True while a computer player is taking its turn (UI should lock input). */
   isAITurn: boolean;
   setAttackStyle: (s: AttackStyle) => void;
   setDefenseStyle: (s: DefenseStyle) => void;
   setFortifyCount: (n: number) => void;
   setSelectedGeneralId: (id: string | null) => void;
+  /** Toggle a card in/out of the current trade-in selection (caps at 3). */
+  toggleCard: (index: number) => void;
+  /** Trade the three selected cards for reinforcements. */
+  tradeSelected: () => void;
   start: (
     map: GameMap,
     players: PlayerConfig[],
@@ -72,6 +79,7 @@ export function useGame(): UseGame {
   const [defenseStyle, setDefenseStyle] = useState<DefenseStyle>("standard");
   const [fortifyCount, setFortifyCount] = useState(1);
   const [selectedGeneralId, setSelectedGeneralId] = useState<string | null>(null);
+  const [selectedCards, setSelectedCards] = useState<number[]>([]);
 
   const run = useCallback((fn: () => GameState) => {
     try {
@@ -131,6 +139,12 @@ export function useGame(): UseGame {
   useEffect(() => {
     if (state) saveGame(state);
   }, [state]);
+
+  // Card-hand indices are per-player; drop any stale selection when the active
+  // seat or turn changes so we never trade the wrong cards.
+  useEffect(() => {
+    setSelectedCards([]);
+  }, [state?.turn, state?.currentPlayerIndex]);
 
   // Let computer players take their turns automatically, paced for visibility.
   useEffect(() => {
@@ -243,6 +257,22 @@ export function useGame(): UseGame {
     run(() => moveGeneral(state, selectedGeneralId, from));
   }, [state, from, selectedGeneralId, run]);
 
+  const toggleCard = useCallback((index: number) => {
+    setSelectedCards((prev) =>
+      prev.includes(index)
+        ? prev.filter((i) => i !== index)
+        : prev.length >= 3
+          ? prev
+          : [...prev, index],
+    );
+  }, []);
+
+  const tradeSelected = useCallback(() => {
+    if (!state || selectedCards.length !== 3) return;
+    run(() => tradeInCards(state, selectedCards));
+    setSelectedCards([]);
+  }, [state, selectedCards, run]);
+
   const nextPhase = useCallback(() => {
     if (!state) return;
     setFrom(null);
@@ -268,6 +298,9 @@ export function useGame(): UseGame {
     setDefenseStyle,
     setFortifyCount,
     setSelectedGeneralId,
+    selectedCards,
+    toggleCard,
+    tradeSelected,
     start,
     resume,
     quit,

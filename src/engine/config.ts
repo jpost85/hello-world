@@ -20,6 +20,12 @@ export const CONFIG = {
     territoriesPerArmy: 3,
   },
 
+  /**
+   * If nobody has achieved world domination by this many rounds, the player
+   * holding the most territories wins. A safety cap against endless games.
+   */
+  maxTurns: 250,
+
   generals: {
     /** Bonus a general adds to its side's highest die while stationed. */
     combatBonus: 1,

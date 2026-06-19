@@ -21,6 +21,7 @@ import { nextFloat, seedRng } from "./rng.ts";
 import type {
   AttackResult,
   AttackStyle,
+  Card,
   DefenseStyle,
   Faction,
   GameEvent,
@@ -39,6 +40,37 @@ export const FORTRESS_BUILD_COST = CONFIG.fortress.buildCost;
 
 /** Combat bonus each starting general provides. */
 export const DEFAULT_GENERAL_BONUS = CONFIG.generals.combatBonus;
+
+// ---------------------------------------------------------------------------
+// Conquest cards
+// ---------------------------------------------------------------------------
+
+const CARD_SYMBOLS = ["infantry", "cavalry", "artillery"] as const;
+/** Escalating reinforcement value of the nth set traded in (classic Risk scale). */
+export function setValue(setsTradedIn: number): number {
+  const scale = [4, 6, 8, 10, 12, 15];
+  return setsTradedIn < scale.length ? scale[setsTradedIn] : 15 + 5 * (setsTradedIn - scale.length + 1);
+}
+
+/** A hand of 5+ cards must be traded down before attacking. */
+export const FORCED_TRADE_AT = 5;
+
+/** Whether three cards form a valid set (3 alike, one of each, or any with a wild). */
+export function isValidSet(cards: Card[]): boolean {
+  if (cards.length !== 3) return false;
+  if (cards.some((c) => c.symbol === "wild")) return true;
+  const symbols = new Set(cards.map((c) => c.symbol));
+  return symbols.size === 1 || symbols.size === 3;
+}
+
+/** Indices of the first valid 3-card set in a hand, or null. */
+export function findValidSet(cards: Card[]): [number, number, number] | null {
+  for (let i = 0; i < cards.length; i++)
+    for (let j = i + 1; j < cards.length; j++)
+      for (let k = j + 1; k < cards.length; k++)
+        if (isValidSet([cards[i], cards[j], cards[k]])) return [i, j, k];
+  return null;
+}
 
 export interface PlayerConfig {
   name: string;
@@ -76,6 +108,7 @@ export function createGame(config: GameConfig): GameState {
     factionId: p.factionId,
     isAI: p.isAI ?? false,
     isEliminated: false,
+    cards: [],
   }));
 
   let rngState = seedRng(config.seed ?? 0x1a2b3c4d);
@@ -137,6 +170,14 @@ export function createGame(config: GameConfig): GameState {
     };
   });
 
+  // Build the conquest-card deck: one card per territory (symbols cycled) + 2 wilds.
+  const deck: Card[] = map.territories.map((t, i) => ({
+    territoryId: t.id,
+    symbol: CARD_SYMBOLS[i % CARD_SYMBOLS.length],
+  }));
+  deck.push({ territoryId: null, symbol: "wild" }, { territoryId: null, symbol: "wild" });
+  rngState = shuffleInPlace(deck, rngState);
+
   const state: GameState = {
     map,
     factions,
@@ -148,6 +189,8 @@ export function createGame(config: GameConfig): GameState {
     phase: "reinforce",
     reinforcementsRemaining: 0,
     conqueredThisTurn: false,
+    deck,
+    setsTradedIn: 0,
     rngState,
     events: [],
     winnerId: null,
@@ -361,16 +404,72 @@ export function fortify(
 /** End the current player's turn and hand off to the next active player. */
 export function endTurn(state: GameState): GameState {
   if (state.phase === "gameover") return state;
-  const count = state.players.length;
-  let idx = state.currentPlayerIndex;
-  let turn = state.turn;
+  let s = state;
+
+  // Award one conquest card if the player captured a territory this turn.
+  const cur = currentPlayer(s);
+  if (s.conqueredThisTurn && s.deck.length > 0) {
+    const card = s.deck[s.deck.length - 1];
+    s = {
+      ...s,
+      deck: s.deck.slice(0, -1),
+      players: s.players.map((p) =>
+        p.id === cur.id ? { ...p, cards: [...p.cards, card] } : p,
+      ),
+      events: log(s, `${cur.name} drew a conquest card`),
+    };
+  }
+
+  const count = s.players.length;
+  let idx = s.currentPlayerIndex;
+  let turn = s.turn;
   do {
     idx = (idx + 1) % count;
     if (idx === 0) turn++;
-  } while (state.players[idx].isEliminated);
+  } while (s.players[idx].isEliminated);
 
-  const advanced: GameState = { ...state, currentPlayerIndex: idx, turn };
-  return startReinforcement(advanced);
+  // Turn-limit victory: if no one has conquered the world by the cap, the player
+  // holding the most territories wins (prevents endless games / AI stalemates).
+  if (turn > CONFIG.maxTurns) {
+    const alive = s.players.filter((p) => !p.isEliminated);
+    const leader = alive.reduce((a, b) =>
+      territoriesOf(s, a.id).length >= territoriesOf(s, b.id).length ? a : b,
+    );
+    return {
+      ...s,
+      currentPlayerIndex: idx,
+      turn,
+      phase: "gameover",
+      winnerId: leader.id,
+      events: log(s, `Turn limit reached — ${leader.name} holds the most territory and wins`),
+    };
+  }
+
+  return startReinforcement({ ...s, currentPlayerIndex: idx, turn });
+}
+
+/** Trade in a set of three cards (by hand index) for escalating reinforcements. */
+export function tradeInCards(state: GameState, indices: number[]): GameState {
+  requirePhase(state, "reinforce");
+  const player = currentPlayer(state);
+  if (indices.length !== 3 || new Set(indices).size !== 3) {
+    throw new Error("Select exactly three distinct cards");
+  }
+  const cards = indices.map((i) => player.cards[i]);
+  if (cards.some((c) => !c)) throw new Error("Invalid card selection");
+  if (!isValidSet(cards)) throw new Error("Those cards are not a valid set");
+
+  const value = setValue(state.setsTradedIn);
+  const remaining = player.cards.filter((_, i) => !indices.includes(i));
+  let next: GameState = {
+    ...state,
+    players: state.players.map((p) => (p.id === player.id ? { ...p, cards: remaining } : p)),
+    deck: [...cards.map((c) => ({ ...c })), ...state.deck], // return to the bottom
+    setsTradedIn: state.setsTradedIn + 1,
+    reinforcementsRemaining: state.reinforcementsRemaining + value,
+  };
+  next = { ...next, events: log(next, `${player.name} traded a set of cards for ${value} armies`) };
+  return next;
 }
 
 // ---------------------------------------------------------------------------
@@ -456,14 +555,19 @@ function generalBonusAt(state: GameState, territoryId: string, ownerId: string):
 
 function checkElimination(state: GameState, formerOwnerId: string): GameState {
   if (territoriesOf(state, formerOwnerId).length > 0) return state;
-  const players = state.players.map((p) =>
-    p.id === formerOwnerId ? { ...p, isEliminated: true } : p,
-  );
+  const eliminated = state.players.find((p) => p.id === formerOwnerId);
+  const captorId = currentPlayer(state).id; // the attacker takes the spoils
+  const spoils = eliminated?.cards ?? [];
+  // Eliminate the player; the captor seizes their conquest cards.
+  const players = state.players.map((p) => {
+    if (p.id === formerOwnerId) return { ...p, isEliminated: true, cards: [] };
+    if (p.id === captorId && spoils.length) return { ...p, cards: [...p.cards, ...spoils] };
+    return p;
+  });
   // A general whose owner is eliminated leaves the board.
   const generals = state.generals.map((g) =>
     g.ownerId === formerOwnerId ? { ...g, territoryId: null } : g,
   );
-  const eliminated = state.players.find((p) => p.id === formerOwnerId);
   return {
     ...state,
     players,

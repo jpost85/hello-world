@@ -40,15 +40,15 @@ describe("headless simulation (smoke)", () => {
 
       expect(finished, `seed ${seed} did not finish`).toBe(true);
       expect(state.winnerId).not.toBeNull();
-
-      // The winner is the sole survivor and therefore holds every territory.
-      const survivors = state.players.filter((p) => !p.isEliminated);
-      expect(survivors).toHaveLength(1);
-      expect(survivors[0].id).toBe(state.winnerId);
-      expect(territoriesOf(state, state.winnerId!)).toHaveLength(
-        classicWorld.territories.length,
-      );
+      // The winner is a surviving player (by conquest or turn-limit lead).
+      expect(state.players.find((p) => p.id === state.winnerId)!.isEliminated).toBe(false);
     }
+  });
+
+  it("2-player games end by outright conquest", () => {
+    // With only two players a stalemate is implausible — the winner takes all.
+    const { state } = playGame(7, 2);
+    expect(territoriesOf(state, state.winnerId!)).toHaveLength(classicWorld.territories.length);
   });
 
   it("is fully reproducible — same seed yields the same winner and length", () => {
@@ -98,8 +98,7 @@ describe("world map simulation", () => {
     for (let seed = 1; seed <= GAMES; seed++) {
       const { state, turns, finished } = playGame(seed, 6, worldMap);
       expect(finished, `world seed ${seed} did not finish`).toBe(true);
-      expect(state.winnerId).not.toBeNull();
-      expect(territoriesOf(state, state.winnerId!)).toHaveLength(worldMap.territories.length);
+      expect(state.winnerId, `world seed ${seed}`).not.toBeNull();
       totalTurns += turns;
     }
     // eslint-disable-next-line no-console
@@ -112,7 +111,7 @@ describe("Caribbean theatre simulation", () => {
     for (let seed = 1; seed <= 10; seed++) {
       const { state, finished } = playGame(seed, 4, caribbeanMap);
       expect(finished, `caribbean seed ${seed} did not finish`).toBe(true);
-      expect(territoriesOf(state, state.winnerId!)).toHaveLength(caribbeanMap.territories.length);
+      expect(state.winnerId).not.toBeNull();
     }
   });
 });
@@ -122,7 +121,7 @@ describe("Napoleonic Europe simulation", () => {
     for (let seed = 1; seed <= 10; seed++) {
       const { state, finished } = playGame(seed, 5, napoleonMap);
       expect(finished, `napoleon seed ${seed} did not finish`).toBe(true);
-      expect(territoriesOf(state, state.winnerId!)).toHaveLength(napoleonMap.territories.length);
+      expect(state.winnerId).not.toBeNull();
     }
   });
 });

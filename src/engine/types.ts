@@ -79,6 +79,20 @@ export interface Player {
   factionId: string;
   isAI: boolean;
   isEliminated: boolean;
+  /** Conquest cards held in hand. */
+  cards: Card[];
+}
+
+// ---------------------------------------------------------------------------
+// Conquest cards (set trade-ins for escalating reinforcements)
+// ---------------------------------------------------------------------------
+
+export type CardSymbol = "infantry" | "cavalry" | "artillery" | "wild";
+
+export interface Card {
+  /** Territory depicted (null for wild cards). */
+  territoryId: string | null;
+  symbol: CardSymbol;
 }
 
 // ---------------------------------------------------------------------------
@@ -156,6 +170,10 @@ export interface GameState {
   reinforcementsRemaining: number;
   /** True once the current player has captured >=1 territory this turn. */
   conqueredThisTurn: boolean;
+  /** Conquest-card draw pile. */
+  deck: Card[];
+  /** Number of card sets traded in across the game (drives the escalating value). */
+  setsTradedIn: number;
   /** Deterministic RNG state, advanced on every die roll. */
   rngState: number;
   events: GameEvent[];
