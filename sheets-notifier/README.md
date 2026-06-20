@@ -80,6 +80,14 @@ This is a Node.js **server**, so it needs a host that can run a process
 step-by-step options: a managed Node host (Render/Railway) with a custom
 domain, Docker on a VPS, or cPanel/Passenger shared hosting.
 
+### Want it free, with no server at all?
+
+If you don't want to pay for or maintain hosting, use the **Google Apps
+Script** edition in **[`apps-script/`](./apps-script/)**. It runs inside the
+sheet on Google's servers (free), fires in real time, needs no host or
+domain, and can even text you for free via a carrier email-to-SMS gateway.
+Trade-off: it's set up per sheet and has no central dashboard.
+
 ## Notes
 
 - Polling granularity is set by `POLL_INTERVAL_SECONDS` (default 30s, min 5s).
