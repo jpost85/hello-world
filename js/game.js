@@ -13,6 +13,7 @@
     squad: {},                               // slotKey -> player object
     slotIndex: 0,                            // which draft slot we're on
     round: 0,                               // current gauntlet round
+    bracket: null,                          // this run's drawn opponents
     history: [],                           // per-match results for sharing
   };
 
@@ -73,6 +74,47 @@
     return Math.max(0.8, Math.min(1, c / REF_CEILING));
   }
 
+  // ---------------------------------------------------------------- bracket draw
+  // Each run draws a fresh cup: an easier "group stage" then a "knockout"
+  // stage of all-time greats. Group teams are ordered easiest-first for a
+  // clean ramp; knockout teams are shuffled but the strongest drawn side is
+  // saved for the final, so every run climaxes against a true heavyweight.
+  function oppStrength(o) { return o.att + o.mid + o.def; }
+
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function drawN(pool, n) {
+    return shuffle(pool).slice(0, Math.min(n, pool.length));
+  }
+
+  function buildBracket() {
+    var groupPool = window.OPPONENTS.filter(function (o) { return o.tier === "group"; });
+    var koPool = window.OPPONENTS.filter(function (o) { return o.tier === "knockout"; });
+
+    var group = drawN(groupPool, window.GAUNTLET.group)
+      .sort(function (a, b) { return oppStrength(a) - oppStrength(b); });
+
+    var ko = drawN(koPool, window.GAUNTLET.knockout);
+    // Pull the strongest drawn side out and make it the final.
+    var maxIdx = 0;
+    ko.forEach(function (o, i) { if (oppStrength(o) > oppStrength(ko[maxIdx])) maxIdx = i; });
+    var finalBoss = ko.splice(maxIdx, 1)[0];
+    ko.push(finalBoss);
+
+    return group.concat(ko);
+  }
+
+  function stageOf(round) {
+    return round < window.GAUNTLET.group ? "Group Stage" : "Knockout";
+  }
+
   // ---------------------------------------------------------------- start
   function renderStart() {
     state.mode = { type: "all-time", value: null };
@@ -80,6 +122,7 @@
     state.squad = {};
     state.slotIndex = 0;
     state.round = 0;
+    state.bracket = null;
     state.history = [];
 
     app.innerHTML = "";
@@ -297,15 +340,18 @@
 
   // ---------------------------------------------------------------- sharing
   function resultSquares() {
-    return window.OPPONENTS.map(function (o, i) {
-      if (i < state.history.length) return state.history[i].result === "win" ? "🟩" : "🟥";
-      return "⬜";
-    }).join("");
+    var total = state.bracket ? state.bracket.length : state.history.length;
+    var sq = [];
+    for (var i = 0; i < total; i++) {
+      if (i < state.history.length) sq.push(state.history[i].result === "win" ? "🟩" : "🟥");
+      else sq.push("⬜");
+    }
+    return sq.join("");
   }
 
   function buildShareText() {
     var beaten = state.history.filter(function (h) { return h.result === "win"; }).length;
-    var total = window.OPPONENTS.length;
+    var total = state.bracket ? state.bracket.length : state.history.length;
     var champion = beaten === total;
     var lines = [
       "🏆 All-Time World Cup Simulator",
@@ -381,7 +427,12 @@
     document.getElementById("redraftBtn").onclick = function () {
       state.squad = {}; state.slotIndex = 0; renderDraft();
     };
-    document.getElementById("toGauntletBtn").onclick = renderGauntlet;
+    document.getElementById("toGauntletBtn").onclick = function () {
+      state.bracket = buildBracket();
+      state.round = 0;
+      state.history = [];
+      renderGauntlet();
+    };
   }
 
   function ratingBox(label, val) {
@@ -395,7 +446,9 @@
 
   // ---------------------------------------------------------------- gauntlet
   function renderGauntlet() {
-    var opp = window.OPPONENTS[state.round];
+    if (!state.bracket) state.bracket = buildBracket();
+    var opp = state.bracket[state.round];
+    var total = state.bracket.length;
     var me = window.Engine.rateSquad(state.squad, state.slots);
     var s = scaleForMode(state.mode);
     var oppRating = { att: opp.att * s, mid: opp.mid * s, def: opp.def * s };
@@ -409,7 +462,7 @@
     app.innerHTML = "";
     app.appendChild(el(
       '<section class="screen gauntlet">' +
-        '<div class="round-pill">Round ' + (state.round + 1) + " / " + window.OPPONENTS.length + "</div>" +
+        '<div class="round-pill">' + stageOf(state.round) + " · Match " + (state.round + 1) + " / " + total + "</div>" +
         scaleNote +
         '<div class="matchup">' +
           '<div class="side me">' +
@@ -434,9 +487,11 @@
   }
 
   function progressTrack() {
-    var dots = window.OPPONENTS.map(function (o, i) {
+    var dots = state.bracket.map(function (o, i) {
       var cls = i < state.round ? "track-dot beat" : (i === state.round ? "track-dot now" : "track-dot");
-      return '<span class="' + cls + '" title="' + o.name + " " + o.year + '">' + o.flag + "</span>";
+      // Visual divider between the group stage and the knockout rounds.
+      var sep = i === window.GAUNTLET.group ? '<span class="track-sep">▸</span>' : "";
+      return sep + '<span class="' + cls + '" title="' + o.name + " " + o.year + " (" + o.tag + ')">' + o.flag + "</span>";
     }).join("");
     return '<div class="track">' + dots + "</div>";
   }
@@ -470,10 +525,12 @@
 
     var nav = app.querySelector(".result-nav");
     if (res.result === "win") {
-      if (state.round >= window.OPPONENTS.length - 1) {
+      if (state.round >= state.bracket.length - 1) {
         nav.appendChild(buttonEl("🏆 Claim Your Crown", "primary big", renderWin));
       } else {
-        nav.appendChild(buttonEl("Next Opponent →", "primary big", function () {
+        var nextStage = stageOf(state.round + 1) !== stageOf(state.round)
+          ? "Into the Knockouts →" : "Next Opponent →";
+        nav.appendChild(buttonEl(nextStage, "primary big", function () {
           state.round++;
           renderGauntlet();
         }));
