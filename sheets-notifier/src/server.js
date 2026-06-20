@@ -14,9 +14,9 @@ app.get('/healthz', (req, res) => res.json({ ok: true }));
 
 const server = app.listen(config.port, () => {
   console.log(`Sheets Notifier running at http://localhost:${config.port}`);
-  if (!config.google.credentialsPath) {
+  if (!config.googleConfigured) {
     console.warn(
-      'WARNING: GOOGLE_APPLICATION_CREDENTIALS is not set — the app cannot read sheets until you configure it.'
+      'WARNING: No Google credentials set (GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_CREDENTIALS_JSON) — the app cannot read sheets until you configure it.'
     );
   }
   if (!config.smsEnabled && !config.emailEnabled) {

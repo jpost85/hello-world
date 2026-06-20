@@ -20,7 +20,7 @@ router.get('/status', (req, res) => {
       phones: recipients.phones.length,
       emails: recipients.emails.length,
     },
-    googleConfigured: Boolean(config.google.credentialsPath),
+    googleConfigured: config.googleConfigured,
   });
 });
 

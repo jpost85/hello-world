@@ -7,17 +7,26 @@ let drivePromise = null;
 
 function getDrive() {
   if (!drivePromise) {
-    if (!config.google.credentialsPath) {
+    if (!config.googleConfigured) {
       return Promise.reject(
         new Error(
-          'No Google credentials configured. Set GOOGLE_APPLICATION_CREDENTIALS to a service-account JSON key path.'
+          'No Google credentials configured. Set GOOGLE_APPLICATION_CREDENTIALS (file path) or GOOGLE_CREDENTIALS_JSON (raw JSON).'
         )
       );
     }
-    const auth = new google.auth.GoogleAuth({
-      keyFile: config.google.credentialsPath,
-      scopes: SCOPES,
-    });
+    const authOptions = { scopes: SCOPES };
+    if (config.google.credentialsJson) {
+      try {
+        authOptions.credentials = JSON.parse(config.google.credentialsJson);
+      } catch (err) {
+        return Promise.reject(
+          new Error(`GOOGLE_CREDENTIALS_JSON is not valid JSON: ${err.message}`)
+        );
+      }
+    } else {
+      authOptions.keyFile = config.google.credentialsPath;
+    }
+    const auth = new google.auth.GoogleAuth(authOptions);
     drivePromise = auth
       .getClient()
       .then((authClient) => google.drive({ version: 'v3', auth: authClient }));

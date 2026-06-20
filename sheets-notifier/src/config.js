@@ -15,7 +15,11 @@ const config = {
   pollIntervalSeconds: Math.max(5, int(process.env.POLL_INTERVAL_SECONDS, 30)),
 
   google: {
+    // Either a path to a service-account JSON key file...
     credentialsPath: process.env.GOOGLE_APPLICATION_CREDENTIALS || '',
+    // ...or the raw JSON contents (handy on hosts where you set env vars
+    // but can't upload files). If both are set, the JSON string wins.
+    credentialsJson: process.env.GOOGLE_CREDENTIALS_JSON || '',
   },
 
   twilio: {
@@ -45,6 +49,10 @@ config.smsEnabled = Boolean(
 );
 
 config.emailEnabled = Boolean(config.email.host && config.email.from);
+
+config.googleConfigured = Boolean(
+  config.google.credentialsPath || config.google.credentialsJson
+);
 
 // Default recipients used to seed the store on first run.
 config.defaultRecipients = {

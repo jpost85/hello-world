@@ -73,6 +73,13 @@ npm start
 
 Open <http://localhost:3000>, paste a sheet URL, and click **Watch**.
 
+## Deploying
+
+This is a Node.js **server**, so it needs a host that can run a process
+(not plain static file hosting). See **[DEPLOY.md](./DEPLOY.md)** for
+step-by-step options: a managed Node host (Render/Railway) with a custom
+domain, Docker on a VPS, or cPanel/Passenger shared hosting.
+
 ## Notes
 
 - Polling granularity is set by `POLL_INTERVAL_SECONDS` (default 30s, min 5s).
