@@ -11,8 +11,10 @@ No build step, no dependencies. Just open `index.html` in a browser.
 1. **Pick a squad style:**
    - **All-Time** — themed tiers (The Talisman, The Playmaker, The No. 9, …),
      each spanning every era, so you weigh Pelé against Messi.
-   - **By Decade** — field the greatest XI of a single decade (1960s–2010s).
-   - **By Nation** — build an all-time team from one of 8 powerhouse nations.
+   - **By Decade** — field the greatest XI of a single decade (1960s–2020s).
+   - **By Nation** — build an all-time team from one of 20 nations across six continents.
+   - **By Region** — an all-time XI from a whole confederation (South America,
+     Europe, Africa, North America, Asia).
 2. **Draft your 4-3-3** — one legend per position. Your XI is laid out on a
    visual pitch with line-by-line attack / midfield / defence ratings.
 3. **The gauntlet** — face 10 all-time great teams in escalating order, from the
@@ -21,17 +23,18 @@ No build step, no dependencies. Just open `index.html` in a browser.
    balanced XI but always leaves room for an upset. **Share** your result as an
    emoji scorecard from the win or defeat screen.
 
-> Decade and Nation modes are deliberately harder: a constrained XI can't
-> cherry-pick the best at every position the way an all-time XI can, while the
-> opponents stay fixed. The per-round win probability is always shown.
+> Constrained modes (Decade / Nation / Region) scale the gauntlet to the
+> *ceiling* of your chosen pool, so they're winnable rather than hopeless while
+> drafting well within a mode still matters. All-Time is left unscaled. The
+> per-round win probability is always shown.
 
 ## How it works
 
 | Concern        | Approach                                                                 |
 |----------------|--------------------------------------------------------------------------|
-| Player data    | Curated JSON-style dataset of ~160 legends (`js/players.js`). All-time greats are a finite, well-known set, so no flaky stats API is needed. |
-| Team building  | All-time "tier pick" slots in `js/slots.js`; decade/nation modes generate position-filtered pools in `js/modes.js`. |
-| Modes          | `js/modes.js` builds mode-aware, de-duplicated draft pools and only offers decades/nations that can actually field a full XI. |
+| Player data    | Curated JSON-style dataset of ~330 legends from 30+ countries (`js/players.js`). All-time greats are a finite, well-known set, so no flaky stats API is needed. |
+| Team building  | All-time "tier pick" slots in `js/slots.js`; decade/nation/region modes generate position-filtered pools in `js/modes.js`. |
+| Modes          | `js/modes.js` builds mode-aware, de-duplicated draft pools, derives each nation's confederation, and only offers a decade/nation/region that can actually field a full XI. |
 | Opponents      | Legendary national sides with line ratings in `js/opponents.js`.          |
 | Match engine   | Rated simulation in `js/engine.js`: line strengths → expected goals → a Poisson draw for the scoreline, so upsets are always possible. |
 | UI / flow      | Vanilla JS screens in `js/game.js` (incl. the visual pitch + share card), styled in `css/styles.css`. |

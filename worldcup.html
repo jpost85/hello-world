@@ -338,6 +338,7 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   letter-spacing: 1px;
   margin-bottom: 18px;
 }
+.scale-note { color: var(--muted); font-size: 0.78rem; margin: -8px 0 12px; }
 .matchup { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 6px 0 14px; }
 .side {
   flex: 1;
@@ -612,6 +613,216 @@ window.PLAYERS = [
   { id: "mbappe",       name: "Kylian Mbappé",     pos: "FWD", nation: "France",      flag: "🇫🇷", decade: "2020s", club: "Paris SG",        ovr: 91, pwr: 92 },
   { id: "lewandowski",  name: "Robert Lewandowski",pos: "FWD", nation: "Poland",      flag: "🇵🇱", decade: "2020s", club: "Bayern Munich",   ovr: 90, pwr: 91 },
   { id: "kane",         name: "Harry Kane",        pos: "FWD", nation: "England",     flag: "🏴",  decade: "2020s", club: "Bayern Munich",   ovr: 85, pwr: 86 },
+
+  // ===================================================================
+  // EXPANSION — more nations & confederations
+  // Grouped by nation. Confederation is derived from nation in js/modes.js,
+  // so no extra field is needed here. These unlock Nation mode for new
+  // countries and power the continental (By Region) modes.
+  // ===================================================================
+
+  // -------- Uruguay (CONMEBOL) --------
+  { id: "uru_muslera",      name: "Fernando Muslera",   pos: "GK",  nation: "Uruguay", flag: "🇺🇾", decade: "2010s", club: "Galatasaray",      ovr: 81, pwr: 81 },
+  { id: "uru_mazurkiewicz", name: "Ladislao Mazurkiewicz", pos: "GK", nation: "Uruguay", flag: "🇺🇾", decade: "1970s", club: "Peñarol",       ovr: 80, pwr: 80 },
+  { id: "uru_godin",        name: "Diego Godín",        pos: "DEF", nation: "Uruguay", flag: "🇺🇾", decade: "2010s", club: "Atlético Madrid",  ovr: 85, pwr: 85 },
+  { id: "uru_montero",      name: "Paolo Montero",      pos: "DEF", nation: "Uruguay", flag: "🇺🇾", decade: "1990s", club: "Juventus",         ovr: 82, pwr: 82 },
+  { id: "uru_santamaria",   name: "José Santamaría",    pos: "DEF", nation: "Uruguay", flag: "🇺🇾", decade: "1960s", club: "Real Madrid",      ovr: 83, pwr: 83 },
+  { id: "uru_lugano",       name: "Diego Lugano",       pos: "DEF", nation: "Uruguay", flag: "🇺🇾", decade: "2000s", club: "Fenerbahçe",       ovr: 80, pwr: 80 },
+  { id: "uru_caceres",      name: "Martín Cáceres",     pos: "DEF", nation: "Uruguay", flag: "🇺🇾", decade: "2010s", club: "Juventus",         ovr: 78, pwr: 78 },
+  { id: "uru_francescoli",  name: "Enzo Francescoli",   pos: "MID", nation: "Uruguay", flag: "🇺🇾", decade: "1990s", club: "River Plate",      ovr: 85, pwr: 85 },
+  { id: "uru_valverde",     name: "Federico Valverde",  pos: "MID", nation: "Uruguay", flag: "🇺🇾", decade: "2020s", club: "Real Madrid",      ovr: 84, pwr: 84 },
+  { id: "uru_recoba",       name: "Álvaro Recoba",      pos: "MID", nation: "Uruguay", flag: "🇺🇾", decade: "2000s", club: "Inter Milan",      ovr: 80, pwr: 80 },
+  { id: "uru_suarez",       name: "Luis Suárez",        pos: "FWD", nation: "Uruguay", flag: "🇺🇾", decade: "2010s", club: "Barcelona",        ovr: 88, pwr: 89 },
+  { id: "uru_cavani",       name: "Edinson Cavani",     pos: "FWD", nation: "Uruguay", flag: "🇺🇾", decade: "2010s", club: "Paris SG",         ovr: 84, pwr: 85 },
+  { id: "uru_forlan",       name: "Diego Forlán",       pos: "FWD", nation: "Uruguay", flag: "🇺🇾", decade: "2010s", club: "Atlético Madrid",  ovr: 84, pwr: 85 },
+
+  // -------- Colombia (CONMEBOL) --------
+  { id: "col_higuita",      name: "René Higuita",       pos: "GK",  nation: "Colombia", flag: "🇨🇴", decade: "1990s", club: "Atlético Nacional", ovr: 81, pwr: 81 },
+  { id: "col_cordoba_o",    name: "Óscar Córdoba",      pos: "GK",  nation: "Colombia", flag: "🇨🇴", decade: "1990s", club: "Boca Juniors",     ovr: 80, pwr: 80 },
+  { id: "col_ivancordoba",  name: "Iván Córdoba",       pos: "DEF", nation: "Colombia", flag: "🇨🇴", decade: "2000s", club: "Inter Milan",      ovr: 81, pwr: 81 },
+  { id: "col_yepes",        name: "Mario Yepes",        pos: "DEF", nation: "Colombia", flag: "🇨🇴", decade: "2000s", club: "AC Milan",         ovr: 80, pwr: 80 },
+  { id: "col_escobar",      name: "Andrés Escobar",     pos: "DEF", nation: "Colombia", flag: "🇨🇴", decade: "1990s", club: "Atlético Nacional", ovr: 79, pwr: 79 },
+  { id: "col_davinson",     name: "Dávinson Sánchez",   pos: "DEF", nation: "Colombia", flag: "🇨🇴", decade: "2020s", club: "Tottenham",        ovr: 78, pwr: 78 },
+  { id: "col_valderrama",   name: "Carlos Valderrama",  pos: "MID", nation: "Colombia", flag: "🇨🇴", decade: "1990s", club: "Junior",           ovr: 85, pwr: 85 },
+  { id: "col_james",        name: "James Rodríguez",    pos: "MID", nation: "Colombia", flag: "🇨🇴", decade: "2010s", club: "Real Madrid",      ovr: 83, pwr: 83 },
+  { id: "col_rincon",       name: "Freddy Rincón",      pos: "MID", nation: "Colombia", flag: "🇨🇴", decade: "1990s", club: "Real Madrid",      ovr: 80, pwr: 80 },
+  { id: "col_falcao",       name: "Radamel Falcao",     pos: "FWD", nation: "Colombia", flag: "🇨🇴", decade: "2010s", club: "Atlético Madrid",  ovr: 84, pwr: 85 },
+  { id: "col_asprilla",     name: "Faustino Asprilla",  pos: "FWD", nation: "Colombia", flag: "🇨🇴", decade: "1990s", club: "Parma",            ovr: 81, pwr: 81 },
+  { id: "col_luisdiaz",     name: "Luis Díaz",          pos: "FWD", nation: "Colombia", flag: "🇨🇴", decade: "2020s", club: "Liverpool",        ovr: 82, pwr: 82 },
+
+  // -------- Chile (CONMEBOL) --------
+  { id: "chi_bravo",        name: "Claudio Bravo",      pos: "GK",  nation: "Chile",   flag: "🇨🇱", decade: "2010s", club: "Barcelona",        ovr: 81, pwr: 81 },
+  { id: "chi_figueroa",     name: "Elías Figueroa",     pos: "DEF", nation: "Chile",   flag: "🇨🇱", decade: "1970s", club: "Internacional",    ovr: 84, pwr: 84 },
+  { id: "chi_medel",        name: "Gary Medel",         pos: "DEF", nation: "Chile",   flag: "🇨🇱", decade: "2010s", club: "Bologna",          ovr: 79, pwr: 79 },
+  { id: "chi_isla",         name: "Mauricio Isla",      pos: "DEF", nation: "Chile",   flag: "🇨🇱", decade: "2010s", club: "Juventus",         ovr: 77, pwr: 77 },
+  { id: "chi_jara",         name: "Gonzalo Jara",       pos: "DEF", nation: "Chile",   flag: "🇨🇱", decade: "2010s", club: "West Brom",        ovr: 76, pwr: 76 },
+  { id: "chi_vidal",        name: "Arturo Vidal",       pos: "MID", nation: "Chile",   flag: "🇨🇱", decade: "2010s", club: "Juventus",         ovr: 84, pwr: 84 },
+  { id: "chi_valdivia",     name: "Jorge Valdivia",     pos: "MID", nation: "Chile",   flag: "🇨🇱", decade: "2010s", club: "Palmeiras",        ovr: 79, pwr: 79 },
+  { id: "chi_aranguiz",     name: "Charles Aránguiz",   pos: "MID", nation: "Chile",   flag: "🇨🇱", decade: "2010s", club: "Leverkusen",       ovr: 78, pwr: 78 },
+  { id: "chi_zamorano",     name: "Iván Zamorano",      pos: "FWD", nation: "Chile",   flag: "🇨🇱", decade: "1990s", club: "Real Madrid",      ovr: 83, pwr: 83 },
+  { id: "chi_salas",        name: "Marcelo Salas",      pos: "FWD", nation: "Chile",   flag: "🇨🇱", decade: "1990s", club: "Lazio",            ovr: 82, pwr: 82 },
+  { id: "chi_alexis",       name: "Alexis Sánchez",     pos: "FWD", nation: "Chile",   flag: "🇨🇱", decade: "2010s", club: "Arsenal",          ovr: 84, pwr: 84 },
+
+  // -------- Nigeria (CAF) --------
+  { id: "ngr_enyeama",      name: "Vincent Enyeama",    pos: "GK",  nation: "Nigeria", flag: "🇳🇬", decade: "2010s", club: "Lille",            ovr: 80, pwr: 80 },
+  { id: "ngr_rufai",        name: "Peter Rufai",        pos: "GK",  nation: "Nigeria", flag: "🇳🇬", decade: "1990s", club: "Deportivo",        ovr: 76, pwr: 76 },
+  { id: "ngr_west",         name: "Taribo West",        pos: "DEF", nation: "Nigeria", flag: "🇳🇬", decade: "1990s", club: "Inter Milan",      ovr: 78, pwr: 78 },
+  { id: "ngr_yobo",         name: "Joseph Yobo",        pos: "DEF", nation: "Nigeria", flag: "🇳🇬", decade: "2000s", club: "Everton",          ovr: 78, pwr: 78 },
+  { id: "ngr_keshi",        name: "Stephen Keshi",      pos: "DEF", nation: "Nigeria", flag: "🇳🇬", decade: "1990s", club: "Anderlecht",       ovr: 76, pwr: 76 },
+  { id: "ngr_ekong",        name: "William Troost-Ekong", pos: "DEF", nation: "Nigeria", flag: "🇳🇬", decade: "2020s", club: "Udinese",       ovr: 75, pwr: 75 },
+  { id: "ngr_okocha",       name: "Jay-Jay Okocha",     pos: "MID", nation: "Nigeria", flag: "🇳🇬", decade: "2000s", club: "Bolton",           ovr: 84, pwr: 84 },
+  { id: "ngr_mikel",        name: "John Obi Mikel",     pos: "MID", nation: "Nigeria", flag: "🇳🇬", decade: "2010s", club: "Chelsea",          ovr: 78, pwr: 78 },
+  { id: "ngr_oliseh",       name: "Sunday Oliseh",      pos: "MID", nation: "Nigeria", flag: "🇳🇬", decade: "1990s", club: "Ajax",             ovr: 78, pwr: 78 },
+  { id: "ngr_kanu",         name: "Nwankwo Kanu",       pos: "FWD", nation: "Nigeria", flag: "🇳🇬", decade: "2000s", club: "Arsenal",          ovr: 81, pwr: 81 },
+  { id: "ngr_yekini",       name: "Rashidi Yekini",     pos: "FWD", nation: "Nigeria", flag: "🇳🇬", decade: "1990s", club: "Vitória",          ovr: 80, pwr: 80 },
+  { id: "ngr_osimhen",      name: "Victor Osimhen",     pos: "FWD", nation: "Nigeria", flag: "🇳🇬", decade: "2020s", club: "Napoli",           ovr: 83, pwr: 83 },
+
+  // -------- Cameroon (CAF) --------
+  { id: "cmr_nkono",        name: "Thomas N'Kono",      pos: "GK",  nation: "Cameroon", flag: "🇨🇲", decade: "1980s", club: "Espanyol",        ovr: 80, pwr: 80 },
+  { id: "cmr_bell",         name: "Joseph-Antoine Bell", pos: "GK", nation: "Cameroon", flag: "🇨🇲", decade: "1990s", club: "Marseille",       ovr: 76, pwr: 76 },
+  { id: "cmr_matip",        name: "Joël Matip",         pos: "DEF", nation: "Cameroon", flag: "🇨🇲", decade: "2010s", club: "Liverpool",       ovr: 80, pwr: 80 },
+  { id: "cmr_song",         name: "Rigobert Song",      pos: "DEF", nation: "Cameroon", flag: "🇨🇲", decade: "2000s", club: "Liverpool",       ovr: 77, pwr: 77 },
+  { id: "cmr_nkoulou",      name: "Nicolas N'Koulou",   pos: "DEF", nation: "Cameroon", flag: "🇨🇲", decade: "2010s", club: "Torino",          ovr: 77, pwr: 77 },
+  { id: "cmr_wome",         name: "Pierre Womé",        pos: "DEF", nation: "Cameroon", flag: "🇨🇲", decade: "2000s", club: "Inter Milan",     ovr: 75, pwr: 75 },
+  { id: "cmr_foe",          name: "Marc-Vivien Foé",    pos: "MID", nation: "Cameroon", flag: "🇨🇲", decade: "2000s", club: "Lyon",            ovr: 78, pwr: 78 },
+  { id: "cmr_geremi",       name: "Geremi",             pos: "MID", nation: "Cameroon", flag: "🇨🇲", decade: "2000s", club: "Chelsea",         ovr: 78, pwr: 78 },
+  { id: "cmr_makoun",       name: "Jean Makoun",        pos: "MID", nation: "Cameroon", flag: "🇨🇲", decade: "2000s", club: "Lyon",            ovr: 76, pwr: 76 },
+  { id: "cmr_etoo",         name: "Samuel Eto'o",       pos: "FWD", nation: "Cameroon", flag: "🇨🇲", decade: "2000s", club: "Barcelona",       ovr: 86, pwr: 86 },
+  { id: "cmr_milla",        name: "Roger Milla",        pos: "FWD", nation: "Cameroon", flag: "🇨🇲", decade: "1990s", club: "Montpellier",     ovr: 82, pwr: 82 },
+  { id: "cmr_mboma",        name: "Patrick Mboma",      pos: "FWD", nation: "Cameroon", flag: "🇨🇲", decade: "2000s", club: "Parma",           ovr: 79, pwr: 79 },
+
+  // -------- Other African greats (CAF depth) --------
+  { id: "lbr_weah",         name: "George Weah",        pos: "FWD", nation: "Liberia",     flag: "🇱🇷", decade: "1990s", club: "AC Milan",     ovr: 86, pwr: 86 },
+  { id: "civ_drogba",       name: "Didier Drogba",      pos: "FWD", nation: "Ivory Coast", flag: "🇨🇮", decade: "2000s", club: "Chelsea",      ovr: 85, pwr: 86 },
+  { id: "civ_yayatoure",    name: "Yaya Touré",         pos: "MID", nation: "Ivory Coast", flag: "🇨🇮", decade: "2010s", club: "Man City",     ovr: 85, pwr: 85 },
+  { id: "civ_kolotoure",    name: "Kolo Touré",         pos: "DEF", nation: "Ivory Coast", flag: "🇨🇮", decade: "2000s", club: "Arsenal",      ovr: 79, pwr: 79 },
+  { id: "egy_salah",        name: "Mohamed Salah",      pos: "FWD", nation: "Egypt",       flag: "🇪🇬", decade: "2020s", club: "Liverpool",    ovr: 88, pwr: 88 },
+  { id: "egy_aboutrika",    name: "Mohamed Aboutrika",  pos: "MID", nation: "Egypt",       flag: "🇪🇬", decade: "2000s", club: "Al Ahly",      ovr: 80, pwr: 80 },
+  { id: "egy_elhadary",     name: "Essam El-Hadary",    pos: "GK",  nation: "Egypt",       flag: "🇪🇬", decade: "2000s", club: "Al Ahly",      ovr: 78, pwr: 78 },
+  { id: "sen_mane",         name: "Sadio Mané",         pos: "FWD", nation: "Senegal",     flag: "🇸🇳", decade: "2020s", club: "Liverpool",    ovr: 85, pwr: 85 },
+  { id: "sen_koulibaly",    name: "Kalidou Koulibaly",  pos: "DEF", nation: "Senegal",     flag: "🇸🇳", decade: "2020s", club: "Napoli",       ovr: 82, pwr: 82 },
+  { id: "sen_mendy",        name: "Édouard Mendy",      pos: "GK",  nation: "Senegal",     flag: "🇸🇳", decade: "2020s", club: "Chelsea",      ovr: 80, pwr: 80 },
+  { id: "sen_diouf",        name: "El Hadji Diouf",     pos: "FWD", nation: "Senegal",     flag: "🇸🇳", decade: "2000s", club: "Liverpool",    ovr: 79, pwr: 79 },
+  { id: "gha_essien",       name: "Michael Essien",     pos: "MID", nation: "Ghana",       flag: "🇬🇭", decade: "2000s", club: "Chelsea",      ovr: 82, pwr: 82 },
+  { id: "gha_abedi",        name: "Abedi Pelé",         pos: "MID", nation: "Ghana",       flag: "🇬🇭", decade: "1990s", club: "Marseille",    ovr: 82, pwr: 82 },
+  { id: "gha_gyan",         name: "Asamoah Gyan",       pos: "FWD", nation: "Ghana",       flag: "🇬🇭", decade: "2010s", club: "Sunderland",   ovr: 79, pwr: 79 },
+  { id: "alg_mahrez",       name: "Riyad Mahrez",       pos: "FWD", nation: "Algeria",     flag: "🇩🇿", decade: "2010s", club: "Man City",     ovr: 83, pwr: 83 },
+  { id: "alg_madjer",       name: "Rabah Madjer",       pos: "FWD", nation: "Algeria",     flag: "🇩🇿", decade: "1980s", club: "FC Porto",     ovr: 80, pwr: 80 },
+  { id: "mar_hakimi",       name: "Achraf Hakimi",      pos: "DEF", nation: "Morocco",     flag: "🇲🇦", decade: "2020s", club: "Paris SG",     ovr: 83, pwr: 83 },
+  { id: "mar_ziyech",       name: "Hakim Ziyech",       pos: "MID", nation: "Morocco",     flag: "🇲🇦", decade: "2020s", club: "Chelsea",      ovr: 80, pwr: 80 },
+  { id: "mar_bounou",       name: "Yassine Bounou",     pos: "GK",  nation: "Morocco",     flag: "🇲🇦", decade: "2020s", club: "Sevilla",      ovr: 80, pwr: 80 },
+
+  // -------- Mexico (CONCACAF) --------
+  { id: "mex_ochoa",        name: "Guillermo Ochoa",    pos: "GK",  nation: "Mexico",  flag: "🇲🇽", decade: "2010s", club: "Club América",     ovr: 79, pwr: 79 },
+  { id: "mex_campos",       name: "Jorge Campos",       pos: "GK",  nation: "Mexico",  flag: "🇲🇽", decade: "1990s", club: "Pumas",            ovr: 79, pwr: 79 },
+  { id: "mex_marquez",      name: "Rafael Márquez",     pos: "DEF", nation: "Mexico",  flag: "🇲🇽", decade: "2000s", club: "Barcelona",        ovr: 83, pwr: 83 },
+  { id: "mex_claudiosuarez", name: "Claudio Suárez",    pos: "DEF", nation: "Mexico",  flag: "🇲🇽", decade: "1990s", club: "Chivas",           ovr: 79, pwr: 79 },
+  { id: "mex_salcido",      name: "Carlos Salcido",     pos: "DEF", nation: "Mexico",  flag: "🇲🇽", decade: "2000s", club: "PSV Eindhoven",    ovr: 78, pwr: 78 },
+  { id: "mex_moreno",       name: "Héctor Moreno",      pos: "DEF", nation: "Mexico",  flag: "🇲🇽", decade: "2010s", club: "Espanyol",         ovr: 77, pwr: 77 },
+  { id: "mex_blanco",       name: "Cuauhtémoc Blanco",  pos: "MID", nation: "Mexico",  flag: "🇲🇽", decade: "2000s", club: "Club América",     ovr: 80, pwr: 80 },
+  { id: "mex_guardado",     name: "Andrés Guardado",    pos: "MID", nation: "Mexico",  flag: "🇲🇽", decade: "2010s", club: "Real Betis",       ovr: 79, pwr: 79 },
+  { id: "mex_pardo",        name: "Pavel Pardo",        pos: "MID", nation: "Mexico",  flag: "🇲🇽", decade: "2000s", club: "VfB Stuttgart",    ovr: 77, pwr: 77 },
+  { id: "mex_hugosanchez",  name: "Hugo Sánchez",       pos: "FWD", nation: "Mexico",  flag: "🇲🇽", decade: "1980s", club: "Real Madrid",      ovr: 86, pwr: 86 },
+  { id: "mex_chicharito",   name: "Javier Hernández",   pos: "FWD", nation: "Mexico",  flag: "🇲🇽", decade: "2010s", club: "Man United",       ovr: 80, pwr: 80 },
+  { id: "mex_borgetti",     name: "Jared Borgetti",     pos: "FWD", nation: "Mexico",  flag: "🇲🇽", decade: "2000s", club: "Pachuca",          ovr: 79, pwr: 79 },
+
+  // -------- USA (CONCACAF) --------
+  { id: "usa_howard",       name: "Tim Howard",         pos: "GK",  nation: "USA",     flag: "🇺🇸", decade: "2010s", club: "Everton",          ovr: 80, pwr: 80 },
+  { id: "usa_friedel",      name: "Brad Friedel",       pos: "GK",  nation: "USA",     flag: "🇺🇸", decade: "2000s", club: "Blackburn",        ovr: 78, pwr: 78 },
+  { id: "usa_bocanegra",    name: "Carlos Bocanegra",   pos: "DEF", nation: "USA",     flag: "🇺🇸", decade: "2000s", club: "Fulham",           ovr: 77, pwr: 77 },
+  { id: "usa_pope",         name: "Eddie Pope",         pos: "DEF", nation: "USA",     flag: "🇺🇸", decade: "2000s", club: "DC United",        ovr: 76, pwr: 76 },
+  { id: "usa_beasley",      name: "DaMarcus Beasley",   pos: "DEF", nation: "USA",     flag: "🇺🇸", decade: "2000s", club: "PSV Eindhoven",    ovr: 76, pwr: 76 },
+  { id: "usa_cherundolo",   name: "Steve Cherundolo",   pos: "DEF", nation: "USA",     flag: "🇺🇸", decade: "2000s", club: "Hannover",         ovr: 75, pwr: 75 },
+  { id: "usa_reyna",        name: "Claudio Reyna",      pos: "MID", nation: "USA",     flag: "🇺🇸", decade: "2000s", club: "Rangers",          ovr: 78, pwr: 78 },
+  { id: "usa_bradley",      name: "Michael Bradley",    pos: "MID", nation: "USA",     flag: "🇺🇸", decade: "2010s", club: "AS Roma",          ovr: 77, pwr: 77 },
+  { id: "usa_pulisic",      name: "Christian Pulisic",  pos: "MID", nation: "USA",     flag: "🇺🇸", decade: "2020s", club: "AC Milan",         ovr: 81, pwr: 81 },
+  { id: "usa_donovan",      name: "Landon Donovan",     pos: "FWD", nation: "USA",     flag: "🇺🇸", decade: "2000s", club: "LA Galaxy",        ovr: 81, pwr: 81 },
+  { id: "usa_dempsey",      name: "Clint Dempsey",      pos: "FWD", nation: "USA",     flag: "🇺🇸", decade: "2010s", club: "Fulham",           ovr: 80, pwr: 80 },
+  { id: "usa_mcbride",      name: "Brian McBride",      pos: "FWD", nation: "USA",     flag: "🇺🇸", decade: "2000s", club: "Fulham",           ovr: 76, pwr: 76 },
+
+  // -------- Costa Rica (CONCACAF depth) --------
+  { id: "crc_navas",        name: "Keylor Navas",       pos: "GK",  nation: "Costa Rica", flag: "🇨🇷", decade: "2010s", club: "Real Madrid",   ovr: 82, pwr: 82 },
+  { id: "crc_wanchope",     name: "Paulo Wanchope",     pos: "FWD", nation: "Costa Rica", flag: "🇨🇷", decade: "2000s", club: "Man City",      ovr: 78, pwr: 78 },
+  { id: "crc_ruiz",         name: "Bryan Ruiz",         pos: "MID", nation: "Costa Rica", flag: "🇨🇷", decade: "2010s", club: "Fulham",        ovr: 76, pwr: 76 },
+
+  // -------- Japan (AFC) --------
+  { id: "jpn_kawaguchi",    name: "Yoshikatsu Kawaguchi", pos: "GK", nation: "Japan",  flag: "🇯🇵", decade: "2000s", club: "Júbilo Iwata",     ovr: 78, pwr: 78 },
+  { id: "jpn_kawashima",    name: "Eiji Kawashima",     pos: "GK",  nation: "Japan",   flag: "🇯🇵", decade: "2010s", club: "Standard Liège",   ovr: 76, pwr: 76 },
+  { id: "jpn_nagatomo",     name: "Yuto Nagatomo",      pos: "DEF", nation: "Japan",   flag: "🇯🇵", decade: "2010s", club: "Inter Milan",      ovr: 77, pwr: 77 },
+  { id: "jpn_yoshida",      name: "Maya Yoshida",       pos: "DEF", nation: "Japan",   flag: "🇯🇵", decade: "2010s", club: "Southampton",      ovr: 77, pwr: 77 },
+  { id: "jpn_tomiyasu",     name: "Takehiro Tomiyasu",  pos: "DEF", nation: "Japan",   flag: "🇯🇵", decade: "2020s", club: "Arsenal",          ovr: 78, pwr: 78 },
+  { id: "jpn_nakazawa",     name: "Yuji Nakazawa",      pos: "DEF", nation: "Japan",   flag: "🇯🇵", decade: "2000s", club: "Yokohama",         ovr: 76, pwr: 76 },
+  { id: "jpn_nakata",       name: "Hidetoshi Nakata",   pos: "MID", nation: "Japan",   flag: "🇯🇵", decade: "2000s", club: "AS Roma",          ovr: 82, pwr: 82 },
+  { id: "jpn_nakamura",     name: "Shunsuke Nakamura",  pos: "MID", nation: "Japan",   flag: "🇯🇵", decade: "2000s", club: "Celtic",           ovr: 80, pwr: 80 },
+  { id: "jpn_honda",        name: "Keisuke Honda",      pos: "MID", nation: "Japan",   flag: "🇯🇵", decade: "2010s", club: "AC Milan",         ovr: 80, pwr: 80 },
+  { id: "jpn_kagawa",       name: "Shinji Kagawa",      pos: "FWD", nation: "Japan",   flag: "🇯🇵", decade: "2010s", club: "Bor. Dortmund",    ovr: 80, pwr: 80 },
+  { id: "jpn_miura",        name: "Kazuyoshi Miura",    pos: "FWD", nation: "Japan",   flag: "🇯🇵", decade: "1990s", club: "Verdy",            ovr: 78, pwr: 78 },
+  { id: "jpn_minamino",     name: "Takumi Minamino",    pos: "FWD", nation: "Japan",   flag: "🇯🇵", decade: "2020s", club: "AS Monaco",        ovr: 77, pwr: 77 },
+
+  // -------- South Korea (AFC) --------
+  { id: "kor_leewoonjae",   name: "Lee Woon-jae",       pos: "GK",  nation: "South Korea", flag: "🇰🇷", decade: "2000s", club: "Suwon",        ovr: 78, pwr: 78 },
+  { id: "kor_jokwon",       name: "Jo Hyeon-woo",       pos: "GK",  nation: "South Korea", flag: "🇰🇷", decade: "2020s", club: "Ulsan",        ovr: 75, pwr: 75 },
+  { id: "kor_hongmyungbo",  name: "Hong Myung-bo",      pos: "DEF", nation: "South Korea", flag: "🇰🇷", decade: "2000s", club: "Pohang",       ovr: 80, pwr: 80 },
+  { id: "kor_kimminjae",    name: "Kim Min-jae",        pos: "DEF", nation: "South Korea", flag: "🇰🇷", decade: "2020s", club: "Bayern Munich", ovr: 82, pwr: 82 },
+  { id: "kor_leeyoungpyo",  name: "Lee Young-pyo",      pos: "DEF", nation: "South Korea", flag: "🇰🇷", decade: "2000s", club: "Tottenham",    ovr: 77, pwr: 77 },
+  { id: "kor_kimyounggwon", name: "Kim Young-gwon",     pos: "DEF", nation: "South Korea", flag: "🇰🇷", decade: "2010s", club: "Guangzhou",    ovr: 75, pwr: 75 },
+  { id: "kor_parkjisung",   name: "Park Ji-sung",       pos: "MID", nation: "South Korea", flag: "🇰🇷", decade: "2000s", club: "Man United",   ovr: 82, pwr: 82 },
+  { id: "kor_kisungyueng",  name: "Ki Sung-yueng",      pos: "MID", nation: "South Korea", flag: "🇰🇷", decade: "2010s", club: "Swansea",      ovr: 77, pwr: 77 },
+  { id: "kor_koojacheol",   name: "Koo Ja-cheol",       pos: "MID", nation: "South Korea", flag: "🇰🇷", decade: "2010s", club: "Augsburg",     ovr: 75, pwr: 75 },
+  { id: "kor_chabumkun",    name: "Cha Bum-kun",        pos: "FWD", nation: "South Korea", flag: "🇰🇷", decade: "1980s", club: "Leverkusen",   ovr: 82, pwr: 82 },
+  { id: "kor_son",          name: "Son Heung-min",      pos: "FWD", nation: "South Korea", flag: "🇰🇷", decade: "2020s", club: "Tottenham",    ovr: 86, pwr: 86 },
+  { id: "kor_hwang",        name: "Hwang Hee-chan",     pos: "FWD", nation: "South Korea", flag: "🇰🇷", decade: "2020s", club: "Wolves",       ovr: 77, pwr: 77 },
+
+  // -------- Iran & Australia (AFC depth) --------
+  { id: "irn_daei",         name: "Ali Daei",           pos: "FWD", nation: "Iran",      flag: "🇮🇷", decade: "2000s", club: "Hertha Berlin",  ovr: 80, pwr: 80 },
+  { id: "irn_karimi",       name: "Ali Karimi",         pos: "MID", nation: "Iran",      flag: "🇮🇷", decade: "2000s", club: "Bayern Munich",  ovr: 79, pwr: 79 },
+  { id: "irn_mahdavikia",   name: "Mehdi Mahdavikia",   pos: "MID", nation: "Iran",      flag: "🇮🇷", decade: "2000s", club: "Hamburg",        ovr: 78, pwr: 78 },
+  { id: "irn_azmoun",       name: "Sardar Azmoun",      pos: "FWD", nation: "Iran",      flag: "🇮🇷", decade: "2020s", club: "Bayer Leverkusen", ovr: 79, pwr: 79 },
+  { id: "aus_schwarzer",    name: "Mark Schwarzer",     pos: "GK",  nation: "Australia", flag: "🇦🇺", decade: "2000s", club: "Fulham",         ovr: 79, pwr: 79 },
+  { id: "aus_neill",        name: "Lucas Neill",        pos: "DEF", nation: "Australia", flag: "🇦🇺", decade: "2000s", club: "Blackburn",      ovr: 77, pwr: 77 },
+  { id: "aus_cahill",       name: "Tim Cahill",         pos: "MID", nation: "Australia", flag: "🇦🇺", decade: "2010s", club: "Everton",        ovr: 80, pwr: 80 },
+  { id: "aus_kewell",       name: "Harry Kewell",       pos: "FWD", nation: "Australia", flag: "🇦🇺", decade: "2000s", club: "Liverpool",      ovr: 81, pwr: 81 },
+  { id: "aus_viduka",       name: "Mark Viduka",        pos: "FWD", nation: "Australia", flag: "🇦🇺", decade: "2000s", club: "Leeds United",   ovr: 80, pwr: 80 },
+
+  // -------- Portugal (UEFA — top up to a full XI) --------
+  { id: "por_ruipatricio",  name: "Rui Patrício",       pos: "GK",  nation: "Portugal", flag: "🇵🇹", decade: "2010s", club: "Wolves",          ovr: 80, pwr: 80 },
+  { id: "por_ricardo",      name: "Ricardo",            pos: "GK",  nation: "Portugal", flag: "🇵🇹", decade: "2000s", club: "Sporting CP",     ovr: 79, pwr: 79 },
+  { id: "por_carvalho",     name: "Ricardo Carvalho",   pos: "DEF", nation: "Portugal", flag: "🇵🇹", decade: "2000s", club: "Chelsea",         ovr: 83, pwr: 83 },
+  { id: "por_pepe",         name: "Pepe",               pos: "DEF", nation: "Portugal", flag: "🇵🇹", decade: "2010s", club: "Real Madrid",     ovr: 82, pwr: 82 },
+  { id: "por_couto",        name: "Fernando Couto",     pos: "DEF", nation: "Portugal", flag: "🇵🇹", decade: "2000s", club: "Lazio",           ovr: 80, pwr: 80 },
+  { id: "por_cancelo",      name: "João Cancelo",       pos: "DEF", nation: "Portugal", flag: "🇵🇹", decade: "2020s", club: "Man City",        ovr: 82, pwr: 82 },
+  { id: "por_figo",         name: "Luís Figo",          pos: "MID", nation: "Portugal", flag: "🇵🇹", decade: "2000s", club: "Real Madrid",     ovr: 87, pwr: 87 },
+  { id: "por_ruicosta",     name: "Rui Costa",          pos: "MID", nation: "Portugal", flag: "🇵🇹", decade: "2000s", club: "AC Milan",        ovr: 84, pwr: 84 },
+  { id: "por_deco",         name: "Deco",               pos: "MID", nation: "Portugal", flag: "🇵🇹", decade: "2000s", club: "Barcelona",       ovr: 84, pwr: 84 },
+  { id: "por_pauleta",      name: "Pauleta",            pos: "FWD", nation: "Portugal", flag: "🇵🇹", decade: "2000s", club: "Paris SG",        ovr: 80, pwr: 80 },
+  { id: "por_nunogomes",    name: "Nuno Gomes",         pos: "FWD", nation: "Portugal", flag: "🇵🇹", decade: "2000s", club: "Benfica",         ovr: 80, pwr: 80 },
+
+  // -------- Belgium (UEFA — top up to a full XI) --------
+  { id: "bel_courtois",     name: "Thibaut Courtois",   pos: "GK",  nation: "Belgium", flag: "🇧🇪", decade: "2020s", club: "Real Madrid",      ovr: 85, pwr: 85 },
+  { id: "bel_pfaff",        name: "Jean-Marie Pfaff",   pos: "GK",  nation: "Belgium", flag: "🇧🇪", decade: "1980s", club: "Bayern Munich",    ovr: 80, pwr: 80 },
+  { id: "bel_vertonghen",   name: "Jan Vertonghen",     pos: "DEF", nation: "Belgium", flag: "🇧🇪", decade: "2010s", club: "Tottenham",        ovr: 80, pwr: 80 },
+  { id: "bel_alderweireld", name: "Toby Alderweireld",  pos: "DEF", nation: "Belgium", flag: "🇧🇪", decade: "2010s", club: "Tottenham",        ovr: 80, pwr: 80 },
+  { id: "bel_gerets",       name: "Eric Gerets",        pos: "DEF", nation: "Belgium", flag: "🇧🇪", decade: "1980s", club: "PSV Eindhoven",    ovr: 79, pwr: 79 },
+  { id: "bel_vermaelen",    name: "Thomas Vermaelen",   pos: "DEF", nation: "Belgium", flag: "🇧🇪", decade: "2010s", club: "Barcelona",        ovr: 77, pwr: 77 },
+  { id: "bel_scifo",        name: "Enzo Scifo",         pos: "MID", nation: "Belgium", flag: "🇧🇪", decade: "1990s", club: "AS Monaco",        ovr: 82, pwr: 82 },
+  { id: "bel_witsel",       name: "Axel Witsel",        pos: "MID", nation: "Belgium", flag: "🇧🇪", decade: "2010s", club: "Bor. Dortmund",    ovr: 79, pwr: 79 },
+  { id: "bel_hazard",       name: "Eden Hazard",        pos: "FWD", nation: "Belgium", flag: "🇧🇪", decade: "2010s", club: "Chelsea",          ovr: 87, pwr: 87 },
+  { id: "bel_lukaku",       name: "Romelu Lukaku",      pos: "FWD", nation: "Belgium", flag: "🇧🇪", decade: "2020s", club: "Inter Milan",      ovr: 84, pwr: 84 },
+  { id: "bel_ceulemans",    name: "Jan Ceulemans",      pos: "FWD", nation: "Belgium", flag: "🇧🇪", decade: "1980s", club: "Club Brugge",      ovr: 80, pwr: 80 },
+
+  // -------- Croatia (UEFA — top up to a full XI) --------
+  { id: "cro_subasic",      name: "Danijel Subašić",    pos: "GK",  nation: "Croatia", flag: "🇭🇷", decade: "2010s", club: "AS Monaco",        ovr: 79, pwr: 79 },
+  { id: "cro_pletikosa",    name: "Stipe Pletikosa",    pos: "GK",  nation: "Croatia", flag: "🇭🇷", decade: "2000s", club: "Spartak Moscow",   ovr: 76, pwr: 76 },
+  { id: "cro_bilic",        name: "Slaven Bilić",       pos: "DEF", nation: "Croatia", flag: "🇭🇷", decade: "1990s", club: "West Ham",         ovr: 78, pwr: 78 },
+  { id: "cro_simic",        name: "Dario Šimić",        pos: "DEF", nation: "Croatia", flag: "🇭🇷", decade: "2000s", club: "AC Milan",         ovr: 77, pwr: 77 },
+  { id: "cro_corluka",      name: "Vedran Ćorluka",     pos: "DEF", nation: "Croatia", flag: "🇭🇷", decade: "2010s", club: "Tottenham",        ovr: 77, pwr: 77 },
+  { id: "cro_lovren",       name: "Dejan Lovren",       pos: "DEF", nation: "Croatia", flag: "🇭🇷", decade: "2010s", club: "Liverpool",        ovr: 77, pwr: 77 },
+  { id: "cro_boban",        name: "Zvonimir Boban",     pos: "MID", nation: "Croatia", flag: "🇭🇷", decade: "1990s", club: "AC Milan",         ovr: 83, pwr: 83 },
+  { id: "cro_prosinecki",   name: "Robert Prosinečki",  pos: "MID", nation: "Croatia", flag: "🇭🇷", decade: "1990s", club: "Real Madrid",      ovr: 83, pwr: 83 },
+  { id: "cro_rakitic",      name: "Ivan Rakitić",       pos: "MID", nation: "Croatia", flag: "🇭🇷", decade: "2010s", club: "Barcelona",        ovr: 83, pwr: 83 },
+  { id: "cro_suker",        name: "Davor Šuker",        pos: "FWD", nation: "Croatia", flag: "🇭🇷", decade: "1990s", club: "Real Madrid",      ovr: 84, pwr: 84 },
+  { id: "cro_mandzukic",    name: "Mario Mandžukić",    pos: "FWD", nation: "Croatia", flag: "🇭🇷", decade: "2010s", club: "Juventus",         ovr: 82, pwr: 82 },
+  { id: "cro_boksic",       name: "Alen Bokšić",        pos: "FWD", nation: "Croatia", flag: "🇭🇷", decade: "1990s", club: "Lazio",            ovr: 80, pwr: 80 },
 ];
 
 // Lookup helper used across the app.
@@ -680,7 +891,7 @@ window.SLOTS = [
     label: "The Playmaker",
     line: "MID",
     blurb: "The deep-lying conductor who dictates the tempo.",
-    pool: ["pirlo", "xavi", "iniesta", "debruyne", "scholes"],
+    pool: ["pirlo", "xavi", "iniesta", "debruyne", "scholes", "por_figo"],
   },
   {
     key: "number10",
@@ -694,14 +905,14 @@ window.SLOTS = [
     label: "The Winger",
     line: "FWD",
     blurb: "Skill, pace and chaos out wide.",
-    pool: ["garrincha", "best", "ronaldinho", "cristiano", "mbappe"],
+    pool: ["garrincha", "best", "ronaldinho", "cristiano", "mbappe", "egy_salah", "bel_hazard"],
   },
   {
     key: "striker",
     label: "The No. 9",
     line: "FWD",
     blurb: "A pure finisher who lives for goals.",
-    pool: ["muller", "vanbasten", "ronaldo", "romario", "batistuta", "lewandowski", "ibrahimovic"],
+    pool: ["muller", "vanbasten", "ronaldo", "romario", "batistuta", "lewandowski", "ibrahimovic", "uru_suarez", "cmr_etoo", "lbr_weah"],
   },
   {
     key: "talisman",
@@ -813,16 +1024,18 @@ window.OPPONENTS = [
  *   all-time : the curated themed tiers from js/slots.js (Pelé vs Messi, etc.)
  *   decade   : only players whose `decade` matches (e.g. the 1980s XI)
  *   nation   : only players from one country (e.g. an all-time Brazil XI)
+ *   confed   : only players from one confederation / region (e.g. an
+ *              all-time South America or Africa XI)
  *
- * A mode is { type: 'all-time' | 'decade' | 'nation', value: string|null }.
+ * A mode is { type: 'all-time' | 'decade' | 'nation' | 'confed', value: string|null }.
  *
- * For decade/nation modes the draft uses a generic 4-3-3 formation and each
- * slot is filled from the matching players for that line, minus anyone already
- * picked. Modes only ever offers a decade/nation that can actually field a
+ * For decade/nation/confed modes the draft uses a generic 4-3-3 formation and
+ * each slot is filled from the matching players for that line, minus anyone
+ * already picked. Modes only ever offers an option that can actually field a
  * full XI, so the player never hits a dead end.
  */
 
-// Generic 4-3-3 used by decade/nation modes.
+// Generic 4-3-3 used by the filtered modes.
 window.FORMATION = [
   { key: "gk",  line: "GK",  label: "Goalkeeper",   blurb: "Your last line of defence." },
   { key: "rb",  line: "DEF", label: "Right-Back",   blurb: "Lock down the right flank." },
@@ -841,6 +1054,38 @@ window.Modes = (function () {
   // Order in which decades are presented.
   var DECADE_ORDER = ["1950s", "1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"];
 
+  // Nation -> confederation. Any nation not listed is treated as "other".
+  var NATION_CONFED = {
+    // UEFA (Europe)
+    "England": "UEFA", "Italy": "UEFA", "Germany": "UEFA", "Spain": "UEFA",
+    "France": "UEFA", "Netherlands": "UEFA", "Portugal": "UEFA", "Belgium": "UEFA",
+    "Croatia": "UEFA", "Denmark": "UEFA", "Sweden": "UEFA", "Poland": "UEFA",
+    "Hungary": "UEFA", "USSR": "UEFA", "N. Ireland": "UEFA",
+    // CONMEBOL (South America)
+    "Brazil": "CONMEBOL", "Argentina": "CONMEBOL", "Uruguay": "CONMEBOL",
+    "Colombia": "CONMEBOL", "Chile": "CONMEBOL",
+    // CAF (Africa)
+    "Nigeria": "CAF", "Cameroon": "CAF", "Ivory Coast": "CAF", "Egypt": "CAF",
+    "Senegal": "CAF", "Ghana": "CAF", "Algeria": "CAF", "Morocco": "CAF", "Liberia": "CAF",
+    // CONCACAF (North & Central America)
+    "Mexico": "CONCACAF", "USA": "CONCACAF", "Costa Rica": "CONCACAF",
+    // AFC (Asia / Australia)
+    "Japan": "AFC", "South Korea": "AFC", "Iran": "AFC", "Australia": "AFC",
+  };
+
+  // Display metadata for confederations, in the order they're offered.
+  var CONFED_META = [
+    { value: "CONMEBOL", label: "South America", flag: "🌎" },
+    { value: "UEFA",     label: "Europe",        flag: "🇪🇺" },
+    { value: "CAF",      label: "Africa",        flag: "🌍" },
+    { value: "CONCACAF", label: "North America", flag: "🌎" },
+    { value: "AFC",      label: "Asia",          flag: "🌏" },
+  ];
+
+  function confedOf(nation) {
+    return NATION_CONFED[nation] || null;
+  }
+
   // A squad needs 1 GK, 4 DEF, 3 MID, 3 FWD — can this pool field it?
   function canField(players) {
     var c = { GK: 0, DEF: 0, MID: 0, FWD: 0 };
@@ -848,37 +1093,57 @@ window.Modes = (function () {
     return c.GK >= 1 && c.DEF >= 4 && c.MID >= 3 && c.FWD >= 3;
   }
 
-  function groupBy(key) {
+  function groupBy(keyFn) {
     return window.PLAYERS.reduce(function (acc, p) {
-      (acc[p[key]] = acc[p[key]] || []).push(p);
+      var k = keyFn(p);
+      if (k == null) return acc;
+      (acc[k] = acc[k] || []).push(p);
       return acc;
     }, {});
   }
 
   // Decades that can field a full XI, in chronological order.
   function availableDecades() {
-    var byDecade = groupBy("decade");
+    var byDecade = groupBy(function (p) { return p.decade; });
     return DECADE_ORDER.filter(function (d) {
       return byDecade[d] && canField(byDecade[d]);
     }).map(function (d) {
-      return { value: d, label: d, count: byDecade[d].length };
+      return { value: d, label: d, flag: null, count: byDecade[d].length };
     });
   }
 
   // Nations that can field a full XI, richest squads first.
   function availableNations() {
-    var byNation = groupBy("nation");
+    var byNation = groupBy(function (p) { return p.nation; });
     return Object.keys(byNation)
       .filter(function (n) { return canField(byNation[n]); })
       .map(function (n) {
-        return { value: n, flag: byNation[n][0].flag, count: byNation[n].length };
+        return { value: n, label: n, flag: byNation[n][0].flag, count: byNation[n].length };
       })
       .sort(function (a, b) { return b.count - a.count || a.value.localeCompare(b.value); });
+  }
+
+  // Confederations that can field a full XI, in CONFED_META order.
+  function availableConfederations() {
+    var byConfed = groupBy(function (p) { return confedOf(p.nation); });
+    return CONFED_META.filter(function (m) {
+      return byConfed[m.value] && canField(byConfed[m.value]);
+    }).map(function (m) {
+      return { value: m.value, label: m.label, flag: m.flag, count: byConfed[m.value].length };
+    });
   }
 
   // The slot template for a mode.
   function slotsFor(mode) {
     return mode.type === "all-time" ? window.SLOTS : window.FORMATION;
+  }
+
+  // Does a player match the (non all-time) mode's filter?
+  function matchesFilter(player, mode) {
+    if (mode.type === "decade") return player.decade === mode.value;
+    if (mode.type === "nation") return player.nation === mode.value;
+    if (mode.type === "confed") return confedOf(player.nation) === mode.value;
+    return true;
   }
 
   // Eligible player ids for a slot, given the mode and current squad
@@ -888,9 +1153,8 @@ window.Modes = (function () {
     if (mode.type === "all-time") {
       ids = slot.pool.slice();
     } else {
-      var matchKey = mode.type === "decade" ? "decade" : "nation";
       ids = window.PLAYERS
-        .filter(function (p) { return p.pos === slot.line && p[matchKey] === mode.value; })
+        .filter(function (p) { return p.pos === slot.line && matchesFilter(p, mode); })
         .map(function (p) { return p.id; });
     }
     var taken = slotsFor(mode)
@@ -904,14 +1168,19 @@ window.Modes = (function () {
   // Short human label for a chosen mode (used in headers / share text).
   function label(mode) {
     if (mode.type === "all-time") return "All-Time XI";
-    if (mode.type === "decade") return mode.value + " XI";
+    if (mode.type === "confed") {
+      var meta = CONFED_META.filter(function (m) { return m.value === mode.value; })[0];
+      return (meta ? meta.label : mode.value) + " XI";
+    }
     return mode.value + " XI";
   }
 
   return {
     canField: canField,
+    confedOf: confedOf,
     availableDecades: availableDecades,
     availableNations: availableNations,
+    availableConfederations: availableConfederations,
     slotsFor: slotsFor,
     poolFor: poolFor,
     label: label,
@@ -1089,6 +1358,30 @@ window.Engine = (function () {
     return state.slots.every(function (s) { return state.squad[s.key]; });
   }
 
+  // ---------------------------------------------------------------- difficulty scaling
+  // The gauntlet is calibrated against an all-time XI. So that constrained
+  // modes (a single nation/region/decade) are winnable rather than hopeless,
+  // opponents are scaled down toward the *ceiling* of the chosen pool — the
+  // strongest XI it could possibly field. Drafting closer to that ceiling
+  // still improves your odds; all-time mode is left unscaled.
+  function bestRatingForMode(mode) {
+    var slots = window.Modes.slotsFor(mode);
+    var sq = {};
+    slots.forEach(function (slot) {
+      var pool = window.Modes.poolFor(mode, slot, sq)
+        .map(function (id) { return window.PLAYER_BY_ID[id]; })
+        .sort(function (a, b) { return b.pwr - a.pwr; });
+      if (pool[0]) sq[slot.key] = pool[0];
+    });
+    return window.Engine.rateSquad(sq, slots);
+  }
+  function avg3(r) { return (r.att + r.mid + r.def) / 3; }
+  var REF_CEILING = avg3(bestRatingForMode({ type: "all-time", value: null }));
+  function scaleForMode(mode) {
+    var c = avg3(bestRatingForMode(mode));
+    return Math.max(0.8, Math.min(1, c / REF_CEILING));
+  }
+
   // ---------------------------------------------------------------- start
   function renderStart() {
     state.mode = { type: "all-time", value: null };
@@ -1126,6 +1419,7 @@ window.Engine = (function () {
           modeCard("all-time", "🌍", "All-Time", "Themed tiers — pit the very best of every era against each other.") +
           modeCard("decade", "📅", "By Decade", "Field the greatest XI of a single decade.") +
           modeCard("nation", "🏳️", "By Nation", "Build an all-time team from one country.") +
+          modeCard("confed", "🌐", "By Region", "An all-time XI from a whole confederation.") +
         "</div>" +
         '<div class="team-nav"><button class="btn ghost" id="backStart">← Back</button></div>' +
       "</section>"
@@ -1141,6 +1435,7 @@ window.Engine = (function () {
     };
     section.querySelector('[data-mode="decade"]').onclick = function () { renderFilterSelect("decade"); };
     section.querySelector('[data-mode="nation"]').onclick = function () { renderFilterSelect("nation"); };
+    section.querySelector('[data-mode="confed"]').onclick = function () { renderFilterSelect("confed"); };
     document.getElementById("backStart").onclick = renderStart;
   }
 
@@ -1154,15 +1449,20 @@ window.Engine = (function () {
     );
   }
 
-  // ---------------------------------------------------------------- decade / nation pick
+  // ---------------------------------------------------------------- decade / nation / region pick
   function renderFilterSelect(type) {
-    var options = type === "decade" ? window.Modes.availableDecades() : window.Modes.availableNations();
+    var options = type === "decade" ? window.Modes.availableDecades()
+                : type === "nation" ? window.Modes.availableNations()
+                : window.Modes.availableConfederations();
+    var heading = type === "decade" ? "Pick a decade"
+                : type === "nation" ? "Pick a nation"
+                : "Pick a region";
     app.innerHTML = "";
 
     var cards = options.map(function (o) {
       var face = type === "decade" ? '<div class="filter-decade">' + o.label + "</div>"
                                    : '<div class="filter-flag">' + o.flag + "</div>";
-      var name = type === "decade" ? "" : '<div class="filter-name">' + o.value + "</div>";
+      var name = type === "decade" ? "" : '<div class="filter-name">' + o.label + "</div>";
       return (
         '<div class="filter-card" data-value="' + o.value + '" role="button" tabindex="0">' +
           face + name +
@@ -1173,7 +1473,7 @@ window.Engine = (function () {
 
     var section = el(
       '<section class="screen filter">' +
-        "<h2>" + (type === "decade" ? "Pick a decade" : "Pick a nation") + "</h2>" +
+        "<h2>" + heading + "</h2>" +
         '<p class="slot-blurb">Only teams with a full squad of legends are shown.</p>' +
         '<div class="filter-grid">' + cards + "</div>" +
         '<div class="team-nav"><button class="btn ghost" id="backModes">← Back</button></div>' +
@@ -1406,13 +1706,20 @@ window.Engine = (function () {
   function renderGauntlet() {
     var opp = window.OPPONENTS[state.round];
     var me = window.Engine.rateSquad(state.squad, state.slots);
-    var oppRating = { att: opp.att, mid: opp.mid, def: opp.def };
+    var s = scaleForMode(state.mode);
+    var oppRating = { att: opp.att * s, mid: opp.mid * s, def: opp.def * s };
     var odds = window.Engine.winProbability(me, oppRating);
+    var scaleNote = s < 0.99
+      ? '<div class="scale-note">⚖️ Opponents tuned to your ' +
+          (state.mode.type === "confed" ? "region" : state.mode.type === "nation" ? "nation" : "era") +
+          " pool</div>"
+      : "";
 
     app.innerHTML = "";
     app.appendChild(el(
       '<section class="screen gauntlet">' +
         '<div class="round-pill">Round ' + (state.round + 1) + " / " + window.OPPONENTS.length + "</div>" +
+        scaleNote +
         '<div class="matchup">' +
           '<div class="side me">' +
             '<div class="side-flag">⭐</div>' +

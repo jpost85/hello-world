@@ -56,7 +56,7 @@ window.SLOTS = [
     label: "The Playmaker",
     line: "MID",
     blurb: "The deep-lying conductor who dictates the tempo.",
-    pool: ["pirlo", "xavi", "iniesta", "debruyne", "scholes"],
+    pool: ["pirlo", "xavi", "iniesta", "debruyne", "scholes", "por_figo"],
   },
   {
     key: "number10",
@@ -70,14 +70,14 @@ window.SLOTS = [
     label: "The Winger",
     line: "FWD",
     blurb: "Skill, pace and chaos out wide.",
-    pool: ["garrincha", "best", "ronaldinho", "cristiano", "mbappe"],
+    pool: ["garrincha", "best", "ronaldinho", "cristiano", "mbappe", "egy_salah", "bel_hazard"],
   },
   {
     key: "striker",
     label: "The No. 9",
     line: "FWD",
     blurb: "A pure finisher who lives for goals.",
-    pool: ["muller", "vanbasten", "ronaldo", "romario", "batistuta", "lewandowski", "ibrahimovic"],
+    pool: ["muller", "vanbasten", "ronaldo", "romario", "batistuta", "lewandowski", "ibrahimovic", "uru_suarez", "cmr_etoo", "lbr_weah"],
   },
   {
     key: "talisman",

@@ -49,6 +49,30 @@
     return state.slots.every(function (s) { return state.squad[s.key]; });
   }
 
+  // ---------------------------------------------------------------- difficulty scaling
+  // The gauntlet is calibrated against an all-time XI. So that constrained
+  // modes (a single nation/region/decade) are winnable rather than hopeless,
+  // opponents are scaled down toward the *ceiling* of the chosen pool — the
+  // strongest XI it could possibly field. Drafting closer to that ceiling
+  // still improves your odds; all-time mode is left unscaled.
+  function bestRatingForMode(mode) {
+    var slots = window.Modes.slotsFor(mode);
+    var sq = {};
+    slots.forEach(function (slot) {
+      var pool = window.Modes.poolFor(mode, slot, sq)
+        .map(function (id) { return window.PLAYER_BY_ID[id]; })
+        .sort(function (a, b) { return b.pwr - a.pwr; });
+      if (pool[0]) sq[slot.key] = pool[0];
+    });
+    return window.Engine.rateSquad(sq, slots);
+  }
+  function avg3(r) { return (r.att + r.mid + r.def) / 3; }
+  var REF_CEILING = avg3(bestRatingForMode({ type: "all-time", value: null }));
+  function scaleForMode(mode) {
+    var c = avg3(bestRatingForMode(mode));
+    return Math.max(0.8, Math.min(1, c / REF_CEILING));
+  }
+
   // ---------------------------------------------------------------- start
   function renderStart() {
     state.mode = { type: "all-time", value: null };
@@ -86,6 +110,7 @@
           modeCard("all-time", "🌍", "All-Time", "Themed tiers — pit the very best of every era against each other.") +
           modeCard("decade", "📅", "By Decade", "Field the greatest XI of a single decade.") +
           modeCard("nation", "🏳️", "By Nation", "Build an all-time team from one country.") +
+          modeCard("confed", "🌐", "By Region", "An all-time XI from a whole confederation.") +
         "</div>" +
         '<div class="team-nav"><button class="btn ghost" id="backStart">← Back</button></div>' +
       "</section>"
@@ -101,6 +126,7 @@
     };
     section.querySelector('[data-mode="decade"]').onclick = function () { renderFilterSelect("decade"); };
     section.querySelector('[data-mode="nation"]').onclick = function () { renderFilterSelect("nation"); };
+    section.querySelector('[data-mode="confed"]').onclick = function () { renderFilterSelect("confed"); };
     document.getElementById("backStart").onclick = renderStart;
   }
 
@@ -114,15 +140,20 @@
     );
   }
 
-  // ---------------------------------------------------------------- decade / nation pick
+  // ---------------------------------------------------------------- decade / nation / region pick
   function renderFilterSelect(type) {
-    var options = type === "decade" ? window.Modes.availableDecades() : window.Modes.availableNations();
+    var options = type === "decade" ? window.Modes.availableDecades()
+                : type === "nation" ? window.Modes.availableNations()
+                : window.Modes.availableConfederations();
+    var heading = type === "decade" ? "Pick a decade"
+                : type === "nation" ? "Pick a nation"
+                : "Pick a region";
     app.innerHTML = "";
 
     var cards = options.map(function (o) {
       var face = type === "decade" ? '<div class="filter-decade">' + o.label + "</div>"
                                    : '<div class="filter-flag">' + o.flag + "</div>";
-      var name = type === "decade" ? "" : '<div class="filter-name">' + o.value + "</div>";
+      var name = type === "decade" ? "" : '<div class="filter-name">' + o.label + "</div>";
       return (
         '<div class="filter-card" data-value="' + o.value + '" role="button" tabindex="0">' +
           face + name +
@@ -133,7 +164,7 @@
 
     var section = el(
       '<section class="screen filter">' +
-        "<h2>" + (type === "decade" ? "Pick a decade" : "Pick a nation") + "</h2>" +
+        "<h2>" + heading + "</h2>" +
         '<p class="slot-blurb">Only teams with a full squad of legends are shown.</p>' +
         '<div class="filter-grid">' + cards + "</div>" +
         '<div class="team-nav"><button class="btn ghost" id="backModes">← Back</button></div>' +
@@ -366,13 +397,20 @@
   function renderGauntlet() {
     var opp = window.OPPONENTS[state.round];
     var me = window.Engine.rateSquad(state.squad, state.slots);
-    var oppRating = { att: opp.att, mid: opp.mid, def: opp.def };
+    var s = scaleForMode(state.mode);
+    var oppRating = { att: opp.att * s, mid: opp.mid * s, def: opp.def * s };
     var odds = window.Engine.winProbability(me, oppRating);
+    var scaleNote = s < 0.99
+      ? '<div class="scale-note">⚖️ Opponents tuned to your ' +
+          (state.mode.type === "confed" ? "region" : state.mode.type === "nation" ? "nation" : "era") +
+          " pool</div>"
+      : "";
 
     app.innerHTML = "";
     app.appendChild(el(
       '<section class="screen gauntlet">' +
         '<div class="round-pill">Round ' + (state.round + 1) + " / " + window.OPPONENTS.length + "</div>" +
+        scaleNote +
         '<div class="matchup">' +
           '<div class="side me">' +
             '<div class="side-flag">⭐</div>' +
