@@ -318,6 +318,28 @@
   }
   #toast.show { opacity: 1; }
 
+  /* First-run coach mark: a small card up top + a glowing target on the tool to tap. */
+  #tutorial {
+    position: absolute; top: 52px; left: 50%; transform: translateX(-50%);
+    width: min(92%, 430px); z-index: 30; display: none;
+    background: linear-gradient(180deg, rgba(26,36,52,.97), rgba(18,26,38,.97));
+    color: #eaf0f6; border: 2px solid #3a5170; border-radius: 14px;
+    padding: 11px 14px 9px; box-shadow: 0 10px 28px rgba(0,0,0,.55);
+    font-size: 13.5px; line-height: 1.4;
+  }
+  #tutorial.show { display: block; animation: tutpop .28s cubic-bezier(.2,1.3,.5,1); }
+  @keyframes tutpop { from { opacity:0; transform: translate(-50%, -8px) scale(.96); } }
+  #tutText b { color: #ffd24a; }
+  #tutorial .tut-foot { display:flex; align-items:center; justify-content:space-between; margin-top:8px; gap:10px; }
+  #tutSkip { font-size: 11px; color: #8fa3bd; cursor: pointer; text-decoration: underline; }
+  #tutSkip:hover { color: #c5d4e6; }
+  #tutNext { padding: 4px 12px; font-size: 12px; }
+  #tutNext.hide { display: none; }
+  /* The tool the player should tap pulses with a gold ring (desktop + mobile). */
+  .tut-highlight { position: relative; z-index: 21; border-radius: 8px;
+    animation: tutpulse 1.1s ease-in-out infinite; outline: 2px solid #ffd24a; outline-offset: 1px; }
+  @keyframes tutpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,210,74,.7); } 60% { box-shadow: 0 0 0 7px rgba(255,210,74,0); } }
+
   .hint { font-size: 11px; color: var(--muted); line-height: 1.4; }
   kbd { background:#000; border-radius:3px; padding:0 4px; font-size:10px; }
 
@@ -914,6 +936,13 @@
       <div id="hotbarTools"></div>
     </div>
     <div id="toast"></div>
+    <div id="tutorial">
+      <div id="tutText"></div>
+      <div class="tut-foot">
+        <span id="tutSkip">Skip tutorial</span>
+        <button id="tutNext" class="btn">Got it ✓</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1427,6 +1456,7 @@ function tryBuild(col, row, key_) {
   if (t.kind === "landmark" && !state.won) winGame();
   refreshStats();
   saveGame(true);
+  tutorialCheck();   // advance the onboarding if this build completes a step
 }
 
 function placeUnit(unit) {
@@ -2071,6 +2101,63 @@ function updateObjective() {
     + (unlocks.length ? `<br>Unlocks: ${unlocks.join(", ")}.` : "");
 }
 
+// ---------- First-run onboarding (a ~60-second guided start) ----------
+const ONBOARD_KEY = "microtower.onboarded";
+const TUTORIAL_STEPS = [
+  { text: "Welcome to <b>MicroTower</b>! 🏗️ In about a minute you'll have your first tenants moving in.",
+    next: "Let's go!" },
+  { text: "People need a way upstairs. Tap <b>Stairs</b> and place one just above your lobby.",
+    tool: "stair", done: () => state.units.some(u => u.type === "stair" || u.type === "elevator") },
+  { text: "Now give them somewhere to work. Tap <b>Office</b> and place it right beside the stairs.",
+    tool: "office", done: () => state.units.some(u => u.type === "office") },
+  { text: "Perfect — workers will move in and pay <b>rent every day</b>. Tap <b>▶▶ speed</b> to fast-forward and watch the cash roll in. 💸",
+    done: () => { const o = state.units.find(u => u.type === "office"); return !!o && o.occupants > 0; }, auto: 12000 },
+  { text: "🎉 You're running a tower! Keep building <b>up</b> to grow your population, earn <b>★</b>, and unlock apartments, shops, hotels and more.",
+    next: "Start building", finale: true },
+];
+let tut = null, _tutTimer = null;
+function startTutorial() {
+  try { if (localStorage.getItem(ONBOARD_KEY)) return; } catch (e) {}
+  tut = { i: 0 };
+  showTutorialStep();
+}
+function clearTutHighlight() {
+  document.querySelectorAll(".tut-highlight").forEach(el => el.classList.remove("tut-highlight"));
+}
+function showTutorialStep() {
+  if (!tut) return;
+  const step = TUTORIAL_STEPS[tut.i];
+  document.getElementById("tutText").innerHTML = step.text;
+  const nextBtn = document.getElementById("tutNext");
+  nextBtn.textContent = step.next || "Got it ✓";
+  nextBtn.classList.toggle("hide", !!step.done);   // build/wait steps advance themselves
+  document.getElementById("tutorial").classList.add("show");
+  clearTutHighlight();
+  if (step.tool) document.querySelectorAll(`[data-tool="${step.tool}"]`).forEach(el => el.classList.add("tut-highlight"));
+  clearTimeout(_tutTimer);
+  if (step.auto) _tutTimer = setTimeout(tutorialAdvance, step.auto);   // never get stuck
+}
+function tutorialAdvance() {
+  if (!tut) return;
+  clearTimeout(_tutTimer);
+  if (++tut.i >= TUTORIAL_STEPS.length) { endTutorial(); return; }
+  showTutorialStep();
+}
+function tutorialCheck() {        // called after each build and each game-minute
+  if (tut) { const s = TUTORIAL_STEPS[tut.i]; if (s && s.done && s.done()) tutorialAdvance(); }
+}
+function endTutorial() {
+  tut = null; clearTimeout(_tutTimer); clearTutHighlight();
+  const card = document.getElementById("tutorial");
+  if (card) card.classList.remove("show");
+  try { localStorage.setItem(ONBOARD_KEY, "1"); } catch (e) {}
+}
+{
+  const nb = document.getElementById("tutNext"), sk = document.getElementById("tutSkip");
+  if (nb) nb.addEventListener("click", tutorialAdvance);
+  if (sk) sk.addEventListener("click", endTutorial);
+}
+
 // ---------- People dots (visual flavor) ----------
 // Horizontal span (in cells) actually occupied on a given floor, so pedestrians
 // stay inside the building's footprint instead of wandering into open sky.
@@ -2648,6 +2735,7 @@ function tick(ts) {
 function advanceMinute() {
   state.minutes++;
   if (state.minutes % 5 === 0) { simTenants(); simHotels(); manageStaff(); }
+  if (tut) tutorialCheck();   // pick up the "tenants moved in" onboarding step
   if (state.minutes % 20 === 0) spawnPerson();
   if (state.minutes % 30 === 0) state.frustration = Math.max(0, state.frustration * 0.9 - 0.2); // service recovers
   if (state.minutes >= 24 * 60) {
@@ -3098,6 +3186,7 @@ function init() {
   selectTool("pointer");
   updateSoundBtn();
   if (isMobile()) app.classList.add("nav-closed");
+  if (!loaded) startTutorial();   // first-run guided start (skips itself if already onboarded)
   requestAnimationFrame((t) => { lastTs = t; requestAnimationFrame(tick); });
 }
 
