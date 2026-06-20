@@ -25,6 +25,30 @@
       </section>
 
       <section class="card">
+        <h2>Notification recipients</h2>
+        <p class="hint">
+          Everyone listed here is notified when any watched sheet changes.
+          Texts are sent first; email is used as a fallback.
+        </p>
+
+        <h3 class="sub">📱 Phone numbers (SMS)</h3>
+        <form id="add-phone-form" class="inline-form">
+          <input type="text" id="phone-input" placeholder="+15551234567 (E.164)" />
+          <button type="submit">Add</button>
+        </form>
+        <ul id="phone-list" class="chip-list"></ul>
+
+        <h3 class="sub">✉️ Email addresses (fallback)</h3>
+        <form id="add-email-form" class="inline-form">
+          <input type="text" id="email-input" placeholder="you@example.com" />
+          <button type="submit">Add</button>
+        </form>
+        <ul id="email-list" class="chip-list"></ul>
+
+        <p id="recipients-msg" class="msg"></p>
+      </section>
+
+      <section class="card">
         <h2>Add a sheet to watch</h2>
         <form id="add-form">
           <input

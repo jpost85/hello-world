@@ -49,15 +49,21 @@ cp .env.example .env
 
 ### 3. Configure notifications
 
-**SMS (Twilio):** fill in `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`,
-`TWILIO_FROM_NUMBER`, and `NOTIFY_SMS_TO` (all numbers in E.164 format,
-e.g. `+15551234567`).
+The **provider credentials** (secrets) live in `.env`; the **recipients**
+(who gets notified) are managed in the web UI under **Notification
+recipients** and can be changed without restarting.
 
-**Email fallback:** fill in the `SMTP_*`, `EMAIL_FROM`, and
-`NOTIFY_EMAIL_TO` values. For Gmail, use an
+**SMS (Twilio):** fill in `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and
+`TWILIO_FROM_NUMBER`. Optionally set `NOTIFY_SMS_TO` to seed one recipient
+on first run.
+
+**Email fallback:** fill in the `SMTP_*` and `EMAIL_FROM` values.
+Optionally set `NOTIFY_EMAIL_TO` to seed one recipient. For Gmail, use an
 [App Password](https://support.google.com/accounts/answer/185833).
 
-SMS is tried first; email is used only if SMS is not configured or fails.
+All phone numbers / emails added in the UI are notified. SMS is tried
+first; email is used only if no SMS could be delivered. Numbers must be in
+E.164 format (e.g. `+15551234567`).
 
 ### 4. Run
 
@@ -86,3 +92,5 @@ Open <http://localhost:3000>, paste a sheet URL, and click **Watch**.
 | DELETE | `/api/sheets/:id`        | Stop watching a sheet               |
 | POST   | `/api/check`             | Poll all sheets immediately         |
 | POST   | `/api/test-notification` | Send a test notification            |
+| GET    | `/api/recipients`        | Get recipient phone/email lists     |
+| PUT    | `/api/recipients`        | Replace recipients `{ phones, emails }` |

@@ -9,14 +9,54 @@ const router = express.Router();
 
 // Overall status: poller + which notification channels are configured.
 router.get('/status', (req, res) => {
+  const recipients = store.getRecipients();
   res.json({
     poller: poller.status(),
     channels: {
       sms: config.smsEnabled,
       email: config.emailEnabled,
     },
+    recipients: {
+      phones: recipients.phones.length,
+      emails: recipients.emails.length,
+    },
     googleConfigured: Boolean(config.google.credentialsPath),
   });
+});
+
+// Get the recipient lists.
+router.get('/recipients', (req, res) => {
+  res.json(store.getRecipients());
+});
+
+// Replace the recipient lists.
+router.put('/recipients', (req, res) => {
+  const { phones, emails } = req.body || {};
+
+  if (phones !== undefined) {
+    if (!Array.isArray(phones)) {
+      return res.status(400).json({ error: 'phones must be an array.' });
+    }
+    const bad = phones.find((p) => !/^\+?[1-9]\d{6,14}$/.test(String(p).trim()));
+    if (bad !== undefined) {
+      return res.status(400).json({
+        error: `Invalid phone number "${bad}". Use E.164 format, e.g. +15551234567.`,
+      });
+    }
+  }
+
+  if (emails !== undefined) {
+    if (!Array.isArray(emails)) {
+      return res.status(400).json({ error: 'emails must be an array.' });
+    }
+    const bad = emails.find((e) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e).trim()));
+    if (bad !== undefined) {
+      return res.status(400).json({ error: `Invalid email address "${bad}".` });
+    }
+  }
+
+  const updated = store.setRecipients({ phones, emails });
+  res.json(updated);
 });
 
 // List watched sheets.

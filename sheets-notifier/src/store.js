@@ -1,20 +1,39 @@
 const fs = require('fs');
 const path = require('path');
+const config = require('./config');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const STORE_PATH = path.join(DATA_DIR, 'store.json');
 
-let state = { sheets: [] };
+let state = { sheets: [], recipients: { phones: [], emails: [] } };
+
+function normalizeState() {
+  if (!Array.isArray(state.sheets)) state.sheets = [];
+  if (!state.recipients || typeof state.recipients !== 'object') {
+    state.recipients = { phones: [], emails: [] };
+  }
+  if (!Array.isArray(state.recipients.phones)) state.recipients.phones = [];
+  if (!Array.isArray(state.recipients.emails)) state.recipients.emails = [];
+}
 
 function load() {
+  let existed = false;
   try {
     if (fs.existsSync(STORE_PATH)) {
+      existed = true;
       state = JSON.parse(fs.readFileSync(STORE_PATH, 'utf8'));
-      if (!Array.isArray(state.sheets)) state.sheets = [];
     }
   } catch (err) {
     console.error('Failed to read store, starting empty:', err.message);
-    state = { sheets: [] };
+    state = { sheets: [], recipients: { phones: [], emails: [] } };
+  }
+  normalizeState();
+
+  // Seed recipients from env defaults the first time the store is created.
+  if (!existed) {
+    state.recipients.phones = [...new Set(config.defaultRecipients.phones)];
+    state.recipients.emails = [...new Set(config.defaultRecipients.emails)];
+    persist();
   }
 }
 
@@ -56,6 +75,21 @@ function updateSheet(id, patch) {
   return sheet;
 }
 
+function getRecipients() {
+  return state.recipients;
+}
+
+function setRecipients({ phones, emails }) {
+  if (Array.isArray(phones)) {
+    state.recipients.phones = [...new Set(phones.map((p) => p.trim()).filter(Boolean))];
+  }
+  if (Array.isArray(emails)) {
+    state.recipients.emails = [...new Set(emails.map((e) => e.trim()).filter(Boolean))];
+  }
+  persist();
+  return state.recipients;
+}
+
 load();
 
 module.exports = {
@@ -64,4 +98,6 @@ module.exports = {
   addSheet,
   removeSheet,
   updateSheet,
+  getRecipients,
+  setRecipients,
 };

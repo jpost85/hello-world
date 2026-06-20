@@ -24,7 +24,7 @@ function badge(on, label) {
 
 async function loadStatus() {
   try {
-    const { poller, channels, googleConfigured } = await api('/status');
+    const { poller, channels, googleConfigured, recipients: rc } = await api('/status');
     $('#status').innerHTML = `
       <div class="status-item">
         <div class="label">Poller</div>
@@ -44,6 +44,10 @@ async function loadStatus() {
       channels.email,
       'Email'
     )}</div>
+      </div>
+      <div class="status-item">
+        <div class="label">Recipients</div>
+        <div class="value">${rc.phones} 📱 · ${rc.emails} ✉️</div>
       </div>
       <div class="status-item">
         <div class="label">Google access</div>
@@ -102,9 +106,92 @@ async function loadSheets() {
   }
 }
 
+let recipients = { phones: [], emails: [] };
+
+function renderChips(listEl, items, kind) {
+  if (!items.length) {
+    listEl.innerHTML = '<li class="empty">None yet.</li>';
+    return;
+  }
+  listEl.innerHTML = items
+    .map(
+      (item, i) =>
+        `<li class="chip">${item}<button data-kind="${kind}" data-index="${i}" title="Remove">×</button></li>`
+    )
+    .join('');
+  listEl.querySelectorAll('button').forEach((btn) => {
+    btn.addEventListener('click', () => removeRecipient(btn.dataset.kind, +btn.dataset.index));
+  });
+}
+
+async function loadRecipients() {
+  try {
+    recipients = await api('/recipients');
+    renderChips($('#phone-list'), recipients.phones, 'phones');
+    renderChips($('#email-list'), recipients.emails, 'emails');
+  } catch (err) {
+    $('#recipients-msg').textContent = err.message;
+    $('#recipients-msg').className = 'msg err';
+  }
+}
+
+async function saveRecipients(next) {
+  const msg = $('#recipients-msg');
+  try {
+    recipients = await api('/recipients', {
+      method: 'PUT',
+      body: JSON.stringify(next),
+    });
+    renderChips($('#phone-list'), recipients.phones, 'phones');
+    renderChips($('#email-list'), recipients.emails, 'emails');
+    msg.textContent = 'Recipients saved.';
+    msg.className = 'msg ok';
+    loadStatus();
+    return true;
+  } catch (err) {
+    msg.textContent = err.message;
+    msg.className = 'msg err';
+    return false;
+  }
+}
+
+function removeRecipient(kind, index) {
+  const next = {
+    phones: [...recipients.phones],
+    emails: [...recipients.emails],
+  };
+  next[kind].splice(index, 1);
+  saveRecipients(next);
+}
+
+$('#add-phone-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = $('#phone-input');
+  const value = input.value.trim();
+  if (!value) return;
+  const ok = await saveRecipients({
+    phones: [...recipients.phones, value],
+    emails: recipients.emails,
+  });
+  if (ok) input.value = '';
+});
+
+$('#add-email-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = $('#email-input');
+  const value = input.value.trim();
+  if (!value) return;
+  const ok = await saveRecipients({
+    phones: recipients.phones,
+    emails: [...recipients.emails, value],
+  });
+  if (ok) input.value = '';
+});
+
 function refresh() {
   loadStatus();
   loadSheets();
+  loadRecipients();
 }
 
 $('#add-form').addEventListener('submit', async (e) => {

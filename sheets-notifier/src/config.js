@@ -36,15 +36,20 @@ const config = {
   },
 };
 
+// "Enabled" means the provider credentials are present. The actual list of
+// recipients (phone numbers / emails) is managed at runtime via the UI and
+// lives in the store; the env values below are only used to seed it the first
+// time the app runs.
 config.smsEnabled = Boolean(
-  config.twilio.accountSid &&
-    config.twilio.authToken &&
-    config.twilio.from &&
-    config.twilio.to
+  config.twilio.accountSid && config.twilio.authToken && config.twilio.from
 );
 
-config.emailEnabled = Boolean(
-  config.email.host && config.email.to && config.email.from
-);
+config.emailEnabled = Boolean(config.email.host && config.email.from);
+
+// Default recipients used to seed the store on first run.
+config.defaultRecipients = {
+  phones: config.twilio.to ? [config.twilio.to] : [],
+  emails: config.email.to ? [config.email.to] : [],
+};
 
 module.exports = config;
