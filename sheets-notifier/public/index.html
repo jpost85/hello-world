@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Sheets Modification Notifier</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>📊 Sheets Modification Notifier</h1>
+      <p class="subtitle">
+        Get a text (or email) whenever a watched Google Sheet changes.
+      </p>
+    </header>
+
+    <main>
+      <section class="card" id="status-card">
+        <h2>Status</h2>
+        <div id="status" class="status-grid">Loading…</div>
+        <div class="actions">
+          <button id="check-now">Check now</button>
+          <button id="test-notify" class="secondary">Send test notification</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Add a sheet to watch</h2>
+        <form id="add-form">
+          <input
+            type="text"
+            id="urlOrId"
+            placeholder="Paste a Google Sheet URL or ID"
+            required
+          />
+          <input type="text" id="name" placeholder="Friendly name (optional)" />
+          <button type="submit">Watch</button>
+        </form>
+        <p class="hint">
+          The sheet must be shared with your service account's email
+          (Viewer access is enough).
+        </p>
+        <p id="add-msg" class="msg"></p>
+      </section>
+
+      <section class="card">
+        <h2>Watched sheets</h2>
+        <div id="sheets">Loading…</div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
