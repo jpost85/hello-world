@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>All-Time World Cup Simulator</title>
+  <meta name="description" content="Draft a team of soccer legends and run the gauntlet of the greatest national sides of all time." />
+  <style>
+/* All-Time World Cup Simulator — styles */
+:root {
+  --pitch-1: #0b3d2e;
+  --pitch-2: #0f5132;
+  --line: rgba(255, 255, 255, 0.14);
+  --gold: #f5c542;
+  --gold-deep: #d9a400;
+  --ink: #0a1f17;
+  --card: #12231c;
+  --card-2: #18302625;
+  --text: #eaf3ee;
+  --muted: #9fb8ac;
+  --win: #2ec16b;
+  --loss: #e0533d;
+  --radius: 14px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(245, 197, 66, 0.08), transparent 60%),
+    repeating-linear-gradient(180deg, var(--pitch-1) 0 64px, var(--pitch-2) 64px 128px);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 28px 16px 60px;
+}
+
+#app {
+  width: 100%;
+  max-width: 760px;
+}
+
+/* ---------- generic screen ---------- */
+.screen {
+  background: linear-gradient(180deg, rgba(8, 28, 21, 0.85), rgba(6, 22, 16, 0.92));
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 30px 28px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(3px);
+  animation: rise 0.35s ease;
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+h1 { font-size: 2.1rem; margin: 6px 0 8px; letter-spacing: 0.5px; }
+h2 { font-size: 1.5rem; margin: 0 0 6px; }
+.tagline { color: var(--muted); line-height: 1.5; max-width: 52ch; margin: 0 auto 18px; }
+
+/* ---------- buttons ---------- */
+.btn {
+  font: inherit;
+  font-weight: 700;
+  border: none;
+  border-radius: 999px;
+  padding: 11px 20px;
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.15s ease, background 0.15s ease;
+  color: var(--ink);
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn.primary { background: linear-gradient(180deg, var(--gold), var(--gold-deep)); color: #2a1c00; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.big { padding: 14px 28px; font-size: 1.05rem; }
+.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+.btn.ghost:hover { background: rgba(255, 255, 255, 0.06); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* ---------- start ---------- */
+.start { text-align: center; }
+.trophy { font-size: 3.4rem; filter: drop-shadow(0 4px 12px rgba(245, 197, 66, 0.4)); }
+.how { text-align: left; max-width: 480px; margin: 8px auto 22px; display: grid; gap: 10px; }
+.how-step {
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+}
+.how-step .num {
+  flex: 0 0 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #2a1c00;
+  font-weight: 800;
+}
+
+/* ---------- mode select ---------- */
+.modes { text-align: center; }
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.mode-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.08s, background 0.15s;
+}
+.mode-card:hover { border-color: var(--gold); transform: translateY(-3px); }
+.mode-icon { font-size: 2.4rem; }
+.mode-title { font-weight: 800; font-size: 1.15rem; margin: 8px 0 6px; }
+.mode-desc { color: var(--muted); font-size: 0.85rem; line-height: 1.45; }
+
+/* ---------- decade / nation pick ---------- */
+.filter { text-align: center; }
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.filter-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.08s, background 0.15s;
+}
+.filter-card:hover { border-color: var(--gold); transform: translateY(-3px); }
+.filter-flag { font-size: 2.4rem; line-height: 1; }
+.filter-decade { font-size: 1.5rem; font-weight: 800; color: var(--gold); }
+.filter-name { font-weight: 700; margin-top: 6px; }
+.filter-count { color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
+
+.draft-context {
+  display: inline-block;
+  background: rgba(245, 197, 66, 0.12);
+  color: var(--gold);
+  border: 1px solid rgba(245, 197, 66, 0.28);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+/* ---------- draft ---------- */
+.draft-head { text-align: center; margin-bottom: 16px; }
+.draft-progress {
+  display: inline-block;
+  font-size: 0.78rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.slot-blurb { color: var(--muted); margin: 0 auto; max-width: 46ch; }
+
+.pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+.player-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.08s, background 0.15s;
+}
+.player-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+.player-card.selected { border-color: var(--gold); background: rgba(245, 197, 66, 0.1); }
+.pc-flag { font-size: 1.6rem; line-height: 1; }
+.pc-body { flex: 1; min-width: 0; }
+.pc-name { font-weight: 700; }
+.pc-meta { font-size: 0.78rem; color: var(--muted); }
+.pc-ovr {
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--gold);
+  background: rgba(245, 197, 66, 0.12);
+  border-radius: 10px;
+  padding: 4px 9px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.draft-nav { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.pitch-dots, .track { display: flex; gap: 6px; flex-wrap: wrap; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255, 255, 255, 0.15); }
+.dot.filled { background: var(--gold); }
+.dot.active { background: var(--text); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12); }
+
+/* ---------- team review ---------- */
+.team { text-align: center; }
+.ratings { display: flex; gap: 14px; justify-content: center; margin: 16px 0 22px; }
+.rating-box {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 22px;
+  min-width: 120px;
+}
+.rb-val { font-size: 2rem; font-weight: 800; color: var(--gold); }
+.rb-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+
+.team-nav, .result-nav, .draft-nav { display: flex; gap: 12px; justify-content: center; align-items: center; }
+.team-nav, .result-nav { flex-wrap: wrap; }
+
+/* ---------- visual pitch ---------- */
+.pitch {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto 22px;
+  aspect-ratio: 3 / 4;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(180deg, rgba(255,255,255,0.04) 0 12.5%, rgba(255,255,255,0) 12.5% 25%),
+    linear-gradient(180deg, #0f5934, #0c4a2b);
+  overflow: hidden;
+}
+.m-halfway {
+  position: absolute; left: 0; right: 0; top: 50%;
+  border-top: 2px solid rgba(255, 255, 255, 0.3);
+}
+.m-circle {
+  position: absolute; left: 50%; top: 50%;
+  width: 26%; aspect-ratio: 1; transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%;
+}
+.m-box {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: 46%; height: 14%;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+}
+.m-box.top { top: -2px; border-top: none; border-radius: 0 0 8px 8px; }
+.m-box.bottom { bottom: -2px; border-bottom: none; border-radius: 8px 8px 0 0; }
+
+.pitch-token {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 64px;
+  text-align: center;
+  animation: rise 0.35s ease;
+}
+.token-badge {
+  position: relative;
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  font-size: 1.3rem;
+  background: radial-gradient(circle at 50% 35%, #1c3a2d, #0c1f18);
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+.token-ovr {
+  position: absolute; right: -8px; bottom: -6px;
+  background: var(--gold); color: #2a1c00;
+  font-size: 0.62rem; font-weight: 800;
+  border-radius: 8px; padding: 1px 4px;
+  border: 1px solid #0c1f18;
+}
+.token-name {
+  font-size: 0.72rem; font-weight: 700;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 6px; padding: 1px 5px;
+  max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ---------- share ---------- */
+.share-track {
+  font-size: 1.5rem;
+  letter-spacing: 3px;
+  margin: 8px 0 16px;
+}
+.toast {
+  position: fixed;
+  left: 50%; bottom: 28px;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--gold); color: #2a1c00;
+  font-weight: 700;
+  padding: 10px 18px; border-radius: 999px;
+  box-shadow: var(--shadow);
+  opacity: 0; transition: opacity 0.25s, transform 0.25s;
+  z-index: 50;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------- gauntlet ---------- */
+.gauntlet { text-align: center; }
+.round-pill {
+  display: inline-block;
+  background: rgba(245, 197, 66, 0.14);
+  color: var(--gold);
+  border: 1px solid rgba(245, 197, 66, 0.3);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 1px;
+  margin-bottom: 18px;
+}
+.matchup { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 6px 0 14px; }
+.side {
+  flex: 1;
+  max-width: 230px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 12px;
+}
+.side.opp { border-color: rgba(224, 83, 61, 0.4); }
+.side.me { border-color: rgba(245, 197, 66, 0.4); }
+.side-flag { font-size: 2.4rem; }
+.side-name { font-weight: 800; margin-top: 6px; }
+.side-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+.vs { font-weight: 900; color: var(--muted); font-size: 1.1rem; }
+.opp-blurb { color: var(--muted); max-width: 50ch; margin: 0 auto 16px; line-height: 1.5; }
+.odds { margin-bottom: 18px; font-size: 1.05rem; }
+.odds strong { color: var(--gold); }
+
+.track { justify-content: center; margin-top: 22px; }
+.track-dot { font-size: 1.2rem; opacity: 0.35; filter: grayscale(0.6); transition: opacity 0.2s; }
+.track-dot.beat { opacity: 1; filter: none; }
+.track-dot.now { opacity: 1; filter: none; transform: scale(1.25); }
+
+/* ---------- result ---------- */
+.result { text-align: center; }
+.result-tag {
+  font-weight: 900;
+  letter-spacing: 4px;
+  font-size: 1.1rem;
+  margin-bottom: 14px;
+}
+.result.won .result-tag { color: var(--win); }
+.result.lost .result-tag { color: var(--loss); }
+.scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 8px;
+}
+.sb-team { font-weight: 700; flex: 1; }
+.sb-score { font-size: 2.2rem; font-weight: 900; color: var(--gold); white-space: nowrap; }
+.pens { color: var(--muted); margin-bottom: 8px; }
+.commentary { color: var(--text); max-width: 54ch; margin: 14px auto 22px; line-height: 1.6; }
+
+/* ---------- win ---------- */
+.win { text-align: center; }
+.big-trophy { font-size: 5rem; animation: pop 0.6s ease; }
+@keyframes pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.win h1 { color: var(--gold); letter-spacing: 2px; }
+.winners {
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 8px auto 22px;
+  max-width: 56ch;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 560px) {
+  .screen { padding: 22px 16px; }
+  h1 { font-size: 1.7rem; }
+  .ratings { flex-wrap: wrap; }
+  .matchup { gap: 10px; }
+  .side-flag { font-size: 1.8rem; }
+  .sb-score { font-size: 1.7rem; }
+}
+
+</style>
+</head>
+<body>
+  <main id="app"><!-- screens are rendered here by js/game.js --></main>
+
+  <script>
+/* === js/players.js === */
+/*
+ * All-Time World Cup Simulator — Player Database
+ *
+ * A curated roster of soccer legends spanning the 1950s to the 2020s.
+ * Each player has a `pwr` (0-100) representing their effectiveness in their
+ * primary role; the match engine reads this when computing line strengths.
+ *
+ * pos: GK | DEF | MID | FWD
+ * pwr: role power used by the engine
+ * ovr: overall rating, shown to the player
+ *
+ * The dataset is deep enough that each of the major footballing nations and
+ * each well-populated decade can field a full 4-3-3 (see js/modes.js, which
+ * only ever offers options that can actually field a team).
+ *
+ * To extend the game, just add entries here. Reference an `id` in js/slots.js
+ * to add it to an all-time draft tier; decade/nation modes pick it up
+ * automatically from its `pos`, `decade` and `nation`.
+ */
+window.PLAYERS = [
+  // ============================ Goalkeepers ============================
+  { id: "yashin",       name: "Lev Yashin",        pos: "GK",  nation: "USSR",        flag: "🇷🇺", decade: "1960s", club: "Dynamo Moscow",   ovr: 89, pwr: 90 },
+  { id: "banks",        name: "Gordon Banks",      pos: "GK",  nation: "England",     flag: "🏴",  decade: "1960s", club: "Stoke City",      ovr: 87, pwr: 88 },
+  { id: "zoff",         name: "Dino Zoff",         pos: "GK",  nation: "Italy",       flag: "🇮🇹", decade: "1970s", club: "Juventus",        ovr: 88, pwr: 89 },
+  { id: "maier",        name: "Sepp Maier",        pos: "GK",  nation: "Germany",     flag: "🇩🇪", decade: "1970s", club: "Bayern Munich",   ovr: 85, pwr: 86 },
+  { id: "fillol",       name: "Ubaldo Fillol",     pos: "GK",  nation: "Argentina",   flag: "🇦🇷", decade: "1970s", club: "River Plate",     ovr: 84, pwr: 85 },
+  { id: "shilton",      name: "Peter Shilton",     pos: "GK",  nation: "England",     flag: "🏴",  decade: "1980s", club: "Nott'm Forest",   ovr: 86, pwr: 87 },
+  { id: "vanbreukelen", name: "Hans van Breukelen",pos: "GK",  nation: "Netherlands", flag: "🇳🇱", decade: "1980s", club: "PSV Eindhoven",   ovr: 82, pwr: 83 },
+  { id: "schmeichel",   name: "Peter Schmeichel",  pos: "GK",  nation: "Denmark",     flag: "🇩🇰", decade: "1990s", club: "Man United",      ovr: 88, pwr: 89 },
+  { id: "taffarel",     name: "Cláudio Taffarel",  pos: "GK",  nation: "Brazil",      flag: "🇧🇷", decade: "1990s", club: "Parma",           ovr: 82, pwr: 83 },
+  { id: "zubizarreta",  name: "Andoni Zubizarreta",pos: "GK",  nation: "Spain",       flag: "🇪🇸", decade: "1990s", club: "Barcelona",       ovr: 85, pwr: 86 },
+  { id: "barthez",      name: "Fabien Barthez",    pos: "GK",  nation: "France",      flag: "🇫🇷", decade: "1990s", club: "AS Monaco",       ovr: 83, pwr: 84 },
+  { id: "seaman",       name: "David Seaman",      pos: "GK",  nation: "England",     flag: "🏴",  decade: "1990s", club: "Arsenal",         ovr: 84, pwr: 85 },
+  { id: "buffon",       name: "Gianluigi Buffon",  pos: "GK",  nation: "Italy",       flag: "🇮🇹", decade: "2000s", club: "Juventus",        ovr: 90, pwr: 91 },
+  { id: "casillas",     name: "Iker Casillas",     pos: "GK",  nation: "Spain",       flag: "🇪🇸", decade: "2000s", club: "Real Madrid",     ovr: 89, pwr: 90 },
+  { id: "kahn",         name: "Oliver Kahn",       pos: "GK",  nation: "Germany",     flag: "🇩🇪", decade: "2000s", club: "Bayern Munich",   ovr: 89, pwr: 90 },
+  { id: "vandersar",    name: "Edwin van der Sar", pos: "GK",  nation: "Netherlands", flag: "🇳🇱", decade: "2000s", club: "Man United",      ovr: 87, pwr: 88 },
+  { id: "neuer",        name: "Manuel Neuer",      pos: "GK",  nation: "Germany",     flag: "🇩🇪", decade: "2010s", club: "Bayern Munich",   ovr: 90, pwr: 91 },
+  { id: "lloris",       name: "Hugo Lloris",       pos: "GK",  nation: "France",      flag: "🇫🇷", decade: "2010s", club: "Tottenham",       ovr: 84, pwr: 85 },
+  { id: "alisson",      name: "Alisson Becker",    pos: "GK",  nation: "Brazil",      flag: "🇧🇷", decade: "2020s", club: "Liverpool",       ovr: 89, pwr: 90 },
+  { id: "emartinez",    name: "Emiliano Martínez", pos: "GK",  nation: "Argentina",   flag: "🇦🇷", decade: "2020s", club: "Aston Villa",     ovr: 85, pwr: 86 },
+
+  // ============================ Defenders ============================
+  { id: "djalma",       name: "Djalma Santos",     pos: "DEF", nation: "Brazil",      flag: "🇧🇷", decade: "1960s", club: "Palmeiras",       ovr: 84, pwr: 84 },
+  { id: "schnellinger", name: "Karl-Heinz Schnellinger", pos: "DEF", nation: "Germany", flag: "🇩🇪", decade: "1960s", club: "AC Milan",     ovr: 82, pwr: 82 },
+  { id: "burgnich",     name: "Tarcisio Burgnich", pos: "DEF", nation: "Italy",       flag: "🇮🇹", decade: "1960s", club: "Inter Milan",     ovr: 82, pwr: 82 },
+  { id: "moore",        name: "Bobby Moore",       pos: "DEF", nation: "England",     flag: "🏴",  decade: "1960s", club: "West Ham",        ovr: 88, pwr: 89 },
+  { id: "facchetti",    name: "Giacinto Facchetti",pos: "DEF", nation: "Italy",       flag: "🇮🇹", decade: "1960s", club: "Inter Milan",     ovr: 86, pwr: 86 },
+  { id: "beckenbauer",  name: "Franz Beckenbauer", pos: "DEF", nation: "Germany",     flag: "🇩🇪", decade: "1970s", club: "Bayern Munich",   ovr: 92, pwr: 90 },
+  { id: "passarella",   name: "Daniel Passarella", pos: "DEF", nation: "Argentina",   flag: "🇦🇷", decade: "1970s", club: "River Plate",     ovr: 86, pwr: 85 },
+  { id: "vogts",        name: "Berti Vogts",       pos: "DEF", nation: "Germany",     flag: "🇩🇪", decade: "1970s", club: "M'gladbach",      ovr: 84, pwr: 84 },
+  { id: "carlosalberto",name: "Carlos Alberto",    pos: "DEF", nation: "Brazil",      flag: "🇧🇷", decade: "1970s", club: "Santos",          ovr: 86, pwr: 86 },
+  { id: "krol",         name: "Ruud Krol",         pos: "DEF", nation: "Netherlands", flag: "🇳🇱", decade: "1970s", club: "Ajax",            ovr: 84, pwr: 84 },
+  { id: "baresi",       name: "Franco Baresi",     pos: "DEF", nation: "Italy",       flag: "🇮🇹", decade: "1980s", club: "AC Milan",        ovr: 90, pwr: 91 },
+  { id: "ruggeri",      name: "Oscar Ruggeri",     pos: "DEF", nation: "Argentina",   flag: "🇦🇷", decade: "1980s", club: "River Plate",     ovr: 82, pwr: 82 },
+  { id: "cabrini",      name: "Antonio Cabrini",   pos: "DEF", nation: "Italy",       flag: "🇮🇹", decade: "1980s", club: "Juventus",        ovr: 83, pwr: 83 },
+  { id: "brehme",       name: "Andreas Brehme",    pos: "DEF", nation: "Germany",     flag: "🇩🇪", decade: "1980s", club: "Inter Milan",     ovr: 83, pwr: 83 },
+  { id: "maldini",      name: "Paolo Maldini",     pos: "DEF", nation: "Italy",       flag: "🇮🇹", decade: "1990s", club: "AC Milan",        ovr: 91, pwr: 91 },
+  { id: "robertocarlos",name: "Roberto Carlos",    pos: "DEF", nation: "Brazil",      flag: "🇧🇷", decade: "1990s", club: "Real Madrid",     ovr: 88, pwr: 86 },
+  { id: "thuram",       name: "Lilian Thuram",     pos: "DEF", nation: "France",      flag: "🇫🇷", decade: "1990s", club: "Juventus",        ovr: 86, pwr: 87 },
+  { id: "desailly",     name: "Marcel Desailly",   pos: "DEF", nation: "France",      flag: "🇫🇷", decade: "1990s", club: "AC Milan",        ovr: 85, pwr: 86 },
+  { id: "sammer",       name: "Matthias Sammer",   pos: "DEF", nation: "Germany",     flag: "🇩🇪", decade: "1990s", club: "Bor. Dortmund",   ovr: 85, pwr: 85 },
+  { id: "kohler",       name: "Jürgen Kohler",     pos: "DEF", nation: "Germany",     flag: "🇩🇪", decade: "1990s", club: "Juventus",        ovr: 83, pwr: 83 },
+  { id: "adams",        name: "Tony Adams",        pos: "DEF", nation: "England",     flag: "🏴",  decade: "1990s", club: "Arsenal",         ovr: 84, pwr: 84 },
+  { id: "blanc",        name: "Laurent Blanc",     pos: "DEF", nation: "France",      flag: "🇫🇷", decade: "1990s", club: "Marseille",       ovr: 84, pwr: 84 },
+  { id: "lizarazu",     name: "Bixente Lizarazu",  pos: "DEF", nation: "France",      flag: "🇫🇷", decade: "1990s", club: "Bayern Munich",   ovr: 83, pwr: 83 },
+  { id: "hierro",       name: "Fernando Hierro",   pos: "DEF", nation: "Spain",       flag: "🇪🇸", decade: "1990s", club: "Real Madrid",     ovr: 85, pwr: 85 },
+  { id: "stam",         name: "Jaap Stam",         pos: "DEF", nation: "Netherlands", flag: "🇳🇱", decade: "1990s", club: "Man United",      ovr: 85, pwr: 85 },
+  { id: "frankdeboer",  name: "Frank de Boer",     pos: "DEF", nation: "Netherlands", flag: "🇳🇱", decade: "1990s", club: "Ajax",            ovr: 82, pwr: 82 },
+  { id: "koeman",       name: "Ronald Koeman",     pos: "DEF", nation: "Netherlands", flag: "🇳🇱", decade: "1990s", club: "Barcelona",       ovr: 84, pwr: 85 },
+  { id: "cafu",         name: "Cafu",              pos: "DEF", nation: "Brazil",      flag: "🇧🇷", decade: "2000s", club: "AC Milan",        ovr: 87, pwr: 86 },
+  { id: "cannavaro",    name: "Fabio Cannavaro",   pos: "DEF", nation: "Italy",       flag: "🇮🇹", decade: "2000s", club: "Real Madrid",     ovr: 88, pwr: 89 },
+  { id: "puyol",        name: "Carles Puyol",      pos: "DEF", nation: "Spain",       flag: "🇪🇸", decade: "2000s", club: "Barcelona",       ovr: 87, pwr: 88 },
+  { id: "nesta",        name: "Alessandro Nesta",  pos: "DEF", nation: "Italy",       flag: "🇮🇹", decade: "2000s", club: "AC Milan",        ovr: 88, pwr: 88 },
+  { id: "terry",        name: "John Terry",        pos: "DEF", nation: "England",     flag: "🏴",  decade: "2000s", club: "Chelsea",         ovr: 85, pwr: 85 },
+  { id: "ferdinand",    name: "Rio Ferdinand",     pos: "DEF", nation: "England",     flag: "🏴",  decade: "2000s", club: "Man United",      ovr: 85, pwr: 85 },
+  { id: "ashleycole",   name: "Ashley Cole",       pos: "DEF", nation: "England",     flag: "🏴",  decade: "2000s", club: "Chelsea",         ovr: 84, pwr: 84 },
+  { id: "ayala",        name: "Roberto Ayala",     pos: "DEF", nation: "Argentina",   flag: "🇦🇷", decade: "2000s", club: "Valencia",        ovr: 84, pwr: 84 },
+  { id: "zanetti",      name: "Javier Zanetti",    pos: "DEF", nation: "Argentina",   flag: "🇦🇷", decade: "2000s", club: "Inter Milan",     ovr: 85, pwr: 85 },
+  { id: "lucio",        name: "Lúcio",             pos: "DEF", nation: "Brazil",      flag: "🇧🇷", decade: "2000s", club: "Inter Milan",     ovr: 84, pwr: 84 },
+  { id: "sagnol",       name: "Willy Sagnol",      pos: "DEF", nation: "France",      flag: "🇫🇷", decade: "2000s", club: "Bayern Munich",   ovr: 80, pwr: 80 },
+  { id: "lahm",         name: "Philipp Lahm",      pos: "DEF", nation: "Germany",     flag: "🇩🇪", decade: "2010s", club: "Bayern Munich",   ovr: 88, pwr: 87 },
+  { id: "ramos",        name: "Sergio Ramos",      pos: "DEF", nation: "Spain",       flag: "🇪🇸", decade: "2010s", club: "Real Madrid",     ovr: 88, pwr: 88 },
+  { id: "vandijk",      name: "Virgil van Dijk",   pos: "DEF", nation: "Netherlands", flag: "🇳🇱", decade: "2010s", club: "Liverpool",       ovr: 89, pwr: 89 },
+  { id: "hummels",      name: "Mats Hummels",      pos: "DEF", nation: "Germany",     flag: "🇩🇪", decade: "2010s", club: "Bayern Munich",   ovr: 85, pwr: 85 },
+  { id: "thiagosilva",  name: "Thiago Silva",      pos: "DEF", nation: "Brazil",      flag: "🇧🇷", decade: "2010s", club: "PSG",             ovr: 86, pwr: 86 },
+  { id: "marcelo",      name: "Marcelo",           pos: "DEF", nation: "Brazil",      flag: "🇧🇷", decade: "2010s", club: "Real Madrid",     ovr: 83, pwr: 83 },
+  { id: "varane",       name: "Raphaël Varane",    pos: "DEF", nation: "France",      flag: "🇫🇷", decade: "2010s", club: "Real Madrid",     ovr: 84, pwr: 84 },
+  { id: "pique",        name: "Gerard Piqué",      pos: "DEF", nation: "Spain",       flag: "🇪🇸", decade: "2010s", club: "Barcelona",       ovr: 85, pwr: 85 },
+  { id: "carvajal",     name: "Dani Carvajal",     pos: "DEF", nation: "Spain",       flag: "🇪🇸", decade: "2010s", club: "Real Madrid",     ovr: 82, pwr: 82 },
+  { id: "otamendi",     name: "Nicolás Otamendi",  pos: "DEF", nation: "Argentina",   flag: "🇦🇷", decade: "2020s", club: "Benfica",         ovr: 81, pwr: 81 },
+
+  // ============================ Midfielders ============================
+  { id: "bobbycharlton",name: "Bobby Charlton",    pos: "MID", nation: "England",     flag: "🏴",  decade: "1960s", club: "Man United",      ovr: 89, pwr: 88 },
+  { id: "didi",         name: "Didi",              pos: "MID", nation: "Brazil",      flag: "🇧🇷", decade: "1960s", club: "Botafogo",        ovr: 85, pwr: 85 },
+  { id: "suarez_l",     name: "Luis Suárez",       pos: "MID", nation: "Spain",       flag: "🇪🇸", decade: "1960s", club: "Inter Milan",     ovr: 84, pwr: 84 },
+  { id: "platini",      name: "Michel Platini",    pos: "MID", nation: "France",      flag: "🇫🇷", decade: "1980s", club: "Juventus",        ovr: 90, pwr: 89 },
+  { id: "rivera",       name: "Gianni Rivera",     pos: "MID", nation: "Italy",       flag: "🇮🇹", decade: "1970s", club: "AC Milan",        ovr: 85, pwr: 85 },
+  { id: "gerson",       name: "Gérson",            pos: "MID", nation: "Brazil",      flag: "🇧🇷", decade: "1970s", club: "Botafogo",        ovr: 84, pwr: 84 },
+  { id: "netzer",       name: "Günter Netzer",     pos: "MID", nation: "Germany",     flag: "🇩🇪", decade: "1970s", club: "M'gladbach",      ovr: 84, pwr: 84 },
+  { id: "overath",      name: "Wolfgang Overath",  pos: "MID", nation: "Germany",     flag: "🇩🇪", decade: "1970s", club: "FC Köln",         ovr: 82, pwr: 82 },
+  { id: "neeskens",     name: "Johan Neeskens",    pos: "MID", nation: "Netherlands", flag: "🇳🇱", decade: "1970s", club: "Ajax",            ovr: 84, pwr: 84 },
+  { id: "zico",         name: "Zico",              pos: "MID", nation: "Brazil",      flag: "🇧🇷", decade: "1980s", club: "Flamengo",        ovr: 89, pwr: 88 },
+  { id: "socrates",     name: "Sócrates",          pos: "MID", nation: "Brazil",      flag: "🇧🇷", decade: "1980s", club: "Corinthians",     ovr: 86, pwr: 86 },
+  { id: "gullit",       name: "Ruud Gullit",       pos: "MID", nation: "Netherlands", flag: "🇳🇱", decade: "1980s", club: "AC Milan",        ovr: 88, pwr: 87 },
+  { id: "matthaus",     name: "Lothar Matthäus",   pos: "MID", nation: "Germany",     flag: "🇩🇪", decade: "1990s", club: "Inter Milan",     ovr: 89, pwr: 88 },
+  { id: "baggio",       name: "Roberto Baggio",    pos: "MID", nation: "Italy",       flag: "🇮🇹", decade: "1990s", club: "Juventus",        ovr: 88, pwr: 87 },
+  { id: "redondo",      name: "Fernando Redondo",  pos: "MID", nation: "Argentina",   flag: "🇦🇷", decade: "1990s", club: "Real Madrid",     ovr: 85, pwr: 85 },
+  { id: "rijkaard",     name: "Frank Rijkaard",    pos: "MID", nation: "Netherlands", flag: "🇳🇱", decade: "1990s", club: "AC Milan",        ovr: 86, pwr: 86 },
+  { id: "davids",       name: "Edgar Davids",      pos: "MID", nation: "Netherlands", flag: "🇳🇱", decade: "1990s", club: "Juventus",        ovr: 83, pwr: 83 },
+  { id: "zidane",       name: "Zinedine Zidane",   pos: "MID", nation: "France",      flag: "🇫🇷", decade: "2000s", club: "Real Madrid",     ovr: 92, pwr: 92 },
+  { id: "pirlo",        name: "Andrea Pirlo",      pos: "MID", nation: "Italy",       flag: "🇮🇹", decade: "2000s", club: "AC Milan",        ovr: 88, pwr: 89 },
+  { id: "xavi",         name: "Xavi Hernández",    pos: "MID", nation: "Spain",       flag: "🇪🇸", decade: "2000s", club: "Barcelona",       ovr: 89, pwr: 91 },
+  { id: "gerrard",      name: "Steven Gerrard",    pos: "MID", nation: "England",     flag: "🏴",  decade: "2000s", club: "Liverpool",       ovr: 87, pwr: 87 },
+  { id: "scholes",      name: "Paul Scholes",      pos: "MID", nation: "England",     flag: "🏴",  decade: "2000s", club: "Man United",      ovr: 85, pwr: 86 },
+  { id: "riquelme",     name: "Juan Román Riquelme",pos:"MID", nation: "Argentina",   flag: "🇦🇷", decade: "2000s", club: "Villarreal",      ovr: 85, pwr: 86 },
+  { id: "kaka",         name: "Kaká",              pos: "MID", nation: "Brazil",      flag: "🇧🇷", decade: "2000s", club: "AC Milan",        ovr: 87, pwr: 87 },
+  { id: "rivaldo",      name: "Rivaldo",           pos: "MID", nation: "Brazil",      flag: "🇧🇷", decade: "2000s", club: "Barcelona",       ovr: 87, pwr: 87 },
+  { id: "ballack",      name: "Michael Ballack",   pos: "MID", nation: "Germany",     flag: "🇩🇪", decade: "2000s", club: "Chelsea",         ovr: 84, pwr: 84 },
+  { id: "lampard",      name: "Frank Lampard",     pos: "MID", nation: "England",     flag: "🏴",  decade: "2000s", club: "Chelsea",         ovr: 85, pwr: 85 },
+  { id: "beckham",      name: "David Beckham",     pos: "MID", nation: "England",     flag: "🏴",  decade: "2000s", club: "Man United",      ovr: 84, pwr: 84 },
+  { id: "veron",        name: "Juan Sebastián Verón",pos:"MID",nation: "Argentina",   flag: "🇦🇷", decade: "2000s", club: "Lazio",           ovr: 83, pwr: 83 },
+  { id: "vieira",       name: "Patrick Vieira",    pos: "MID", nation: "France",      flag: "🇫🇷", decade: "2000s", club: "Arsenal",         ovr: 85, pwr: 85 },
+  { id: "modric",       name: "Luka Modrić",       pos: "MID", nation: "Croatia",     flag: "🇭🇷", decade: "2010s", club: "Real Madrid",     ovr: 89, pwr: 89 },
+  { id: "kante",        name: "N'Golo Kanté",      pos: "MID", nation: "France",      flag: "🇫🇷", decade: "2010s", club: "Chelsea",         ovr: 86, pwr: 86 },
+  { id: "debruyne",     name: "Kevin De Bruyne",   pos: "MID", nation: "Belgium",     flag: "🇧🇪", decade: "2010s", club: "Man City",        ovr: 89, pwr: 89 },
+  { id: "iniesta",      name: "Andrés Iniesta",    pos: "MID", nation: "Spain",       flag: "🇪🇸", decade: "2010s", club: "Barcelona",       ovr: 90, pwr: 90 },
+  { id: "busquets",     name: "Sergio Busquets",   pos: "MID", nation: "Spain",       flag: "🇪🇸", decade: "2010s", club: "Barcelona",       ovr: 86, pwr: 86 },
+  { id: "fabregas",     name: "Cesc Fàbregas",     pos: "MID", nation: "Spain",       flag: "🇪🇸", decade: "2010s", club: "Barcelona",       ovr: 83, pwr: 83 },
+  { id: "kroos",        name: "Toni Kroos",        pos: "MID", nation: "Germany",     flag: "🇩🇪", decade: "2010s", club: "Real Madrid",     ovr: 86, pwr: 86 },
+  { id: "sneijder",     name: "Wesley Sneijder",   pos: "MID", nation: "Netherlands", flag: "🇳🇱", decade: "2010s", club: "Inter Milan",     ovr: 84, pwr: 84 },
+  { id: "derossi",      name: "Daniele De Rossi",  pos: "MID", nation: "Italy",       flag: "🇮🇹", decade: "2010s", club: "AS Roma",         ovr: 82, pwr: 82 },
+  { id: "mascherano",   name: "Javier Mascherano", pos: "MID", nation: "Argentina",   flag: "🇦🇷", decade: "2010s", club: "Barcelona",       ovr: 83, pwr: 83 },
+  { id: "depaul",       name: "Rodrigo De Paul",   pos: "MID", nation: "Argentina",   flag: "🇦🇷", decade: "2020s", club: "Atlético Madrid", ovr: 80, pwr: 80 },
+
+  // ============================ Forwards ============================
+  { id: "distefano",    name: "Alfredo Di Stéfano",pos: "FWD", nation: "Argentina",   flag: "🇦🇷", decade: "1950s", club: "Real Madrid",     ovr: 91, pwr: 90 },
+  { id: "puskas",       name: "Ferenc Puskás",     pos: "FWD", nation: "Hungary",     flag: "🇭🇺", decade: "1950s", club: "Real Madrid",     ovr: 90, pwr: 91 },
+  { id: "pele",         name: "Pelé",              pos: "FWD", nation: "Brazil",      flag: "🇧🇷", decade: "1960s", club: "Santos",          ovr: 95, pwr: 95 },
+  { id: "eusebio",      name: "Eusébio",           pos: "FWD", nation: "Portugal",    flag: "🇵🇹", decade: "1960s", club: "Benfica",         ovr: 89, pwr: 90 },
+  { id: "garrincha",    name: "Garrincha",         pos: "FWD", nation: "Brazil",      flag: "🇧🇷", decade: "1960s", club: "Botafogo",        ovr: 89, pwr: 89 },
+  { id: "seeler",       name: "Uwe Seeler",        pos: "FWD", nation: "Germany",     flag: "🇩🇪", decade: "1960s", club: "Hamburg",         ovr: 83, pwr: 84 },
+  { id: "greaves",      name: "Jimmy Greaves",     pos: "FWD", nation: "England",     flag: "🏴",  decade: "1960s", club: "Tottenham",       ovr: 84, pwr: 85 },
+  { id: "muller",       name: "Gerd Müller",       pos: "FWD", nation: "Germany",     flag: "🇩🇪", decade: "1970s", club: "Bayern Munich",   ovr: 90, pwr: 92 },
+  { id: "cruyff",       name: "Johan Cruyff",      pos: "FWD", nation: "Netherlands", flag: "🇳🇱", decade: "1970s", club: "Ajax",            ovr: 93, pwr: 92 },
+  { id: "best",         name: "George Best",       pos: "FWD", nation: "N. Ireland",  flag: "🇬🇧", decade: "1970s", club: "Man United",      ovr: 88, pwr: 88 },
+  { id: "riva",         name: "Gigi Riva",         pos: "FWD", nation: "Italy",       flag: "🇮🇹", decade: "1970s", club: "Cagliari",        ovr: 85, pwr: 86 },
+  { id: "kempes",       name: "Mario Kempes",      pos: "FWD", nation: "Argentina",   flag: "🇦🇷", decade: "1970s", club: "Valencia",        ovr: 85, pwr: 85 },
+  { id: "rivelino",     name: "Rivelino",          pos: "FWD", nation: "Brazil",      flag: "🇧🇷", decade: "1970s", club: "Corinthians",     ovr: 85, pwr: 85 },
+  { id: "vanbasten",    name: "Marco van Basten",  pos: "FWD", nation: "Netherlands", flag: "🇳🇱", decade: "1980s", club: "AC Milan",        ovr: 90, pwr: 91 },
+  { id: "rummenigge",   name: "Karl-Heinz Rummenigge",pos:"FWD",nation: "Germany",    flag: "🇩🇪", decade: "1980s", club: "Bayern Munich",   ovr: 86, pwr: 87 },
+  { id: "rossi",        name: "Paolo Rossi",       pos: "FWD", nation: "Italy",       flag: "🇮🇹", decade: "1980s", club: "Juventus",        ovr: 84, pwr: 85 },
+  { id: "butragueno",   name: "Emilio Butragueño", pos: "FWD", nation: "Spain",       flag: "🇪🇸", decade: "1980s", club: "Real Madrid",     ovr: 82, pwr: 82 },
+  { id: "lineker",      name: "Gary Lineker",      pos: "FWD", nation: "England",     flag: "🏴",  decade: "1980s", club: "Tottenham",       ovr: 85, pwr: 85 },
+  { id: "maradona",     name: "Diego Maradona",    pos: "FWD", nation: "Argentina",   flag: "🇦🇷", decade: "1980s", club: "Napoli",          ovr: 94, pwr: 93 },
+  { id: "romario",      name: "Romário",           pos: "FWD", nation: "Brazil",      flag: "🇧🇷", decade: "1990s", club: "Barcelona",       ovr: 88, pwr: 90 },
+  { id: "batistuta",    name: "Gabriel Batistuta", pos: "FWD", nation: "Argentina",   flag: "🇦🇷", decade: "1990s", club: "Fiorentina",      ovr: 86, pwr: 88 },
+  { id: "klinsmann",    name: "Jürgen Klinsmann",  pos: "FWD", nation: "Germany",     flag: "🇩🇪", decade: "1990s", club: "Tottenham",       ovr: 85, pwr: 86 },
+  { id: "papin",        name: "Jean-Pierre Papin", pos: "FWD", nation: "France",      flag: "🇫🇷", decade: "1990s", club: "Marseille",       ovr: 84, pwr: 85 },
+  { id: "shearer",      name: "Alan Shearer",      pos: "FWD", nation: "England",     flag: "🏴",  decade: "1990s", club: "Newcastle",       ovr: 85, pwr: 86 },
+  { id: "bergkamp",     name: "Dennis Bergkamp",   pos: "FWD", nation: "Netherlands", flag: "🇳🇱", decade: "1990s", club: "Arsenal",         ovr: 87, pwr: 87 },
+  { id: "ronaldo",      name: "Ronaldo Nazário",   pos: "FWD", nation: "Brazil",      flag: "🇧🇷", decade: "2000s", club: "Real Madrid",     ovr: 92, pwr: 93 },
+  { id: "ronaldinho",   name: "Ronaldinho",        pos: "FWD", nation: "Brazil",      flag: "🇧🇷", decade: "2000s", club: "Barcelona",       ovr: 90, pwr: 90 },
+  { id: "henry",        name: "Thierry Henry",     pos: "FWD", nation: "France",      flag: "🇫🇷", decade: "2000s", club: "Arsenal",         ovr: 88, pwr: 89 },
+  { id: "trezeguet",    name: "David Trezeguet",   pos: "FWD", nation: "France",      flag: "🇫🇷", decade: "2000s", club: "Juventus",        ovr: 83, pwr: 84 },
+  { id: "klose",        name: "Miroslav Klose",    pos: "FWD", nation: "Germany",     flag: "🇩🇪", decade: "2000s", club: "Bayern Munich",   ovr: 84, pwr: 85 },
+  { id: "delpiero",     name: "Alessandro Del Piero",pos:"FWD",nation: "Italy",       flag: "🇮🇹", decade: "2000s", club: "Juventus",        ovr: 86, pwr: 86 },
+  { id: "totti",        name: "Francesco Totti",   pos: "FWD", nation: "Italy",       flag: "🇮🇹", decade: "2000s", club: "AS Roma",         ovr: 86, pwr: 86 },
+  { id: "raul",         name: "Raúl",              pos: "FWD", nation: "Spain",       flag: "🇪🇸", decade: "2000s", club: "Real Madrid",     ovr: 86, pwr: 86 },
+  { id: "torres",       name: "Fernando Torres",   pos: "FWD", nation: "Spain",       flag: "🇪🇸", decade: "2000s", club: "Liverpool",       ovr: 84, pwr: 84 },
+  { id: "morientes",    name: "Fernando Morientes",pos: "FWD", nation: "Spain",       flag: "🇪🇸", decade: "2000s", club: "Real Madrid",     ovr: 81, pwr: 81 },
+  { id: "owen",         name: "Michael Owen",      pos: "FWD", nation: "England",     flag: "🏴",  decade: "2000s", club: "Liverpool",       ovr: 83, pwr: 84 },
+  { id: "vannistelrooy",name: "Ruud van Nistelrooy",pos:"FWD", nation: "Netherlands", flag: "🇳🇱", decade: "2000s", club: "Man United",      ovr: 84, pwr: 85 },
+  { id: "messi",        name: "Lionel Messi",      pos: "FWD", nation: "Argentina",   flag: "🇦🇷", decade: "2010s", club: "Barcelona",       ovr: 95, pwr: 95 },
+  { id: "cristiano",    name: "Cristiano Ronaldo", pos: "FWD", nation: "Portugal",    flag: "🇵🇹", decade: "2010s", club: "Real Madrid",     ovr: 93, pwr: 93 },
+  { id: "ibrahimovic",  name: "Zlatan Ibrahimović",pos: "FWD", nation: "Sweden",      flag: "🇸🇪", decade: "2010s", club: "Milan / PSG",     ovr: 88, pwr: 88 },
+  { id: "benzema",      name: "Karim Benzema",     pos: "FWD", nation: "France",      flag: "🇫🇷", decade: "2010s", club: "Real Madrid",     ovr: 86, pwr: 87 },
+  { id: "griezmann",    name: "Antoine Griezmann", pos: "FWD", nation: "France",      flag: "🇫🇷", decade: "2010s", club: "Atlético Madrid", ovr: 84, pwr: 84 },
+  { id: "villa",        name: "David Villa",       pos: "FWD", nation: "Spain",       flag: "🇪🇸", decade: "2010s", club: "Barcelona",       ovr: 84, pwr: 85 },
+  { id: "rooney",       name: "Wayne Rooney",      pos: "FWD", nation: "England",     flag: "🏴",  decade: "2010s", club: "Man United",      ovr: 85, pwr: 85 },
+  { id: "robben",       name: "Arjen Robben",      pos: "FWD", nation: "Netherlands", flag: "🇳🇱", decade: "2010s", club: "Bayern Munich",   ovr: 85, pwr: 85 },
+  { id: "vanpersie",    name: "Robin van Persie",  pos: "FWD", nation: "Netherlands", flag: "🇳🇱", decade: "2010s", club: "Man United",      ovr: 84, pwr: 85 },
+  { id: "aguero",       name: "Sergio Agüero",     pos: "FWD", nation: "Argentina",   flag: "🇦🇷", decade: "2010s", club: "Man City",        ovr: 85, pwr: 86 },
+  { id: "neymar",       name: "Neymar",            pos: "FWD", nation: "Brazil",      flag: "🇧🇷", decade: "2010s", club: "Barcelona / PSG", ovr: 86, pwr: 87 },
+  { id: "mbappe",       name: "Kylian Mbappé",     pos: "FWD", nation: "France",      flag: "🇫🇷", decade: "2020s", club: "Paris SG",        ovr: 91, pwr: 92 },
+  { id: "lewandowski",  name: "Robert Lewandowski",pos: "FWD", nation: "Poland",      flag: "🇵🇱", decade: "2020s", club: "Bayern Munich",   ovr: 90, pwr: 91 },
+  { id: "kane",         name: "Harry Kane",        pos: "FWD", nation: "England",     flag: "🏴",  decade: "2020s", club: "Bayern Munich",   ovr: 85, pwr: 86 },
+];
+
+// Lookup helper used across the app.
+window.PLAYER_BY_ID = window.PLAYERS.reduce(function (acc, p) {
+  acc[p.id] = p;
+  return acc;
+}, {});
+
+
+/* === js/slots.js === */
+/*
+ * Draft slots — the "tier picks" that build your XI.
+ *
+ * The user fills an 11-man 4-3-3 by choosing one legend from each themed
+ * slot. Every pool deliberately spans multiple decades so the all-time /
+ * all-decade flavour comes through in the choices themselves.
+ *
+ * line: which line the slot feeds in the match engine (GK | DEF | MID | FWD)
+ * pool: candidate player ids (must exist in js/players.js)
+ */
+window.SLOTS = [
+  {
+    key: "gk",
+    label: "The Goalkeeper",
+    line: "GK",
+    blurb: "The last line of defence. A great keeper steals points on his own.",
+    pool: ["yashin", "banks", "zoff", "schmeichel", "buffon", "casillas", "neuer"],
+  },
+  {
+    key: "libero",
+    label: "The Libero",
+    line: "DEF",
+    blurb: "A commanding centre-back who reads the game and starts attacks.",
+    pool: ["beckenbauer", "baresi", "moore", "passarella", "cannavaro", "vandijk"],
+  },
+  {
+    key: "stopper",
+    label: "The Stopper",
+    line: "DEF",
+    blurb: "An uncompromising centre-back who wins every duel.",
+    pool: ["puyol", "ramos", "desailly", "thuram", "maldini", "facchetti"],
+  },
+  {
+    key: "rightback",
+    label: "The Right-Back",
+    line: "DEF",
+    blurb: "Lock down the flank — or rampage up it.",
+    pool: ["cafu", "lahm", "thuram", "ramos"],
+  },
+  {
+    key: "leftback",
+    label: "The Left-Back",
+    line: "DEF",
+    blurb: "Pace, power and a cannon of a left foot.",
+    pool: ["maldini", "robertocarlos", "facchetti"],
+  },
+  {
+    key: "anchor",
+    label: "The Engine",
+    line: "MID",
+    blurb: "The box-to-box heartbeat who covers every blade of grass.",
+    pool: ["matthaus", "gullit", "gerrard", "kante", "modric"],
+  },
+  {
+    key: "playmaker",
+    label: "The Playmaker",
+    line: "MID",
+    blurb: "The deep-lying conductor who dictates the tempo.",
+    pool: ["pirlo", "xavi", "iniesta", "debruyne", "scholes"],
+  },
+  {
+    key: "number10",
+    label: "The No. 10",
+    line: "MID",
+    blurb: "The creative genius who unlocks any defence.",
+    pool: ["zidane", "platini", "zico", "baggio", "socrates", "riquelme"],
+  },
+  {
+    key: "winger",
+    label: "The Winger",
+    line: "FWD",
+    blurb: "Skill, pace and chaos out wide.",
+    pool: ["garrincha", "best", "ronaldinho", "cristiano", "mbappe"],
+  },
+  {
+    key: "striker",
+    label: "The No. 9",
+    line: "FWD",
+    blurb: "A pure finisher who lives for goals.",
+    pool: ["muller", "vanbasten", "ronaldo", "romario", "batistuta", "lewandowski", "ibrahimovic"],
+  },
+  {
+    key: "talisman",
+    label: "The Talisman",
+    line: "FWD",
+    blurb: "The once-in-a-generation superstar your team is built around.",
+    pool: ["pele", "maradona", "messi", "cruyff", "distefano", "puskas", "eusebio", "henry"],
+  },
+];
+
+
+/* === js/opponents.js === */
+/*
+ * The Gauntlet — legendary national sides, in escalating order of difficulty.
+ *
+ * Each opponent is rated on three lines (att / mid / def, 0-100) that the
+ * match engine pits against your XI. Ratings climb round by round, with the
+ * 1970 Brazil side as the final boss — widely regarded as the greatest team
+ * ever assembled.
+ */
+window.OPPONENTS = [
+  {
+    name: "Hungary",
+    year: 1954,
+    flag: "🇭🇺",
+    tag: "The Mighty Magyars",
+    att: 80, mid: 79, def: 74,
+    blurb: "Puskás and the Golden Team that went unbeaten for six years.",
+  },
+  {
+    name: "England",
+    year: 1966,
+    flag: "🏴",
+    tag: "The Wingless Wonders",
+    att: 79, mid: 80, def: 80,
+    blurb: "World champions on home soil, marshalled by Bobby Moore.",
+  },
+  {
+    name: "Italy",
+    year: 1982,
+    flag: "🇮🇹",
+    tag: "Catenaccio Kings",
+    att: 81, mid: 80, def: 84,
+    blurb: "Paolo Rossi's redemption and a back line carved from granite.",
+  },
+  {
+    name: "Netherlands",
+    year: 1974,
+    flag: "🇳🇱",
+    tag: "Total Football",
+    att: 85, mid: 86, def: 80,
+    blurb: "Cruyff's revolutionaries who changed the sport forever.",
+  },
+  {
+    name: "France",
+    year: 1998,
+    flag: "🇫🇷",
+    tag: "Les Bleus",
+    att: 84, mid: 87, def: 86,
+    blurb: "Zidane at his peak in front of an iron-clad defence.",
+  },
+  {
+    name: "Argentina",
+    year: 1986,
+    flag: "🇦🇷",
+    tag: "Maradona's Masterpiece",
+    att: 88, mid: 86, def: 82,
+    blurb: "One man dragged a nation to glory almost single-handed.",
+  },
+  {
+    name: "Germany",
+    year: 2014,
+    flag: "🇩🇪",
+    tag: "Die Mannschaft",
+    att: 86, mid: 88, def: 87,
+    blurb: "A ruthless, machine-like unit — ask Brazil about the 7-1.",
+  },
+  {
+    name: "Spain",
+    year: 2010,
+    flag: "🇪🇸",
+    tag: "Tiki-Taka",
+    att: 85, mid: 91, def: 87,
+    blurb: "Xavi and Iniesta passed the world to death.",
+  },
+  {
+    name: "Argentina",
+    year: 2022,
+    flag: "🇦🇷",
+    tag: "Scaloneta",
+    att: 89, mid: 87, def: 86,
+    blurb: "Messi finally lifts the trophy with a side that never breaks.",
+  },
+  {
+    name: "Brazil",
+    year: 1970,
+    flag: "🇧🇷",
+    tag: "The Greatest of All Time",
+    att: 95, mid: 90, def: 85,
+    blurb: "Pelé, Jairzinho, Tostão, Gérson, Rivelino. The final boss.",
+  },
+];
+
+
+/* === js/modes.js === */
+/*
+ * Game modes — how the draft pool is constrained.
+ *
+ *   all-time : the curated themed tiers from js/slots.js (Pelé vs Messi, etc.)
+ *   decade   : only players whose `decade` matches (e.g. the 1980s XI)
+ *   nation   : only players from one country (e.g. an all-time Brazil XI)
+ *
+ * A mode is { type: 'all-time' | 'decade' | 'nation', value: string|null }.
+ *
+ * For decade/nation modes the draft uses a generic 4-3-3 formation and each
+ * slot is filled from the matching players for that line, minus anyone already
+ * picked. Modes only ever offers a decade/nation that can actually field a
+ * full XI, so the player never hits a dead end.
+ */
+
+// Generic 4-3-3 used by decade/nation modes.
+window.FORMATION = [
+  { key: "gk",  line: "GK",  label: "Goalkeeper",   blurb: "Your last line of defence." },
+  { key: "rb",  line: "DEF", label: "Right-Back",   blurb: "Lock down the right flank." },
+  { key: "rcb", line: "DEF", label: "Centre-Back",  blurb: "The defensive rock." },
+  { key: "lcb", line: "DEF", label: "Centre-Back",  blurb: "Win every aerial duel." },
+  { key: "lb",  line: "DEF", label: "Left-Back",    blurb: "Lock down the left flank." },
+  { key: "cm1", line: "MID", label: "Midfielder",   blurb: "Control the centre of the park." },
+  { key: "cm2", line: "MID", label: "Midfielder",   blurb: "Drive the team forward." },
+  { key: "cm3", line: "MID", label: "Midfielder",   blurb: "Pull the creative strings." },
+  { key: "rw",  line: "FWD", label: "Forward",      blurb: "Stretch and terrorise the defence." },
+  { key: "st",  line: "FWD", label: "Forward",      blurb: "Lead the line and finish chances." },
+  { key: "lw",  line: "FWD", label: "Forward",      blurb: "The wide threat." },
+];
+
+window.Modes = (function () {
+  // Order in which decades are presented.
+  var DECADE_ORDER = ["1950s", "1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"];
+
+  // A squad needs 1 GK, 4 DEF, 3 MID, 3 FWD — can this pool field it?
+  function canField(players) {
+    var c = { GK: 0, DEF: 0, MID: 0, FWD: 0 };
+    players.forEach(function (p) { c[p.pos]++; });
+    return c.GK >= 1 && c.DEF >= 4 && c.MID >= 3 && c.FWD >= 3;
+  }
+
+  function groupBy(key) {
+    return window.PLAYERS.reduce(function (acc, p) {
+      (acc[p[key]] = acc[p[key]] || []).push(p);
+      return acc;
+    }, {});
+  }
+
+  // Decades that can field a full XI, in chronological order.
+  function availableDecades() {
+    var byDecade = groupBy("decade");
+    return DECADE_ORDER.filter(function (d) {
+      return byDecade[d] && canField(byDecade[d]);
+    }).map(function (d) {
+      return { value: d, label: d, count: byDecade[d].length };
+    });
+  }
+
+  // Nations that can field a full XI, richest squads first.
+  function availableNations() {
+    var byNation = groupBy("nation");
+    return Object.keys(byNation)
+      .filter(function (n) { return canField(byNation[n]); })
+      .map(function (n) {
+        return { value: n, flag: byNation[n][0].flag, count: byNation[n].length };
+      })
+      .sort(function (a, b) { return b.count - a.count || a.value.localeCompare(b.value); });
+  }
+
+  // The slot template for a mode.
+  function slotsFor(mode) {
+    return mode.type === "all-time" ? window.SLOTS : window.FORMATION;
+  }
+
+  // Eligible player ids for a slot, given the mode and current squad
+  // (already-picked players are filtered out so no one is chosen twice).
+  function poolFor(mode, slot, squad) {
+    var ids;
+    if (mode.type === "all-time") {
+      ids = slot.pool.slice();
+    } else {
+      var matchKey = mode.type === "decade" ? "decade" : "nation";
+      ids = window.PLAYERS
+        .filter(function (p) { return p.pos === slot.line && p[matchKey] === mode.value; })
+        .map(function (p) { return p.id; });
+    }
+    var taken = slotsFor(mode)
+      .filter(function (s) { return s.key !== slot.key; })
+      .map(function (s) { return squad[s.key]; })
+      .filter(Boolean)
+      .map(function (p) { return p.id; });
+    return ids.filter(function (id) { return taken.indexOf(id) === -1; });
+  }
+
+  // Short human label for a chosen mode (used in headers / share text).
+  function label(mode) {
+    if (mode.type === "all-time") return "All-Time XI";
+    if (mode.type === "decade") return mode.value + " XI";
+    return mode.value + " XI";
+  }
+
+  return {
+    canField: canField,
+    availableDecades: availableDecades,
+    availableNations: availableNations,
+    slotsFor: slotsFor,
+    poolFor: poolFor,
+    label: label,
+  };
+})();
+
+
+/* === js/engine.js === */
+/*
+ * Match engine — rated simulation with randomness.
+ *
+ * 1. Reduce each side to three line ratings (att / mid / def).
+ * 2. The midfield battle shifts expected goals toward whoever controls it.
+ * 3. Each attack is graded against the opposing defence to produce an
+ *    expected-goals (xG) figure, which is sampled with a Poisson draw so
+ *    upsets are always possible but talent wins out over time.
+ */
+window.Engine = (function () {
+  // ---- Build the player's three line ratings from their chosen XI ----
+  // squad: { [slotKey]: playerObject }
+  // slots: the active slot template (all-time tiers or a 4-3-3 formation)
+  function rateSquad(squad, slots) {
+    slots = slots || window.SLOTS;
+    var lines = { GK: [], DEF: [], MID: [], FWD: [] };
+    slots.forEach(function (slot) {
+      var player = squad[slot.key];
+      if (player) lines[slot.line].push(player.pwr);
+    });
+    var avg = function (arr) {
+      if (!arr.length) return 70;
+      return arr.reduce(function (a, b) { return a + b; }, 0) / arr.length;
+    };
+    // The keeper reinforces the defensive line (weighted in).
+    var defBase = avg(lines.DEF);
+    var gk = avg(lines.GK);
+    return {
+      att: avg(lines.FWD),
+      mid: avg(lines.MID),
+      def: defBase * 0.78 + gk * 0.22,
+    };
+  }
+
+  // ---- Poisson sampler (Knuth) for goal counts ----
+  function poisson(lambda) {
+    var L = Math.exp(-lambda);
+    var k = 0;
+    var p = 1;
+    do {
+      k++;
+      p *= Math.random();
+    } while (p > L);
+    return k - 1;
+  }
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  // ---- Expected goals for an attack vs a defence, tilted by midfield edge ----
+  function expectedGoals(att, def, midEdge) {
+    // 1.25 baseline goals; every rating point of attacking edge is worth
+    // ~0.07 xG, and controlling midfield adds a smaller bonus. The edge
+    // coefficient is tuned so a top XI clears the full gauntlet ~11% of the
+    // time while a mediocre XI is all but doomed — hard but achievable.
+    var xg = 1.25 + (att - def) * 0.07 + midEdge * 0.035;
+    return clamp(xg, 0.18, 5.0);
+  }
+
+  // ---- Simulate one match. a = player squad rating, b = opponent ----
+  // Returns { home, away, xgHome, xgAway, result, penalties? }
+  function simulateMatch(a, b) {
+    var midEdge = a.mid - b.mid;
+    var xgHome = expectedGoals(a.att, b.def, midEdge);
+    var xgAway = expectedGoals(b.att, a.def, -midEdge);
+
+    var home = poisson(xgHome);
+    var away = poisson(xgAway);
+
+    var out = {
+      home: home,
+      away: away,
+      xgHome: xgHome,
+      xgAway: xgAway,
+      penalties: null,
+    };
+
+    if (home > away) out.result = "win";
+    else if (home < away) out.result = "loss";
+    else {
+      // Knockout: a draw goes to penalties, weighted slightly by who had
+      // the better expected-goals figure (i.e. who created more).
+      var edge = clamp(0.5 + (xgHome - xgAway) * 0.12, 0.2, 0.8);
+      var winHome = Math.random() < edge;
+      out.penalties = {
+        home: winHome ? 4 + Math.floor(Math.random() * 2) : 2 + Math.floor(Math.random() * 2),
+        away: winHome ? 2 + Math.floor(Math.random() * 2) : 4 + Math.floor(Math.random() * 2),
+      };
+      // Guarantee the shootout isn't level.
+      if (out.penalties.home === out.penalties.away) {
+        if (winHome) out.penalties.home++; else out.penalties.away++;
+      }
+      out.result = winHome ? "win" : "loss";
+    }
+    return out;
+  }
+
+  // ---- Win probability estimate (for the pre-match odds display) ----
+  // Runs a quick Monte-Carlo so the displayed odds match the live engine.
+  function winProbability(a, b, samples) {
+    samples = samples || 600;
+    var wins = 0;
+    for (var i = 0; i < samples; i++) {
+      if (simulateMatch(a, b).result === "win") wins++;
+    }
+    return Math.round((wins / samples) * 100);
+  }
+
+  return {
+    rateSquad: rateSquad,
+    simulateMatch: simulateMatch,
+    winProbability: winProbability,
+  };
+})();
+
+
+/* === js/game.js === */
+/*
+ * Game controller — screens, state and rendering for the
+ * All-Time World Cup Simulator.
+ *
+ * Flow:  Start → Mode select → (Decade/Nation pick) → Draft → Team → Gauntlet → Win/Lose
+ */
+(function () {
+  var app = document.getElementById("app");
+
+  var state = {
+    mode: { type: "all-time", value: null }, // see js/modes.js
+    slots: window.SLOTS,                      // active slot template
+    squad: {},                               // slotKey -> player object
+    slotIndex: 0,                            // which draft slot we're on
+    round: 0,                               // current gauntlet round
+    history: [],                           // per-match results for sharing
+  };
+
+  // ---------------------------------------------------------------- helpers
+  function el(html) {
+    var t = document.createElement("template");
+    t.innerHTML = html.trim();
+    return t.content.firstElementChild;
+  }
+
+  function buttonEl(text, cls, onclick) {
+    var b = el('<button class="btn ' + cls + '">' + text + "</button>");
+    b.onclick = onclick;
+    return b;
+  }
+
+  function pdCard(player, opts) {
+    opts = opts || {};
+    return (
+      '<div class="player-card' + (opts.selected ? " selected" : "") + '"' +
+      (opts.pickKey ? ' data-pick="' + opts.pickKey + '" data-id="' + player.id + '"' : "") +
+      ' role="button" tabindex="0">' +
+        '<div class="pc-flag">' + player.flag + "</div>" +
+        '<div class="pc-body">' +
+          '<div class="pc-name">' + player.name + "</div>" +
+          '<div class="pc-meta">' + player.club + " · " + player.decade + "</div>" +
+        "</div>" +
+        '<div class="pc-ovr">' + player.ovr + "</div>" +
+      "</div>"
+    );
+  }
+
+  function squadComplete() {
+    return state.slots.every(function (s) { return state.squad[s.key]; });
+  }
+
+  // ---------------------------------------------------------------- start
+  function renderStart() {
+    state.mode = { type: "all-time", value: null };
+    state.slots = window.SLOTS;
+    state.squad = {};
+    state.slotIndex = 0;
+    state.round = 0;
+    state.history = [];
+
+    app.innerHTML = "";
+    app.appendChild(el(
+      '<section class="screen start">' +
+        '<div class="trophy">🏆</div>' +
+        "<h1>All-Time World Cup</h1>" +
+        '<p class="tagline">Draft a team of legends. Run the gauntlet of the greatest sides ever to play. Lose once and it\'s over.</p>' +
+        '<div class="how">' +
+          '<div class="how-step"><span class="num">1</span> Choose a squad style, then pick a legend for each position.</div>' +
+          '<div class="how-step"><span class="num">2</span> Face ' + window.OPPONENTS.length + " all-time great teams, one by one.</div>" +
+          '<div class="how-step"><span class="num">3</span> Win every match to be crowned champion of history.</div>' +
+        "</div>" +
+        '<button class="btn primary big" id="startBtn">Start the Gauntlet</button>' +
+      "</section>"
+    ));
+    document.getElementById("startBtn").onclick = renderModeSelect;
+  }
+
+  // ---------------------------------------------------------------- mode select
+  function renderModeSelect() {
+    app.innerHTML = "";
+    var section = el(
+      '<section class="screen modes">' +
+        "<h2>Choose your squad</h2>" +
+        '<p class="slot-blurb">How do you want to build your team?</p>' +
+        '<div class="mode-grid">' +
+          modeCard("all-time", "🌍", "All-Time", "Themed tiers — pit the very best of every era against each other.") +
+          modeCard("decade", "📅", "By Decade", "Field the greatest XI of a single decade.") +
+          modeCard("nation", "🏳️", "By Nation", "Build an all-time team from one country.") +
+        "</div>" +
+        '<div class="team-nav"><button class="btn ghost" id="backStart">← Back</button></div>' +
+      "</section>"
+    );
+    app.appendChild(section);
+
+    section.querySelector('[data-mode="all-time"]').onclick = function () {
+      state.mode = { type: "all-time", value: null };
+      state.slots = window.SLOTS;
+      state.squad = {};
+      state.slotIndex = 0;
+      renderDraft();
+    };
+    section.querySelector('[data-mode="decade"]').onclick = function () { renderFilterSelect("decade"); };
+    section.querySelector('[data-mode="nation"]').onclick = function () { renderFilterSelect("nation"); };
+    document.getElementById("backStart").onclick = renderStart;
+  }
+
+  function modeCard(key, icon, title, desc) {
+    return (
+      '<div class="mode-card" data-mode="' + key + '" role="button" tabindex="0">' +
+        '<div class="mode-icon">' + icon + "</div>" +
+        '<div class="mode-title">' + title + "</div>" +
+        '<div class="mode-desc">' + desc + "</div>" +
+      "</div>"
+    );
+  }
+
+  // ---------------------------------------------------------------- decade / nation pick
+  function renderFilterSelect(type) {
+    var options = type === "decade" ? window.Modes.availableDecades() : window.Modes.availableNations();
+    app.innerHTML = "";
+
+    var cards = options.map(function (o) {
+      var face = type === "decade" ? '<div class="filter-decade">' + o.label + "</div>"
+                                   : '<div class="filter-flag">' + o.flag + "</div>";
+      var name = type === "decade" ? "" : '<div class="filter-name">' + o.value + "</div>";
+      return (
+        '<div class="filter-card" data-value="' + o.value + '" role="button" tabindex="0">' +
+          face + name +
+          '<div class="filter-count">' + o.count + " legends</div>" +
+        "</div>"
+      );
+    }).join("");
+
+    var section = el(
+      '<section class="screen filter">' +
+        "<h2>" + (type === "decade" ? "Pick a decade" : "Pick a nation") + "</h2>" +
+        '<p class="slot-blurb">Only teams with a full squad of legends are shown.</p>' +
+        '<div class="filter-grid">' + cards + "</div>" +
+        '<div class="team-nav"><button class="btn ghost" id="backModes">← Back</button></div>' +
+      "</section>"
+    );
+    app.appendChild(section);
+
+    section.querySelectorAll(".filter-card").forEach(function (node) {
+      node.onclick = function () {
+        state.mode = { type: type, value: node.getAttribute("data-value") };
+        state.slots = window.FORMATION;
+        state.squad = {};
+        state.slotIndex = 0;
+        renderDraft();
+      };
+    });
+    document.getElementById("backModes").onclick = renderModeSelect;
+  }
+
+  // ---------------------------------------------------------------- draft
+  function renderDraft() {
+    var slot = state.slots[state.slotIndex];
+    app.innerHTML = "";
+
+    var cards = window.Modes.poolFor(state.mode, slot, state.squad)
+      .map(function (id) { return window.PLAYER_BY_ID[id]; })
+      .filter(Boolean)
+      .map(function (p) {
+        return pdCard(p, {
+          pickKey: slot.key,
+          selected: state.squad[slot.key] && state.squad[slot.key].id === p.id,
+        });
+      })
+      .join("");
+
+    var context = state.mode.type === "all-time" ? "" :
+      '<div class="draft-context">' + window.Modes.label(state.mode) + "</div>";
+
+    var section = el(
+      '<section class="screen draft">' +
+        '<div class="draft-head">' +
+          context +
+          '<div class="draft-progress">Pick ' + (state.slotIndex + 1) + " of " + state.slots.length + "</div>" +
+          "<h2>" + slot.label + "</h2>" +
+          '<p class="slot-blurb">' + slot.blurb + "</p>" +
+        "</div>" +
+        '<div class="pick-grid">' + cards + "</div>" +
+        '<div class="draft-nav">' +
+          '<button class="btn ghost" id="backBtn">← Back</button>' +
+          '<div class="pitch-dots">' + dotsHTML() + "</div>" +
+        "</div>" +
+      "</section>"
+    );
+    app.appendChild(section);
+
+    section.querySelectorAll("[data-pick]").forEach(function (node) {
+      var choose = function () {
+        state.squad[slot.key] = window.PLAYER_BY_ID[node.getAttribute("data-id")];
+        advanceDraft();
+      };
+      node.addEventListener("click", choose);
+      node.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(); }
+      });
+    });
+    document.getElementById("backBtn").onclick = function () {
+      if (state.slotIndex > 0) { state.slotIndex--; renderDraft(); }
+      else renderModeSelect();
+    };
+  }
+
+  function dotsHTML() {
+    return state.slots.map(function (s, i) {
+      var cls = state.squad[s.key] ? "dot filled" : (i === state.slotIndex ? "dot active" : "dot");
+      return '<span class="' + cls + '"></span>';
+    }).join("");
+  }
+
+  function advanceDraft() {
+    if (state.slotIndex < state.slots.length - 1) {
+      state.slotIndex++;
+      renderDraft();
+    } else if (squadComplete()) {
+      renderTeam();
+    } else {
+      state.slotIndex = state.slots.findIndex(function (s) { return !state.squad[s.key]; });
+      renderDraft();
+    }
+  }
+
+  // ---------------------------------------------------------------- pitch view
+  // Lay the chosen XI out on a 4-3-3 pitch (GK at the bottom, attack on top).
+  var LINE_Y = { FWD: 17, MID: 43, DEF: 69, GK: 89 };
+
+  function pitchTokens() {
+    var byLine = { GK: [], DEF: [], MID: [], FWD: [] };
+    state.slots.forEach(function (s) { byLine[s.line].push(s); });
+
+    var tokens = [];
+    Object.keys(byLine).forEach(function (line) {
+      var arr = byLine[line];
+      arr.forEach(function (slot, i) {
+        var p = state.squad[slot.key];
+        if (!p) return;
+        var x = ((i + 1) / (arr.length + 1)) * 100;
+        var surname = p.name.split(" ").slice(-1)[0];
+        tokens.push(
+          '<div class="pitch-token" style="left:' + x.toFixed(1) + "%;top:" + LINE_Y[line] + '%" ' +
+            'title="' + p.name + " — " + p.club + " (" + p.decade + ')">' +
+            '<div class="token-badge">' + p.flag + '<span class="token-ovr">' + p.ovr + "</span></div>" +
+            '<div class="token-name">' + surname + "</div>" +
+          "</div>"
+        );
+      });
+    });
+    return tokens.join("");
+  }
+
+  function pitchHTML() {
+    return (
+      '<div class="pitch">' +
+        '<div class="m-circle"></div>' +
+        '<div class="m-halfway"></div>' +
+        '<div class="m-box top"></div>' +
+        '<div class="m-box bottom"></div>' +
+        pitchTokens() +
+      "</div>"
+    );
+  }
+
+  // ---------------------------------------------------------------- sharing
+  function resultSquares() {
+    return window.OPPONENTS.map(function (o, i) {
+      if (i < state.history.length) return state.history[i].result === "win" ? "🟩" : "🟥";
+      return "⬜";
+    }).join("");
+  }
+
+  function buildShareText() {
+    var beaten = state.history.filter(function (h) { return h.result === "win"; }).length;
+    var total = window.OPPONENTS.length;
+    var champion = beaten === total;
+    var lines = [
+      "🏆 All-Time World Cup Simulator",
+      window.Modes.label(state.mode) + " — " +
+        (champion ? "CHAMPIONS! " + total + "/" + total
+                  : beaten + "/" + total + " · out in round " + (beaten + 1)),
+      resultSquares(),
+    ];
+    var last = state.history[state.history.length - 1];
+    if (!champion && last) {
+      lines.push("Fell to " + last.flag + " " + last.name + " " + last.year + " (" + last.home + "–" + last.away + ")");
+    }
+    lines.push("", window.location.href);
+    return lines.join("\n");
+  }
+
+  function toast(msg) {
+    var t = el('<div class="toast">' + msg + "</div>");
+    document.body.appendChild(t);
+    var raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
+    raf(function () { t.classList.add("show"); });
+    setTimeout(function () {
+      t.classList.remove("show");
+      setTimeout(function () { t.remove(); }, 300);
+    }, 1600);
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); toast("Result copied!"); }
+    catch (e) { toast("Copy failed — select and copy manually"); }
+    ta.remove();
+  }
+
+  function shareResult() {
+    var text = buildShareText();
+    if (navigator.share) {
+      navigator.share({ title: "All-Time World Cup Simulator", text: text }).catch(function () {});
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast("Result copied!"); }).catch(function () { fallbackCopy(text); });
+    } else {
+      fallbackCopy(text);
+    }
+  }
+
+  // ---------------------------------------------------------------- team review
+  function renderTeam() {
+    var r = window.Engine.rateSquad(state.squad, state.slots);
+    app.innerHTML = "";
+    app.appendChild(el(
+      '<section class="screen team">' +
+        '<div class="draft-context">' + window.Modes.label(state.mode) + "</div>" +
+        "<h2>Your Starting XI</h2>" +
+        '<div class="ratings">' +
+          ratingBox("Attack", r.att) +
+          ratingBox("Midfield", r.mid) +
+          ratingBox("Defence", r.def) +
+        "</div>" +
+        pitchHTML() +
+        '<div class="team-nav">' +
+          '<button class="btn ghost" id="redraftBtn">↺ Re-draft</button>' +
+          '<button class="btn primary big" id="toGauntletBtn">Enter the Gauntlet →</button>' +
+        "</div>" +
+      "</section>"
+    ));
+    document.getElementById("redraftBtn").onclick = function () {
+      state.squad = {}; state.slotIndex = 0; renderDraft();
+    };
+    document.getElementById("toGauntletBtn").onclick = renderGauntlet;
+  }
+
+  function ratingBox(label, val) {
+    return (
+      '<div class="rating-box">' +
+        '<div class="rb-val">' + Math.round(val) + "</div>" +
+        '<div class="rb-label">' + label + "</div>" +
+      "</div>"
+    );
+  }
+
+  // ---------------------------------------------------------------- gauntlet
+  function renderGauntlet() {
+    var opp = window.OPPONENTS[state.round];
+    var me = window.Engine.rateSquad(state.squad, state.slots);
+    var oppRating = { att: opp.att, mid: opp.mid, def: opp.def };
+    var odds = window.Engine.winProbability(me, oppRating);
+
+    app.innerHTML = "";
+    app.appendChild(el(
+      '<section class="screen gauntlet">' +
+        '<div class="round-pill">Round ' + (state.round + 1) + " / " + window.OPPONENTS.length + "</div>" +
+        '<div class="matchup">' +
+          '<div class="side me">' +
+            '<div class="side-flag">⭐</div>' +
+            '<div class="side-name">' + window.Modes.label(state.mode) + "</div>" +
+            '<div class="side-sub">ATT ' + Math.round(me.att) + " · MID " + Math.round(me.mid) + " · DEF " + Math.round(me.def) + "</div>" +
+          "</div>" +
+          '<div class="vs">VS</div>' +
+          '<div class="side opp">' +
+            '<div class="side-flag">' + opp.flag + "</div>" +
+            '<div class="side-name">' + opp.name + " " + opp.year + "</div>" +
+            '<div class="side-sub">' + opp.tag + "</div>" +
+          "</div>" +
+        "</div>" +
+        '<p class="opp-blurb">' + opp.blurb + "</p>" +
+        '<div class="odds">Win probability: <strong>' + odds + "%</strong></div>" +
+        '<button class="btn primary big" id="kickoffBtn">Kick Off ⚽</button>' +
+        progressTrack() +
+      "</section>"
+    ));
+    document.getElementById("kickoffBtn").onclick = function () { playMatch(me, oppRating, opp); };
+  }
+
+  function progressTrack() {
+    var dots = window.OPPONENTS.map(function (o, i) {
+      var cls = i < state.round ? "track-dot beat" : (i === state.round ? "track-dot now" : "track-dot");
+      return '<span class="' + cls + '" title="' + o.name + " " + o.year + '">' + o.flag + "</span>";
+    }).join("");
+    return '<div class="track">' + dots + "</div>";
+  }
+
+  // ---------------------------------------------------------------- match
+  function playMatch(me, oppRating, opp) {
+    var res = window.Engine.simulateMatch(me, oppRating);
+    state.history[state.round] = {
+      name: opp.name, year: opp.year, flag: opp.flag,
+      result: res.result, home: res.home, away: res.away,
+    };
+    var scoreline = res.home + " – " + res.away;
+    var pens = res.penalties
+      ? '<div class="pens">(' + res.penalties.home + " – " + res.penalties.away + " on penalties)</div>"
+      : "";
+
+    app.innerHTML = "";
+    app.appendChild(el(
+      '<section class="screen result ' + (res.result === "win" ? "won" : "lost") + '">' +
+        '<div class="result-tag">' + (res.result === "win" ? "VICTORY" : "DEFEAT") + "</div>" +
+        '<div class="scoreboard">' +
+          '<div class="sb-team">⭐ You</div>' +
+          '<div class="sb-score">' + scoreline + "</div>" +
+          '<div class="sb-team">' + opp.flag + " " + opp.name + "</div>" +
+        "</div>" +
+        pens +
+        '<p class="commentary">' + commentary(res, opp) + "</p>" +
+        '<div class="result-nav"></div>' +
+      "</section>"
+    ));
+
+    var nav = app.querySelector(".result-nav");
+    if (res.result === "win") {
+      if (state.round >= window.OPPONENTS.length - 1) {
+        nav.appendChild(buttonEl("🏆 Claim Your Crown", "primary big", renderWin));
+      } else {
+        nav.appendChild(buttonEl("Next Opponent →", "primary big", function () {
+          state.round++;
+          renderGauntlet();
+        }));
+      }
+    } else {
+      app.querySelector(".result").appendChild(el('<div class="share-track">' + resultSquares() + "</div>"));
+      nav.appendChild(buttonEl("📋 Share", "ghost", shareResult));
+      nav.appendChild(buttonEl("Try Again", "primary big", renderStart));
+    }
+  }
+
+  function commentary(res, opp) {
+    var gf = res.home, ga = res.away;
+    if (res.penalties) {
+      return res.result === "win"
+        ? "Nerves of steel from the spot! After " + gf + "–" + ga + " couldn't separate them, your legends hold their nerve to knock out " + opp.name + " " + opp.year + "."
+        : "Agony from twelve yards. " + opp.name + " " + opp.year + " edge a shootout after a " + gf + "–" + ga + " deadlock.";
+    }
+    if (res.result === "win") {
+      if (gf - ga >= 3) return "A statement performance — " + opp.name + " " + opp.year + " are swept aside in style.";
+      if (gf - ga === 1) return "A nervy, hard-fought win. The greats find a way past " + opp.name + " " + opp.year + ".";
+      return "Job done. Your legends see off " + opp.name + " " + opp.year + ".";
+    }
+    if (ga - gf >= 3) return opp.name + " " + opp.year + " were simply irresistible. The dream ends here.";
+    return "So close. " + opp.name + " " + opp.year + " find the decisive goal and the gauntlet claims another challenger.";
+  }
+
+  // ---------------------------------------------------------------- win
+  function renderWin() {
+    app.innerHTML = "";
+    app.appendChild(el(
+      '<section class="screen win">' +
+        '<div class="trophy big-trophy">🏆</div>' +
+        "<h1>CHAMPIONS OF HISTORY</h1>" +
+        '<p class="tagline">Your ' + window.Modes.label(state.mode) + " ran the gauntlet and beat every great team ever assembled. Immortal.</p>" +
+        '<div class="share-track">' + resultSquares() + "</div>" +
+        pitchHTML() +
+        '<div class="team-nav">' +
+          '<button class="btn ghost" id="shareWin">📋 Share</button>' +
+          '<button class="btn primary big" id="againBtn">Play Again</button>' +
+        "</div>" +
+      "</section>"
+    ));
+    document.getElementById("shareWin").onclick = shareResult;
+    document.getElementById("againBtn").onclick = renderStart;
+  }
+
+  // ---------------------------------------------------------------- boot
+  renderStart();
+})();
+
+</script>
+</body>
+</html>
