@@ -776,6 +776,20 @@
   #hud .hud-item b.bump { animation: cashbump .5s ease; }
   @keyframes cashbump { 0%{ transform:scale(1);} 35%{ transform:scale(1.25); color:#fff;} 100%{ transform:scale(1);} }
 
+  /* Particle juice overlay + bursts, floats, HUD pops, placement pop. */
+  #fx { position:fixed; inset:0; pointer-events:none; z-index:60; overflow:hidden; }
+  .fx-piece { position:absolute; transform:translate(-50%,-50%); will-change:transform,opacity;
+    animation: fxfly var(--dur,.7s) cubic-bezier(.25,.7,.35,1) forwards; }
+  @keyframes fxfly { to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--rot)); opacity:0; } }
+  .fx-float { position:absolute; transform:translate(-50%,-50%); font:800 15px system-ui; letter-spacing:.2px;
+    text-shadow:0 1px 3px rgba(0,0,0,.7); white-space:nowrap; will-change:transform,opacity;
+    animation: fxfloat 1.05s cubic-bezier(.2,.8,.3,1) forwards; }
+  @keyframes fxfloat { 0%{opacity:0; transform:translate(-50%,-20%) scale(.8);} 18%{opacity:1; transform:translate(-50%,-58%) scale(1.06);} 100%{opacity:0; transform:translate(-50%,-155%) scale(1);} }
+  .juicebump { display:inline-block; animation: juicebump .34s ease; }
+  @keyframes juicebump { 0%{transform:scale(1);} 38%{transform:scale(1.22);} 100%{transform:scale(1);} }
+  .unit.pop-in { transform-origin:50% 100%; animation: popin .3s cubic-bezier(.2,1.5,.45,1); }
+  @keyframes popin { 0%{transform:scale(.5); opacity:.25;} 62%{transform:scale(1.09);} 100%{transform:scale(1);} }
+
   /* ---------- Mobile-only UI (hidden on desktop) ---------- */
   #hotbar, #edgeHandle { display: none; }   /* desktop: never shown */
   @media (max-width: 700px) {
@@ -1455,6 +1469,13 @@ function tryBuild(col, row, key_) {
   sfx("build");
   if (t.kind === "landmark" && !state.won) winGame();
   refreshStats();
+  // juice: the unit pops into place with a puff of dust and a -$cost float
+  unit.el.classList.add("pop-in");
+  unit.el.addEventListener("animationend", () => unit.el.classList.remove("pop-in"), { once: true });
+  const _r = unit.el.getBoundingClientRect();
+  fxBurst(_r.left + _r.width / 2, _r.bottom - 3, { count: 9, palette: ["#cdbf9b", "#b9ac86", "#d9c79a"], spread: 30, gravity: 16, lift: 6, size: 4, dur: 0.65 });
+  if (t.cost > 0) fxFloatAt(_r.left + _r.width / 2, _r.top + 4, "-$" + t.cost.toLocaleString(), "#ff8f7e");
+  fxPulse(document.getElementById("s-cash"));
   saveGame(true);
   tutorialCheck();   // advance the onboarding if this build completes a step
 }
@@ -1951,7 +1972,11 @@ function collectRent() {
   if (total !== 0) {
     state.cash += total;
     log(`Daily income: +$${total.toLocaleString()}`, "good");
-    if (total > 0) { floatText(`+$${total.toLocaleString()}`); sfx("cash"); }
+    if (total > 0) {
+      floatText(`+$${total.toLocaleString()}`); sfx("cash");
+      const c = elCenter("s-cash");                  // coins spray from the cash counter
+      if (c) { fxBurst(c.x, c.y, { count: 14, palette: ["#ffd24a", "#ffe27a", "#f5b932"], spread: 26, gravity: 8, lift: 6, size: 4, round: true, dur: 0.8 }); fxPulse(c.el); }
+    }
   }
   refreshStats();
 }
@@ -2059,6 +2084,8 @@ function recomputeStars() {
       banner(`★ ${s}-STAR TOWER! ★`);
       if (unlocked.length) log(`Unlocked: ${unlocked.join(", ")}.`, "good");
       sfx("promote");
+      fxConfetti();                                   // celebrate the promotion
+      fxPulse(document.getElementById("s-stars"));
     }
     state.stars = s;
     buildToolbar();       // reveal newly unlocked build options
@@ -2081,6 +2108,7 @@ function winGame() {
   banner("👑 TOWER COMPLETE! 👑");
   log("👑 The Sky Spire is raised — your TOWER is complete. Congratulations!", "good");
   sfx("promote");
+  fxConfetti(); setTimeout(fxConfetti, 500); setTimeout(fxConfetti, 1000);  // a proper celebration
   updateObjective();
   saveGame(true);
 }
@@ -2766,13 +2794,16 @@ function updateClock() {
 setInterval(() => { if (state.speed > 0) { movepeople(); moveShafts(); } }, 250);
 
 // ---------- Stats / UI ----------
-let _lastCash = null;
+let _lastCash = null, _lastPop = null;
 function refreshStats() {
   const cash = "$" + state.cash.toLocaleString();
   const stars = "★".repeat(state.stars) + "☆".repeat(5 - state.stars);
   const floorsUsed = new Set(state.units.map(u => u.row)).size;
   document.getElementById("s-cash").textContent = cash;
-  document.getElementById("s-pop").textContent = state.pop;
+  const popEl = document.getElementById("s-pop");
+  popEl.textContent = state.pop;
+  if (_lastPop !== null && state.pop > _lastPop) fxPulse(popEl);   // a little pop as residents arrive
+  _lastPop = state.pop;
   document.getElementById("s-floors").textContent = floorsUsed;
   document.getElementById("s-stars").textContent = stars;
   const hCash = document.getElementById("h-cash");
@@ -2842,6 +2873,67 @@ function spawnSmoke(unit) {
     world.appendChild(s);
     setTimeout(() => s.remove(), 2200 + i * 180);
   }
+}
+
+// ---- Screen-space particle juice (a fixed overlay above everything) ----
+const fxLayer = document.createElement("div");
+fxLayer.id = "fx";
+document.body.appendChild(fxLayer);
+const _reduceMotion = (typeof matchMedia !== "undefined") && matchMedia("(prefers-reduced-motion: reduce)").matches;
+function _fxPiece(x, y, dx, dy, rot, dur, w, h, color, round) {
+  const p = document.createElement("div");
+  p.className = "fx-piece";
+  p.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${color};` +
+    (round ? "border-radius:50%;" : "") + `--dx:${dx.toFixed(1)}px;--dy:${dy.toFixed(1)}px;--rot:${rot.toFixed(0)}deg;--dur:${dur}s`;
+  fxLayer.appendChild(p);
+  p.addEventListener("animationend", () => p.remove(), { once: true });
+}
+// A burst of pieces flung out from (cx,cy) — dust, coins, sparks.
+function fxBurst(cx, cy, cfg) {
+  if (_reduceMotion) return;
+  cfg = cfg || {};
+  const n = cfg.count || 12, pal = cfg.palette || ["#fff"];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, sp = (cfg.spread || 30) * (0.4 + Math.random());
+    const dx = Math.cos(a) * sp, dy = Math.sin(a) * sp - (cfg.lift || 10) + (cfg.gravity || 0) * (0.5 + Math.random());
+    const s = (cfg.size || 4) * (0.6 + Math.random() * 0.8);
+    _fxPiece(cx, cy, dx, dy, Math.random() * 360 - 180, cfg.dur || 0.7, s, cfg.tall ? s * 1.7 : s, pal[i % pal.length] || pal[0], cfg.round);
+  }
+}
+// Celebration confetti raining from the top of the screen.
+function fxConfetti() {
+  if (_reduceMotion) return;
+  const W = window.innerWidth || 800, pal = ["#ff5a7a", "#ffd24a", "#5b8def", "#56c271", "#b08be0", "#f3a857"];
+  for (let w = 0; w < 3; w++) setTimeout(() => {
+    for (let i = 0; i < 22; i++) {
+      const s = 4 + Math.random() * 4;
+      _fxPiece(W * (0.12 + Math.random() * 0.76), -12, (Math.random() - 0.5) * 150, 280 + Math.random() * 340,
+        Math.random() * 1080 - 540, 1.3 + Math.random() * 0.9, s, s * 1.7, pal[Math.floor(Math.random() * pal.length)], false);
+    }
+  }, w * 150);
+}
+// A value that floats up from a screen point (e.g. -$cost at the build spot).
+function fxFloatAt(cx, cy, text, color) {
+  const el = document.createElement("div");
+  el.className = "fx-float";
+  el.textContent = text;
+  el.style.cssText = `left:${cx}px;top:${cy}px;color:${color || "#fff"}`;
+  fxLayer.appendChild(el);
+  el.addEventListener("animationend", () => el.remove(), { once: true });
+}
+// Restart a quick scale "pop" on a HUD value.
+function fxPulse(el) {
+  if (!el) return;
+  el.classList.remove("juicebump");
+  void el.offsetWidth;
+  el.classList.add("juicebump");
+}
+// Screen center of an element (for anchoring bursts to the HUD).
+function elCenter(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2, top: r.top, el };
 }
 
 function log(msg, cls) {
