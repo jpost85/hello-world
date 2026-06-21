@@ -95,6 +95,8 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   gap: 12px;
   color: var(--text);
 }
+.start-daily { margin-top: 14px; }
+.start-daily .btn { border-color: rgba(245, 197, 66, 0.4); }
 .how-step .num {
   flex: 0 0 26px;
   height: 26px;

@@ -15,6 +15,10 @@ No build step, no dependencies. Just open `index.html` in a browser.
    - **By Nation** — build an all-time team from one of 20 nations across six continents.
    - **By Region** — an all-time XI from a whole confederation (South America,
      Europe, Africa, North America, Asia).
+   - **🗓️ Daily Challenge** — one shared puzzle per day (from the start screen):
+     everyone worldwide gets the *same* seeded draft shortlists, the *same*
+     bracket, and *deterministic* match results, so it's pure drafting skill and
+     scores are directly comparable. Your best is remembered locally.
 2. **Draft your 4-3-3** — one legend per position. Your XI is laid out on a
    visual pitch with line-by-line attack / midfield / defence ratings.
 3. **Run the cup** — a freshly drawn 10-match bracket every time: a 3-game
@@ -39,6 +43,7 @@ No build step, no dependencies. Just open `index.html` in a browser.
 | Player data    | Curated JSON-style dataset of ~330 legends from 30+ countries (`js/players.js`). All-time greats are a finite, well-known set, so no flaky stats API is needed. |
 | Team building  | All-time "tier pick" slots in `js/slots.js`; decade/nation/region modes generate position-filtered pools in `js/modes.js`. |
 | Modes          | `js/modes.js` builds mode-aware, de-duplicated draft pools, derives each nation's confederation, and only offers a decade/nation/region that can actually field a full XI. |
+| Daily Challenge | A seeded RNG (`js/rng.js`, date-keyed) drives the daily draft shortlists, bracket and per-match outcomes so the puzzle is identical and reproducible for everyone; today's best is stored in `localStorage`. |
 | Opponents      | ~37 legendary sides in `js/opponents.js`, split into `group` and `knockout` tiers; each run draws a random bracket (`buildBracket` in `js/game.js`). |
 | Match engine   | Rated simulation in `js/engine.js`: line strengths → expected goals → a Poisson draw for the scoreline, so upsets are always possible. |
 | UI / flow      | Vanilla JS screens in `js/game.js` — incl. the visual pitch, the Final Standings page, and a canvas-rendered PNG share card (`drawCard`) — styled in `css/styles.css`. |
@@ -48,6 +53,7 @@ No build step, no dependencies. Just open `index.html` in a browser.
 ```
 index.html          # shell that loads everything (open this)
 css/styles.css      # all styling
+js/rng.js           # seeded RNG for the Daily Challenge
 js/players.js       # the legend database (extend this to add players)
 js/slots.js         # all-time draft tiers
 js/modes.js         # all-time / decade / nation modes + pool generation

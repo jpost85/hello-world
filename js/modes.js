@@ -118,6 +118,33 @@ window.Modes = (function () {
     return mode.type === "all-time" ? window.SLOTS : window.FORMATION;
   }
 
+  // ----- Daily Challenge: seeded draft shortlists -----
+  // Every position gets the same fixed shortlist of candidates for everyone
+  // playing on the given date — the puzzle is to build the best XI from these.
+  var DAILY_CHOICES = 6;
+
+  function seededShuffle(arr, rng) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  // Returns { [slotKey]: [playerId, ...] } for the day.
+  function buildDailyPools(dateKey) {
+    var pools = {};
+    window.FORMATION.forEach(function (slot) {
+      var rng = window.Rng.fromString(dateKey + "|slot|" + slot.key);
+      var byLine = window.PLAYERS.filter(function (p) { return p.pos === slot.line; });
+      pools[slot.key] = seededShuffle(byLine, rng)
+        .slice(0, DAILY_CHOICES)
+        .map(function (p) { return p.id; });
+    });
+    return pools;
+  }
+
   // Does a player match the (non all-time) mode's filter?
   function matchesFilter(player, mode) {
     if (mode.type === "decade") return player.decade === mode.value;
@@ -132,6 +159,8 @@ window.Modes = (function () {
     var ids;
     if (mode.type === "all-time") {
       ids = slot.pool.slice();
+    } else if (mode.type === "daily") {
+      ids = (mode.pools && mode.pools[slot.key] ? mode.pools[slot.key] : []).slice();
     } else {
       ids = window.PLAYERS
         .filter(function (p) { return p.pos === slot.line && matchesFilter(p, mode); })
@@ -148,6 +177,7 @@ window.Modes = (function () {
   // Short human label for a chosen mode (used in headers / share text).
   function label(mode) {
     if (mode.type === "all-time") return "All-Time XI";
+    if (mode.type === "daily") return "Daily Challenge";
     if (mode.type === "confed") {
       var meta = CONFED_META.filter(function (m) { return m.value === mode.value; })[0];
       return (meta ? meta.label : mode.value) + " XI";
@@ -163,6 +193,7 @@ window.Modes = (function () {
     availableConfederations: availableConfederations,
     slotsFor: slotsFor,
     poolFor: poolFor,
+    buildDailyPools: buildDailyPools,
     label: label,
   };
 })();

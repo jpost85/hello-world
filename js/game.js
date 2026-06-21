@@ -50,6 +50,13 @@
     return state.slots.every(function (s) { return state.squad[s.key]; });
   }
 
+  // Header label for the current mode (Daily also shows its date).
+  function contextLabel() {
+    return state.mode.type === "daily"
+      ? "🗓️ Daily Challenge · " + state.mode.value
+      : window.Modes.label(state.mode);
+  }
+
   // ---------------------------------------------------------------- difficulty scaling
   // The gauntlet is calibrated against an all-time XI. So that constrained
   // modes (a single nation/region/decade) are winnable rather than hopeless,
@@ -81,27 +88,29 @@
   // saved for the final, so every run climaxes against a true heavyweight.
   function oppStrength(o) { return o.att + o.mid + o.def; }
 
-  function shuffle(arr) {
+  function shuffle(arr, rng) {
+    rng = rng || Math.random;
     var a = arr.slice();
     for (var i = a.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
+      var j = Math.floor(rng() * (i + 1));
       var t = a[i]; a[i] = a[j]; a[j] = t;
     }
     return a;
   }
 
-  function drawN(pool, n) {
-    return shuffle(pool).slice(0, Math.min(n, pool.length));
+  function drawN(pool, n, rng) {
+    return shuffle(pool, rng).slice(0, Math.min(n, pool.length));
   }
 
-  function buildBracket() {
+  // rng optional — pass a seeded generator for a fixed daily bracket.
+  function buildBracket(rng) {
     var groupPool = window.OPPONENTS.filter(function (o) { return o.tier === "group"; });
     var koPool = window.OPPONENTS.filter(function (o) { return o.tier === "knockout"; });
 
-    var group = drawN(groupPool, window.GAUNTLET.group)
+    var group = drawN(groupPool, window.GAUNTLET.group, rng)
       .sort(function (a, b) { return oppStrength(a) - oppStrength(b); });
 
-    var ko = drawN(koPool, window.GAUNTLET.knockout);
+    var ko = drawN(koPool, window.GAUNTLET.knockout, rng);
     // Pull the strongest drawn side out and make it the final.
     var maxIdx = 0;
     ko.forEach(function (o, i) { if (oppStrength(o) > oppStrength(ko[maxIdx])) maxIdx = i; });
@@ -137,9 +146,46 @@
           '<div class="how-step"><span class="num">3</span> Win every match to be crowned champion of history.</div>' +
         "</div>" +
         '<button class="btn primary big" id="startBtn">Start the Gauntlet</button>' +
+        '<div class="start-daily"><button class="btn ghost" id="dailyBtn">' + dailyButtonLabel() + "</button></div>" +
       "</section>"
     ));
     document.getElementById("startBtn").onclick = renderModeSelect;
+    document.getElementById("dailyBtn").onclick = startDaily;
+  }
+
+  // ---------------------------------------------------------------- daily challenge
+  function dailyStorageKey(date) { return "wc_daily_" + date; }
+
+  function loadDaily(date) {
+    try { return JSON.parse(window.localStorage.getItem(dailyStorageKey(date))); }
+    catch (e) { return null; }
+  }
+
+  function saveDaily(date, res) {
+    try {
+      var prev = loadDaily(date);
+      if (!prev || res.won > prev.won) {
+        window.localStorage.setItem(dailyStorageKey(date), JSON.stringify(res));
+      }
+    } catch (e) { /* storage unavailable — ignore */ }
+  }
+
+  function dailyButtonLabel() {
+    var prev = loadDaily(window.Rng.today());
+    return prev
+      ? "🗓️ Daily Challenge ✓ — today's best " + prev.won + "/" + prev.total
+      : "🗓️ Play the Daily Challenge";
+  }
+
+  function startDaily() {
+    var date = window.Rng.today();
+    state.mode = { type: "daily", value: date, pools: window.Modes.buildDailyPools(date) };
+    state.slots = window.FORMATION;
+    state.squad = {};
+    state.slotIndex = 0;
+    state.bracket = null;
+    state.history = [];
+    renderDraft();
   }
 
   // ---------------------------------------------------------------- mode select
@@ -244,7 +290,7 @@
       .join("");
 
     var context = state.mode.type === "all-time" ? "" :
-      '<div class="draft-context">' + window.Modes.label(state.mode) + "</div>";
+      '<div class="draft-context">' + contextLabel() + "</div>";
 
     var section = el(
       '<section class="screen draft">' +
@@ -275,6 +321,7 @@
     });
     document.getElementById("backBtn").onclick = function () {
       if (state.slotIndex > 0) { state.slotIndex--; renderDraft(); }
+      else if (state.mode.type === "daily") renderStart();
       else renderModeSelect();
     };
   }
@@ -372,7 +419,10 @@
   function buildShareText() {
     var s = runStats();
     var last = state.history[state.history.length - 1];
-    var lines = ["🏆 All-Time World Cup", window.Modes.label(state.mode)];
+    var title = state.mode.type === "daily"
+      ? "🏆 All-Time World Cup — Daily " + state.mode.value
+      : "🏆 All-Time World Cup";
+    var lines = [title, window.Modes.label(state.mode)];
     if (s.champion) {
       lines.push("👑 CHAMPIONS — won all " + s.total + "!");
     } else {
@@ -429,7 +479,7 @@
     app.innerHTML = "";
     app.appendChild(el(
       '<section class="screen team">' +
-        '<div class="draft-context">' + window.Modes.label(state.mode) + "</div>" +
+        '<div class="draft-context">' + contextLabel() + "</div>" +
         "<h2>Your Starting XI</h2>" +
         '<div class="ratings">' +
           ratingBox("Attack", r.att) +
@@ -447,7 +497,9 @@
       state.squad = {}; state.slotIndex = 0; renderDraft();
     };
     document.getElementById("toGauntletBtn").onclick = function () {
-      state.bracket = buildBracket();
+      state.bracket = state.mode.type === "daily"
+        ? buildBracket(window.Rng.fromString(state.mode.value + "|bracket"))
+        : buildBracket();
       state.round = 0;
       state.history = [];
       renderGauntlet();
@@ -517,7 +569,12 @@
 
   // ---------------------------------------------------------------- match
   function playMatch(me, oppRating, opp) {
-    var res = window.Engine.simulateMatch(me, oppRating);
+    // Daily uses a per-round seeded rng so a given XI always yields the same
+    // result — it's a drafting puzzle, not a luck re-roll.
+    var rng = state.mode.type === "daily"
+      ? window.Rng.fromString(state.mode.value + "|match|" + state.round)
+      : null;
+    var res = window.Engine.simulateMatch(me, oppRating, rng);
     state.history[state.round] = {
       name: opp.name, year: opp.year, flag: opp.flag,
       result: res.result, home: res.home, away: res.away,
@@ -599,6 +656,9 @@
 
   function renderSummary() {
     var s = runStats();
+    if (state.mode.type === "daily") {
+      saveDaily(state.mode.value, { won: s.won, total: s.total, champion: s.champion });
+    }
     var headline = s.champion
       ? "👑 CHAMPIONS OF HISTORY"
       : "Out in the " + stageOf(state.history.length - 1);

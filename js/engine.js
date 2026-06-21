@@ -32,14 +32,14 @@ window.Engine = (function () {
     };
   }
 
-  // ---- Poisson sampler (Knuth) for goal counts ----
-  function poisson(lambda) {
+  // ---- Poisson sampler (Knuth) for goal counts, from a given rng ----
+  function poisson(rng, lambda) {
     var L = Math.exp(-lambda);
     var k = 0;
     var p = 1;
     do {
       k++;
-      p *= Math.random();
+      p *= rng();
     } while (p > L);
     return k - 1;
   }
@@ -59,14 +59,17 @@ window.Engine = (function () {
   }
 
   // ---- Simulate one match. a = player squad rating, b = opponent ----
+  // rng is optional; pass a seeded generator for deterministic results (the
+  // Daily Challenge). Defaults to Math.random for normal play.
   // Returns { home, away, xgHome, xgAway, result, penalties? }
-  function simulateMatch(a, b) {
+  function simulateMatch(a, b, rng) {
+    rng = rng || Math.random;
     var midEdge = a.mid - b.mid;
     var xgHome = expectedGoals(a.att, b.def, midEdge);
     var xgAway = expectedGoals(b.att, a.def, -midEdge);
 
-    var home = poisson(xgHome);
-    var away = poisson(xgAway);
+    var home = poisson(rng, xgHome);
+    var away = poisson(rng, xgAway);
 
     var out = {
       home: home,
@@ -82,10 +85,10 @@ window.Engine = (function () {
       // Knockout: a draw goes to penalties, weighted slightly by who had
       // the better expected-goals figure (i.e. who created more).
       var edge = clamp(0.5 + (xgHome - xgAway) * 0.12, 0.2, 0.8);
-      var winHome = Math.random() < edge;
+      var winHome = rng() < edge;
       out.penalties = {
-        home: winHome ? 4 + Math.floor(Math.random() * 2) : 2 + Math.floor(Math.random() * 2),
-        away: winHome ? 2 + Math.floor(Math.random() * 2) : 4 + Math.floor(Math.random() * 2),
+        home: winHome ? 4 + Math.floor(rng() * 2) : 2 + Math.floor(rng() * 2),
+        away: winHome ? 2 + Math.floor(rng() * 2) : 4 + Math.floor(rng() * 2),
       };
       // Guarantee the shootout isn't level.
       if (out.penalties.home === out.penalties.away) {

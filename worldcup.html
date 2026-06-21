@@ -103,6 +103,8 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   gap: 12px;
   color: var(--text);
 }
+.start-daily { margin-top: 14px; }
+.start-daily .btn { border-color: rgba(245, 197, 66, 0.4); }
 .how-step .num {
   flex: 0 0 26px;
   height: 26px;
@@ -498,7 +500,58 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
 <body>
   <main id="app"><!-- screens are rendered here by js/game.js --></main>
 
+  <!-- Data layer (plain globals so the game runs by just opening this file) -->
   <script>
+/* === js/rng.js === */
+/*
+ * Seeded RNG — deterministic pseudo-random numbers from a string key.
+ *
+ * Used by the Daily Challenge so that everyone playing on a given date gets
+ * the exact same draft shortlists, bracket and match outcomes. Normal modes
+ * keep using Math.random.
+ *
+ *   var rng = Rng.fromString("2026-06-21|bracket");
+ *   rng(); // -> deterministic float in [0, 1)
+ */
+window.Rng = (function () {
+  // xmur3 string hash -> 32-bit seed
+  function xmur3(str) {
+    var h = 1779033703 ^ str.length;
+    for (var i = 0; i < str.length; i++) {
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function () {
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      return (h ^= h >>> 16) >>> 0;
+    };
+  }
+
+  // mulberry32 PRNG
+  function mulberry32(a) {
+    return function () {
+      a |= 0;
+      a = (a + 0x6d2b79f5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function fromString(str) {
+    return mulberry32(xmur3(String(str))());
+  }
+
+  // Today's challenge id (UTC, so it's the same worldwide).
+  function today() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return { fromString: fromString, today: today };
+})();
+
+
 /* === js/players.js === */
 /*
  * All-Time World Cup Simulator — Player Database
@@ -1180,6 +1233,33 @@ window.Modes = (function () {
     return mode.type === "all-time" ? window.SLOTS : window.FORMATION;
   }
 
+  // ----- Daily Challenge: seeded draft shortlists -----
+  // Every position gets the same fixed shortlist of candidates for everyone
+  // playing on the given date — the puzzle is to build the best XI from these.
+  var DAILY_CHOICES = 6;
+
+  function seededShuffle(arr, rng) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(rng() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  // Returns { [slotKey]: [playerId, ...] } for the day.
+  function buildDailyPools(dateKey) {
+    var pools = {};
+    window.FORMATION.forEach(function (slot) {
+      var rng = window.Rng.fromString(dateKey + "|slot|" + slot.key);
+      var byLine = window.PLAYERS.filter(function (p) { return p.pos === slot.line; });
+      pools[slot.key] = seededShuffle(byLine, rng)
+        .slice(0, DAILY_CHOICES)
+        .map(function (p) { return p.id; });
+    });
+    return pools;
+  }
+
   // Does a player match the (non all-time) mode's filter?
   function matchesFilter(player, mode) {
     if (mode.type === "decade") return player.decade === mode.value;
@@ -1194,6 +1274,8 @@ window.Modes = (function () {
     var ids;
     if (mode.type === "all-time") {
       ids = slot.pool.slice();
+    } else if (mode.type === "daily") {
+      ids = (mode.pools && mode.pools[slot.key] ? mode.pools[slot.key] : []).slice();
     } else {
       ids = window.PLAYERS
         .filter(function (p) { return p.pos === slot.line && matchesFilter(p, mode); })
@@ -1210,6 +1292,7 @@ window.Modes = (function () {
   // Short human label for a chosen mode (used in headers / share text).
   function label(mode) {
     if (mode.type === "all-time") return "All-Time XI";
+    if (mode.type === "daily") return "Daily Challenge";
     if (mode.type === "confed") {
       var meta = CONFED_META.filter(function (m) { return m.value === mode.value; })[0];
       return (meta ? meta.label : mode.value) + " XI";
@@ -1225,6 +1308,7 @@ window.Modes = (function () {
     availableConfederations: availableConfederations,
     slotsFor: slotsFor,
     poolFor: poolFor,
+    buildDailyPools: buildDailyPools,
     label: label,
   };
 })();
@@ -1265,14 +1349,14 @@ window.Engine = (function () {
     };
   }
 
-  // ---- Poisson sampler (Knuth) for goal counts ----
-  function poisson(lambda) {
+  // ---- Poisson sampler (Knuth) for goal counts, from a given rng ----
+  function poisson(rng, lambda) {
     var L = Math.exp(-lambda);
     var k = 0;
     var p = 1;
     do {
       k++;
-      p *= Math.random();
+      p *= rng();
     } while (p > L);
     return k - 1;
   }
@@ -1292,14 +1376,17 @@ window.Engine = (function () {
   }
 
   // ---- Simulate one match. a = player squad rating, b = opponent ----
+  // rng is optional; pass a seeded generator for deterministic results (the
+  // Daily Challenge). Defaults to Math.random for normal play.
   // Returns { home, away, xgHome, xgAway, result, penalties? }
-  function simulateMatch(a, b) {
+  function simulateMatch(a, b, rng) {
+    rng = rng || Math.random;
     var midEdge = a.mid - b.mid;
     var xgHome = expectedGoals(a.att, b.def, midEdge);
     var xgAway = expectedGoals(b.att, a.def, -midEdge);
 
-    var home = poisson(xgHome);
-    var away = poisson(xgAway);
+    var home = poisson(rng, xgHome);
+    var away = poisson(rng, xgAway);
 
     var out = {
       home: home,
@@ -1315,10 +1402,10 @@ window.Engine = (function () {
       // Knockout: a draw goes to penalties, weighted slightly by who had
       // the better expected-goals figure (i.e. who created more).
       var edge = clamp(0.5 + (xgHome - xgAway) * 0.12, 0.2, 0.8);
-      var winHome = Math.random() < edge;
+      var winHome = rng() < edge;
       out.penalties = {
-        home: winHome ? 4 + Math.floor(Math.random() * 2) : 2 + Math.floor(Math.random() * 2),
-        away: winHome ? 2 + Math.floor(Math.random() * 2) : 4 + Math.floor(Math.random() * 2),
+        home: winHome ? 4 + Math.floor(rng() * 2) : 2 + Math.floor(rng() * 2),
+        away: winHome ? 2 + Math.floor(rng() * 2) : 4 + Math.floor(rng() * 2),
       };
       // Guarantee the shootout isn't level.
       if (out.penalties.home === out.penalties.away) {
@@ -1401,6 +1488,13 @@ window.Engine = (function () {
     return state.slots.every(function (s) { return state.squad[s.key]; });
   }
 
+  // Header label for the current mode (Daily also shows its date).
+  function contextLabel() {
+    return state.mode.type === "daily"
+      ? "🗓️ Daily Challenge · " + state.mode.value
+      : window.Modes.label(state.mode);
+  }
+
   // ---------------------------------------------------------------- difficulty scaling
   // The gauntlet is calibrated against an all-time XI. So that constrained
   // modes (a single nation/region/decade) are winnable rather than hopeless,
@@ -1432,27 +1526,29 @@ window.Engine = (function () {
   // saved for the final, so every run climaxes against a true heavyweight.
   function oppStrength(o) { return o.att + o.mid + o.def; }
 
-  function shuffle(arr) {
+  function shuffle(arr, rng) {
+    rng = rng || Math.random;
     var a = arr.slice();
     for (var i = a.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
+      var j = Math.floor(rng() * (i + 1));
       var t = a[i]; a[i] = a[j]; a[j] = t;
     }
     return a;
   }
 
-  function drawN(pool, n) {
-    return shuffle(pool).slice(0, Math.min(n, pool.length));
+  function drawN(pool, n, rng) {
+    return shuffle(pool, rng).slice(0, Math.min(n, pool.length));
   }
 
-  function buildBracket() {
+  // rng optional — pass a seeded generator for a fixed daily bracket.
+  function buildBracket(rng) {
     var groupPool = window.OPPONENTS.filter(function (o) { return o.tier === "group"; });
     var koPool = window.OPPONENTS.filter(function (o) { return o.tier === "knockout"; });
 
-    var group = drawN(groupPool, window.GAUNTLET.group)
+    var group = drawN(groupPool, window.GAUNTLET.group, rng)
       .sort(function (a, b) { return oppStrength(a) - oppStrength(b); });
 
-    var ko = drawN(koPool, window.GAUNTLET.knockout);
+    var ko = drawN(koPool, window.GAUNTLET.knockout, rng);
     // Pull the strongest drawn side out and make it the final.
     var maxIdx = 0;
     ko.forEach(function (o, i) { if (oppStrength(o) > oppStrength(ko[maxIdx])) maxIdx = i; });
@@ -1488,9 +1584,46 @@ window.Engine = (function () {
           '<div class="how-step"><span class="num">3</span> Win every match to be crowned champion of history.</div>' +
         "</div>" +
         '<button class="btn primary big" id="startBtn">Start the Gauntlet</button>' +
+        '<div class="start-daily"><button class="btn ghost" id="dailyBtn">' + dailyButtonLabel() + "</button></div>" +
       "</section>"
     ));
     document.getElementById("startBtn").onclick = renderModeSelect;
+    document.getElementById("dailyBtn").onclick = startDaily;
+  }
+
+  // ---------------------------------------------------------------- daily challenge
+  function dailyStorageKey(date) { return "wc_daily_" + date; }
+
+  function loadDaily(date) {
+    try { return JSON.parse(window.localStorage.getItem(dailyStorageKey(date))); }
+    catch (e) { return null; }
+  }
+
+  function saveDaily(date, res) {
+    try {
+      var prev = loadDaily(date);
+      if (!prev || res.won > prev.won) {
+        window.localStorage.setItem(dailyStorageKey(date), JSON.stringify(res));
+      }
+    } catch (e) { /* storage unavailable — ignore */ }
+  }
+
+  function dailyButtonLabel() {
+    var prev = loadDaily(window.Rng.today());
+    return prev
+      ? "🗓️ Daily Challenge ✓ — today's best " + prev.won + "/" + prev.total
+      : "🗓️ Play the Daily Challenge";
+  }
+
+  function startDaily() {
+    var date = window.Rng.today();
+    state.mode = { type: "daily", value: date, pools: window.Modes.buildDailyPools(date) };
+    state.slots = window.FORMATION;
+    state.squad = {};
+    state.slotIndex = 0;
+    state.bracket = null;
+    state.history = [];
+    renderDraft();
   }
 
   // ---------------------------------------------------------------- mode select
@@ -1595,7 +1728,7 @@ window.Engine = (function () {
       .join("");
 
     var context = state.mode.type === "all-time" ? "" :
-      '<div class="draft-context">' + window.Modes.label(state.mode) + "</div>";
+      '<div class="draft-context">' + contextLabel() + "</div>";
 
     var section = el(
       '<section class="screen draft">' +
@@ -1626,6 +1759,7 @@ window.Engine = (function () {
     });
     document.getElementById("backBtn").onclick = function () {
       if (state.slotIndex > 0) { state.slotIndex--; renderDraft(); }
+      else if (state.mode.type === "daily") renderStart();
       else renderModeSelect();
     };
   }
@@ -1723,7 +1857,10 @@ window.Engine = (function () {
   function buildShareText() {
     var s = runStats();
     var last = state.history[state.history.length - 1];
-    var lines = ["🏆 All-Time World Cup", window.Modes.label(state.mode)];
+    var title = state.mode.type === "daily"
+      ? "🏆 All-Time World Cup — Daily " + state.mode.value
+      : "🏆 All-Time World Cup";
+    var lines = [title, window.Modes.label(state.mode)];
     if (s.champion) {
       lines.push("👑 CHAMPIONS — won all " + s.total + "!");
     } else {
@@ -1780,7 +1917,7 @@ window.Engine = (function () {
     app.innerHTML = "";
     app.appendChild(el(
       '<section class="screen team">' +
-        '<div class="draft-context">' + window.Modes.label(state.mode) + "</div>" +
+        '<div class="draft-context">' + contextLabel() + "</div>" +
         "<h2>Your Starting XI</h2>" +
         '<div class="ratings">' +
           ratingBox("Attack", r.att) +
@@ -1798,7 +1935,9 @@ window.Engine = (function () {
       state.squad = {}; state.slotIndex = 0; renderDraft();
     };
     document.getElementById("toGauntletBtn").onclick = function () {
-      state.bracket = buildBracket();
+      state.bracket = state.mode.type === "daily"
+        ? buildBracket(window.Rng.fromString(state.mode.value + "|bracket"))
+        : buildBracket();
       state.round = 0;
       state.history = [];
       renderGauntlet();
@@ -1868,7 +2007,12 @@ window.Engine = (function () {
 
   // ---------------------------------------------------------------- match
   function playMatch(me, oppRating, opp) {
-    var res = window.Engine.simulateMatch(me, oppRating);
+    // Daily uses a per-round seeded rng so a given XI always yields the same
+    // result — it's a drafting puzzle, not a luck re-roll.
+    var rng = state.mode.type === "daily"
+      ? window.Rng.fromString(state.mode.value + "|match|" + state.round)
+      : null;
+    var res = window.Engine.simulateMatch(me, oppRating, rng);
     state.history[state.round] = {
       name: opp.name, year: opp.year, flag: opp.flag,
       result: res.result, home: res.home, away: res.away,
@@ -1950,6 +2094,9 @@ window.Engine = (function () {
 
   function renderSummary() {
     var s = runStats();
+    if (state.mode.type === "daily") {
+      saveDaily(state.mode.value, { won: s.won, total: s.total, champion: s.champion });
+    }
     var headline = s.champion
       ? "👑 CHAMPIONS OF HISTORY"
       : "Out in the " + stageOf(state.history.length - 1);
