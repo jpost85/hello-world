@@ -22,8 +22,10 @@ No build step, no dependencies. Just open `index.html` in a browser.
    then a 7-game **knockout** drawn from the all-time greats and shuffled, with
    the strongest side you drew saved for the final. No two runs are alike.
 4. **Win it all** — one defeat ends the run. The match engine rewards a strong,
-   balanced XI but always leaves room for an upset. **Share** your result as an
-   emoji scorecard from the win or defeat screen.
+   balanced XI but always leaves room for an upset. Every run ends on a
+   **Final Standings** page — your record, a match-by-match journey, your XI,
+   and an emoji scorecard — with **Copy** (Wordle-style text) and **Save Image**
+   (a rendered PNG card, also wired to the native share sheet on mobile).
 
 > Constrained modes (Decade / Nation / Region) scale the gauntlet to the
 > *ceiling* of your chosen pool, so they're winnable rather than hopeless while
@@ -39,7 +41,7 @@ No build step, no dependencies. Just open `index.html` in a browser.
 | Modes          | `js/modes.js` builds mode-aware, de-duplicated draft pools, derives each nation's confederation, and only offers a decade/nation/region that can actually field a full XI. |
 | Opponents      | ~37 legendary sides in `js/opponents.js`, split into `group` and `knockout` tiers; each run draws a random bracket (`buildBracket` in `js/game.js`). |
 | Match engine   | Rated simulation in `js/engine.js`: line strengths → expected goals → a Poisson draw for the scoreline, so upsets are always possible. |
-| UI / flow      | Vanilla JS screens in `js/game.js` (incl. the visual pitch + share card), styled in `css/styles.css`. |
+| UI / flow      | Vanilla JS screens in `js/game.js` — incl. the visual pitch, the Final Standings page, and a canvas-rendered PNG share card (`drawCard`) — styled in `css/styles.css`. |
 
 ## Project layout
 

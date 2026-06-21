@@ -349,21 +349,40 @@
     return sq.join("");
   }
 
-  function buildShareText() {
-    var beaten = state.history.filter(function (h) { return h.result === "win"; }).length;
+  // Aggregate the finished (or abandoned) run into shareable stats.
+  function runStats() {
+    var won = state.history.filter(function (h) { return h.result === "win"; }).length;
     var total = state.bracket ? state.bracket.length : state.history.length;
-    var champion = beaten === total;
-    var lines = [
-      "🏆 All-Time World Cup Simulator",
-      window.Modes.label(state.mode) + " — " +
-        (champion ? "CHAMPIONS! " + total + "/" + total
-                  : beaten + "/" + total + " · out in round " + (beaten + 1)),
-      resultSquares(),
-    ];
+    var gf = state.history.reduce(function (s, h) { return s + h.home; }, 0);
+    var ga = state.history.reduce(function (s, h) { return s + h.away; }, 0);
+    var best = null; // toughest side beaten, by combined rating
+    state.history.forEach(function (h, i) {
+      if (h.result === "win" && state.bracket[i]) {
+        var o = state.bracket[i];
+        var st = o.att + o.mid + o.def;
+        if (!best || st > best.st) best = { o: o, st: st };
+      }
+    });
+    return {
+      won: won, total: total, gf: gf, ga: ga, best: best,
+      champion: won === total && state.history.length === total,
+    };
+  }
+
+  function buildShareText() {
+    var s = runStats();
     var last = state.history[state.history.length - 1];
-    if (!champion && last) {
+    var lines = ["🏆 All-Time World Cup", window.Modes.label(state.mode)];
+    if (s.champion) {
+      lines.push("👑 CHAMPIONS — won all " + s.total + "!");
+    } else {
+      lines.push("Out in the " + stageOf(state.history.length - 1) + " · " + s.won + "/" + s.total);
+    }
+    lines.push(resultSquares());
+    if (!s.champion && last) {
       lines.push("Fell to " + last.flag + " " + last.name + " " + last.year + " (" + last.home + "–" + last.away + ")");
     }
+    if (s.best) lines.push("Best win: beat " + s.best.o.flag + " " + s.best.o.name + " " + s.best.o.year);
     lines.push("", window.location.href);
     return lines.join("\n");
   }
@@ -526,7 +545,7 @@
     var nav = app.querySelector(".result-nav");
     if (res.result === "win") {
       if (state.round >= state.bracket.length - 1) {
-        nav.appendChild(buttonEl("🏆 Claim Your Crown", "primary big", renderWin));
+        nav.appendChild(buttonEl("🏆 See Final Standings →", "primary big", renderSummary));
       } else {
         var nextStage = stageOf(state.round + 1) !== stageOf(state.round)
           ? "Into the Knockouts →" : "Next Opponent →";
@@ -536,9 +555,7 @@
         }));
       }
     } else {
-      app.querySelector(".result").appendChild(el('<div class="share-track">' + resultSquares() + "</div>"));
-      nav.appendChild(buttonEl("📋 Share", "ghost", shareResult));
-      nav.appendChild(buttonEl("Try Again", "primary big", renderStart));
+      nav.appendChild(buttonEl("See Final Standings →", "primary big", renderSummary));
     }
   }
 
@@ -558,24 +575,210 @@
     return "So close. " + opp.name + " " + opp.year + " find the decisive goal and the gauntlet claims another challenger.";
   }
 
-  // ---------------------------------------------------------------- win
-  function renderWin() {
+  // ---------------------------------------------------------------- final standings
+  function xiNames() {
+    return state.slots.map(function (s) { return state.squad[s.key]; }).filter(Boolean);
+  }
+
+  function matchRows() {
+    return state.history.map(function (h, i) {
+      var opp = state.bracket[i];
+      var stage = i < window.GAUNTLET.group ? "G" : "K";
+      var win = h.result === "win";
+      return (
+        '<div class="match-row ' + (win ? "w" : "l") + '">' +
+          '<span class="mr-stage" title="' + (stage === "G" ? "Group Stage" : "Knockout") + '">' + stage + "</span>" +
+          '<span class="mr-flag">' + opp.flag + "</span>" +
+          '<span class="mr-name">' + opp.name + " " + opp.year + "</span>" +
+          '<span class="mr-score">' + h.home + "–" + h.away + "</span>" +
+          '<span class="mr-mark">' + (win ? "✓" : "✗") + "</span>" +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  function renderSummary() {
+    var s = runStats();
+    var headline = s.champion
+      ? "👑 CHAMPIONS OF HISTORY"
+      : "Out in the " + stageOf(state.history.length - 1);
+    var sub = s.champion
+      ? "Your " + window.Modes.label(state.mode) + " beat every side drawn against them. Immortal."
+      : "Your " + window.Modes.label(state.mode) + " reached match " + state.history.length + " of " + s.total + ".";
+
+    var xi = xiNames();
+    var chips = xi.map(function (p) {
+      return '<span class="xi-chip">' + p.flag + " " + p.name + "</span>";
+    }).join("");
+
+    var stats =
+      statBox(s.won + "/" + s.total, "Won") +
+      statBox(s.gf + "–" + s.ga, "Goals") +
+      (s.best ? statBox(s.best.o.flag + " " + s.best.o.year, "Best Win") : statBox("–", "Best Win"));
+
     app.innerHTML = "";
     app.appendChild(el(
-      '<section class="screen win">' +
-        '<div class="trophy big-trophy">🏆</div>' +
-        "<h1>CHAMPIONS OF HISTORY</h1>" +
-        '<p class="tagline">Your ' + window.Modes.label(state.mode) + " ran the gauntlet and beat every great team ever assembled. Immortal.</p>" +
+      '<section class="screen summary ' + (s.champion ? "champ" : "out") + '">' +
+        (s.champion ? '<div class="trophy big-trophy">🏆</div>' : "") +
+        '<div class="summary-result">' + headline + "</div>" +
+        '<p class="summary-sub">' + sub + "</p>" +
         '<div class="share-track">' + resultSquares() + "</div>" +
-        pitchHTML() +
+        '<div class="summary-stats">' + stats + "</div>" +
+        '<div class="match-list">' + matchRows() + "</div>" +
+        '<div class="summary-xi"><div class="sxi-label">' + window.Modes.label(state.mode) + "</div>" + chips + "</div>" +
         '<div class="team-nav">' +
-          '<button class="btn ghost" id="shareWin">📋 Share</button>' +
+          '<button class="btn ghost" id="copyBtn">📋 Copy</button>' +
+          '<button class="btn ghost" id="imgBtn">📸 Save Image</button>' +
           '<button class="btn primary big" id="againBtn">Play Again</button>' +
         "</div>" +
+        '<div class="share-hint">Screenshot this or save the image to share your run!</div>' +
       "</section>"
     ));
-    document.getElementById("shareWin").onclick = shareResult;
+    document.getElementById("copyBtn").onclick = shareResult;
+    document.getElementById("imgBtn").onclick = saveImage;
     document.getElementById("againBtn").onclick = renderStart;
+  }
+
+  function statBox(val, label) {
+    return '<div class="stat-box"><div class="sb-val">' + val + '</div><div class="sb-label">' + label + "</div></div>";
+  }
+
+  // ---------------------------------------------------------------- shareable image card
+  // Rendered with plain canvas shapes/text (no emoji) so it looks identical
+  // on every device, then offered via the native share sheet or a download.
+  function drawCard() {
+    var W = 1080, H = 1350;
+    var c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    var x = c.getContext("2d");
+    var s = runStats();
+
+    // background
+    var bg = x.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#0f5934");
+    bg.addColorStop(1, "#08251a");
+    x.fillStyle = bg; x.fillRect(0, 0, W, H);
+    x.strokeStyle = "rgba(245,197,66,0.55)"; x.lineWidth = 10;
+    x.strokeRect(20, 20, W - 40, H - 40);
+
+    var cx = W / 2;
+    x.textAlign = "center";
+
+    x.fillStyle = "#f5c542";
+    x.font = "700 40px Arial";
+    x.fillText("ALL-TIME WORLD CUP", cx, 110);
+
+    x.fillStyle = "#eaf3ee";
+    x.font = "800 64px Arial";
+    x.fillText(window.Modes.label(state.mode), cx, 185);
+
+    // result headline
+    x.fillStyle = s.champion ? "#f5c542" : "#e0533d";
+    x.font = "800 56px Arial";
+    var head = s.champion ? "CHAMPIONS" : "OUT — " + stageOf(state.history.length - 1).toUpperCase();
+    x.fillText(head, cx, 270);
+    x.fillStyle = "#9fb8ac";
+    x.font = "600 34px Arial";
+    x.fillText("Record: " + s.won + " / " + s.total + "    Goals: " + s.gf + "–" + s.ga, cx, 320);
+
+    // result squares
+    var n = state.bracket.length;
+    var sq = 58, gap = 12, totalW = n * sq + (n - 1) * gap;
+    var sx = cx - totalW / 2, sy = 360;
+    for (var i = 0; i < n; i++) {
+      var done = i < state.history.length;
+      x.fillStyle = !done ? "rgba(255,255,255,0.12)"
+        : (state.history[i].result === "win" ? "#2ec16b" : "#e0533d");
+      roundRect(x, sx + i * (sq + gap), sy, sq, sq, 10); x.fill();
+      if (i === window.GAUNTLET.group - 1 && i < n - 1) {
+        // small gold tick marking the group→knockout boundary
+        x.fillStyle = "#f5c542";
+        x.fillRect(sx + i * (sq + gap) + sq + gap / 2 - 2, sy - 8, 4, sq + 16);
+      }
+    }
+
+    // match list
+    var ly = 500, lh = 64;
+    x.textAlign = "left";
+    state.history.forEach(function (h, idx) {
+      var o = state.bracket[idx];
+      var y = ly + idx * lh;
+      var win = h.result === "win";
+      x.fillStyle = "rgba(255,255,255,0.05)";
+      roundRect(x, 90, y - 38, W - 180, 52, 10); x.fill();
+      x.fillStyle = win ? "#2ec16b" : "#e0533d";
+      roundRect(x, 102, y - 30, 36, 36, 8); x.fill();
+      x.fillStyle = "#08251a"; x.font = "800 26px Arial"; x.textAlign = "center";
+      x.fillText(win ? "✓" : "✗", 120, y - 3);
+      x.textAlign = "left";
+      x.fillStyle = "#eaf3ee"; x.font = "600 30px Arial";
+      x.fillText((idx < window.GAUNTLET.group ? "Group · " : "KO · ") + o.name + " " + o.year, 158, y - 5);
+      x.textAlign = "right";
+      x.fillStyle = "#f5c542"; x.font = "800 32px Arial";
+      x.fillText(h.home + "–" + h.away, W - 110, y - 4);
+      x.textAlign = "left";
+    });
+
+    // XI footer
+    var xi = xiNames();
+    var fy = ly + state.history.length * lh + 36;
+    x.textAlign = "center";
+    x.fillStyle = "#9fb8ac"; x.font = "700 26px Arial";
+    x.fillText("YOUR XI", cx, fy);
+    x.fillStyle = "#eaf3ee"; x.font = "500 27px Arial";
+    var names = xi.map(function (p) { return p.name; });
+    wrapCentered(x, names.join("  •  "), cx, fy + 40, W - 160, 36);
+
+    x.fillStyle = "rgba(245,197,66,0.8)"; x.font = "700 24px Arial";
+    x.fillText("Play it yourself — All-Time World Cup Simulator", cx, H - 50);
+    return c;
+  }
+
+  function roundRect(x, X, Y, w, h, r) {
+    x.beginPath();
+    x.moveTo(X + r, Y);
+    x.arcTo(X + w, Y, X + w, Y + h, r);
+    x.arcTo(X + w, Y + h, X, Y + h, r);
+    x.arcTo(X, Y + h, X, Y, r);
+    x.arcTo(X, Y, X + w, Y, r);
+    x.closePath();
+  }
+
+  function wrapCentered(x, text, cx, y, maxW, lh) {
+    var words = text.split(" "), line = "", yy = y;
+    for (var i = 0; i < words.length; i++) {
+      var test = line + words[i] + " ";
+      if (x.measureText(test).width > maxW && line) {
+        x.fillText(line.trim(), cx, yy); line = words[i] + " "; yy += lh;
+      } else line = test;
+    }
+    x.fillText(line.trim(), cx, yy);
+  }
+
+  function saveImage() {
+    var canvas;
+    try { canvas = drawCard(); }
+    catch (e) { toast("Couldn't build image"); return; }
+    canvas.toBlob(function (blob) {
+      if (!blob) { toast("Couldn't build image"); return; }
+      var fname = "world-cup-" + window.Modes.label(state.mode).replace(/\s+/g, "-").toLowerCase() + ".png";
+      var file = null;
+      try { file = new File([blob], fname, { type: "image/png" }); } catch (e) {}
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], text: buildShareText() }).catch(function () { downloadBlob(blob, fname); });
+      } else {
+        downloadBlob(blob, fname);
+      }
+    }, "image/png");
+  }
+
+  function downloadBlob(blob, fname) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    toast("Image saved!");
   }
 
   // ---------------------------------------------------------------- boot

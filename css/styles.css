@@ -382,6 +382,79 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
 .pens { color: var(--muted); margin-bottom: 8px; }
 .commentary { color: var(--text); max-width: 54ch; margin: 14px auto 22px; line-height: 1.6; }
 
+/* ---------- final standings / summary ---------- */
+.summary { text-align: center; }
+.summary-result {
+  font-weight: 900;
+  font-size: 1.7rem;
+  letter-spacing: 1px;
+  margin: 4px 0 6px;
+}
+.summary.champ .summary-result { color: var(--gold); }
+.summary.out .summary-result { color: var(--loss); }
+.summary-sub { color: var(--muted); margin: 0 auto 14px; max-width: 50ch; line-height: 1.5; }
+
+.summary-stats { display: flex; gap: 12px; justify-content: center; margin: 14px 0 18px; flex-wrap: wrap; }
+.stat-box {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 18px;
+  min-width: 92px;
+}
+.sb-val { font-size: 1.3rem; font-weight: 800; color: var(--gold); }
+.sb-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+
+.match-list { display: grid; gap: 6px; margin: 0 auto 20px; max-width: 460px; text-align: left; }
+.match-row {
+  display: grid;
+  grid-template-columns: 22px 26px 1fr auto 22px;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+.match-row.w { border-left-color: var(--win); }
+.match-row.l { border-left-color: var(--loss); }
+.mr-stage {
+  font-size: 0.62rem; font-weight: 800;
+  width: 20px; height: 20px; line-height: 20px; text-align: center;
+  border-radius: 5px; color: var(--ink);
+  background: rgba(255,255,255,0.25);
+}
+.match-row.w .mr-stage { background: rgba(46,193,107,0.35); color: var(--text); }
+.mr-flag { font-size: 1.1rem; }
+.mr-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mr-score { font-weight: 800; color: var(--gold); }
+.mr-mark { font-weight: 800; text-align: center; }
+.match-row.w .mr-mark { color: var(--win); }
+.match-row.l .mr-mark { color: var(--loss); }
+
+.summary-xi {
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 18px;
+  display: flex; flex-wrap: wrap; gap: 7px; justify-content: center;
+}
+.sxi-label {
+  width: 100%; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--gold); font-weight: 700; margin-bottom: 4px;
+}
+.xi-chip {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+}
+.share-hint { color: var(--muted); font-size: 0.78rem; margin-top: 12px; }
+
 /* ---------- win ---------- */
 .win { text-align: center; }
 .big-trophy { font-size: 5rem; animation: pop 0.6s ease; }
