@@ -1,6 +1,6 @@
 /*
- * Game controller — screens, state and rendering for the
- * All-Time World Cup Simulator.
+ * Game controller — screens, state and rendering for
+ * Copa XI: All-Time World Cup.
  *
  * Flow:  Start → Mode select → (Decade/Nation pick) → Draft → Team → Gauntlet → Win/Lose
  */
@@ -138,7 +138,8 @@
     app.appendChild(el(
       '<section class="screen start">' +
         '<div class="trophy">🏆</div>' +
-        "<h1>All-Time World Cup</h1>" +
+        '<h1>Copa XI</h1>' +
+        '<div class="brand-sub">All-Time World Cup</div>' +
         '<p class="tagline">Draft a team of legends. Run the gauntlet of the greatest sides ever to play. Lose once and it\'s over.</p>' +
         '<div class="how">' +
           '<div class="how-step"><span class="num">1</span> Choose a squad style, then pick a legend for each position.</div>' +
@@ -453,8 +454,8 @@
     var s = runStats();
     var last = state.history[state.history.length - 1];
     var title = state.mode.type === "daily"
-      ? "🏆 All-Time World Cup — Daily " + state.mode.value
-      : "🏆 All-Time World Cup";
+      ? "🏆 Copa XI — Daily " + state.mode.value
+      : "🏆 Copa XI: All-Time World Cup";
     var lines = [title, window.Modes.label(state.mode)];
     if (s.champion) {
       lines.push("👑 CHAMPIONS — won all " + s.total + "!");
@@ -500,7 +501,7 @@
   function shareResult() {
     var text = buildShareText();
     if (navigator.share) {
-      navigator.share({ title: "All-Time World Cup Simulator", text: text }).catch(function () {});
+      navigator.share({ title: "Copa XI: All-Time World Cup", text: text }).catch(function () {});
       return;
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -770,12 +771,15 @@
     x.textAlign = "center";
 
     x.fillStyle = "#f5c542";
-    x.font = "700 40px Arial";
-    x.fillText("ALL-TIME WORLD CUP", cx, 110);
+    x.font = "800 56px Arial";
+    x.fillText("COPA XI", cx, 100);
+    x.fillStyle = "#9fb8ac";
+    x.font = "700 24px Arial";
+    x.fillText("ALL-TIME WORLD CUP", cx, 138);
 
     x.fillStyle = "#eaf3ee";
-    x.font = "800 64px Arial";
-    x.fillText(window.Modes.label(state.mode), cx, 185);
+    x.font = "800 60px Arial";
+    x.fillText(window.Modes.label(state.mode), cx, 200);
 
     // result headline
     x.fillStyle = s.champion ? "#f5c542" : "#e0533d";
@@ -837,7 +841,7 @@
     wrapCentered(x, names.join("  •  "), cx, fy + 40, W - 160, 36);
 
     x.fillStyle = "rgba(245,197,66,0.8)"; x.font = "700 24px Arial";
-    x.fillText("Play it yourself — All-Time World Cup Simulator", cx, H - 50);
+    x.fillText("Play it yourself — Copa XI: All-Time World Cup", cx, H - 50);
     return c;
   }
 

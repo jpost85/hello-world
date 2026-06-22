@@ -1,5 +1,5 @@
 /*
- * All-Time World Cup Simulator — Player Database
+ * Copa XI: All-Time World Cup — Player Database
  *
  * A curated roster of soccer legends spanning the 1950s to the 2020s.
  * Each player has a `pwr` (0-100) representing their effectiveness in their

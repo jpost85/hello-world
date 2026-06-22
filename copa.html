@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>All-Time World Cup Simulator</title>
-  <meta name="description" content="Draft a team of soccer legends and run the gauntlet of the greatest national sides of all time." />
+  <title>Copa XI: All-Time World Cup</title>
+  <meta name="description" content="Copa XI — draft a team of soccer legends and run the gauntlet of the greatest national sides of all time." />
   <style>
-/* All-Time World Cup Simulator — styles */
+/* Copa XI: All-Time World Cup — styles */
 :root {
   --pitch-1: #0b3d2e;
   --pitch-2: #0f5132;
@@ -65,7 +65,15 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-h1 { font-size: 2.1rem; margin: 6px 0 8px; letter-spacing: 0.5px; }
+h1 { font-size: 2.4rem; margin: 6px 0 2px; letter-spacing: 1px; color: var(--gold); }
+.brand-sub {
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
 h2 { font-size: 1.5rem; margin: 0 0 6px; }
 .tagline { color: var(--muted); line-height: 1.5; max-width: 52ch; margin: 0 auto 18px; }
 
@@ -564,7 +572,7 @@ window.Rng = (function () {
 
 /* === js/players.js === */
 /*
- * All-Time World Cup Simulator — Player Database
+ * Copa XI: All-Time World Cup — Player Database
  *
  * A curated roster of soccer legends spanning the 1950s to the 2020s.
  * Each player has a `pwr` (0-100) representing their effectiveness in their
@@ -1447,8 +1455,8 @@ window.Engine = (function () {
 
 /* === js/game.js === */
 /*
- * Game controller — screens, state and rendering for the
- * All-Time World Cup Simulator.
+ * Game controller — screens, state and rendering for
+ * Copa XI: All-Time World Cup.
  *
  * Flow:  Start → Mode select → (Decade/Nation pick) → Draft → Team → Gauntlet → Win/Lose
  */
@@ -1586,7 +1594,8 @@ window.Engine = (function () {
     app.appendChild(el(
       '<section class="screen start">' +
         '<div class="trophy">🏆</div>' +
-        "<h1>All-Time World Cup</h1>" +
+        '<h1>Copa XI</h1>' +
+        '<div class="brand-sub">All-Time World Cup</div>' +
         '<p class="tagline">Draft a team of legends. Run the gauntlet of the greatest sides ever to play. Lose once and it\'s over.</p>' +
         '<div class="how">' +
           '<div class="how-step"><span class="num">1</span> Choose a squad style, then pick a legend for each position.</div>' +
@@ -1901,8 +1910,8 @@ window.Engine = (function () {
     var s = runStats();
     var last = state.history[state.history.length - 1];
     var title = state.mode.type === "daily"
-      ? "🏆 All-Time World Cup — Daily " + state.mode.value
-      : "🏆 All-Time World Cup";
+      ? "🏆 Copa XI — Daily " + state.mode.value
+      : "🏆 Copa XI: All-Time World Cup";
     var lines = [title, window.Modes.label(state.mode)];
     if (s.champion) {
       lines.push("👑 CHAMPIONS — won all " + s.total + "!");
@@ -1948,7 +1957,7 @@ window.Engine = (function () {
   function shareResult() {
     var text = buildShareText();
     if (navigator.share) {
-      navigator.share({ title: "All-Time World Cup Simulator", text: text }).catch(function () {});
+      navigator.share({ title: "Copa XI: All-Time World Cup", text: text }).catch(function () {});
       return;
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -2218,12 +2227,15 @@ window.Engine = (function () {
     x.textAlign = "center";
 
     x.fillStyle = "#f5c542";
-    x.font = "700 40px Arial";
-    x.fillText("ALL-TIME WORLD CUP", cx, 110);
+    x.font = "800 56px Arial";
+    x.fillText("COPA XI", cx, 100);
+    x.fillStyle = "#9fb8ac";
+    x.font = "700 24px Arial";
+    x.fillText("ALL-TIME WORLD CUP", cx, 138);
 
     x.fillStyle = "#eaf3ee";
-    x.font = "800 64px Arial";
-    x.fillText(window.Modes.label(state.mode), cx, 185);
+    x.font = "800 60px Arial";
+    x.fillText(window.Modes.label(state.mode), cx, 200);
 
     // result headline
     x.fillStyle = s.champion ? "#f5c542" : "#e0533d";
@@ -2285,7 +2297,7 @@ window.Engine = (function () {
     wrapCentered(x, names.join("  •  "), cx, fy + 40, W - 160, 36);
 
     x.fillStyle = "rgba(245,197,66,0.8)"; x.font = "700 24px Arial";
-    x.fillText("Play it yourself — All-Time World Cup Simulator", cx, H - 50);
+    x.fillText("Play it yourself — Copa XI: All-Time World Cup", cx, H - 50);
     return c;
   }
 

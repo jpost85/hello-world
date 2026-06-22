@@ -1,10 +1,11 @@
-# All-Time World Cup Simulator ⚽🏆
+# Copa XI: All-Time World Cup ⚽🏆
 
 A browser game in the spirit of the viral **82-0**: draft a team of soccer
 legends and run a gauntlet of the greatest national sides of all time. Win
 every match to be crowned champion of history — **lose once and it's over.**
 
-No build step, no dependencies. Just open `index.html` in a browser.
+No build step, no dependencies. Just open `index.html` in a browser (or the
+self-contained `copa.html` build).
 
 ## How to play
 

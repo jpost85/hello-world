@@ -1,4 +1,4 @@
-/* All-Time World Cup Simulator — styles */
+/* Copa XI: All-Time World Cup — styles */
 :root {
   --pitch-1: #0b3d2e;
   --pitch-2: #0f5132;
@@ -57,7 +57,15 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-h1 { font-size: 2.1rem; margin: 6px 0 8px; letter-spacing: 0.5px; }
+h1 { font-size: 2.4rem; margin: 6px 0 2px; letter-spacing: 1px; color: var(--gold); }
+.brand-sub {
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
 h2 { font-size: 1.5rem; margin: 0 0 6px; }
 .tagline { color: var(--muted); line-height: 1.5; max-width: 52ch; margin: 0 auto 18px; }
 
