@@ -28,18 +28,15 @@ Use the **10-digit number only** — no `+1`, no dashes or spaces
 
 (If your carrier isn't listed, search "<carrier> email to SMS gateway".)
 
-**You do NOT need Twilio.** The email-to-SMS gateway above is free and is all
-most people need. Twilio is optional — only add it if you want a dedicated
-sender number or guaranteed-delivery SMS (small per-message cost).
+**No Twilio / paid SMS service needed.** The email-to-SMS gateway above is
+free and is all this script uses.
 
 ## Troubleshooting
 
-- **"I got an error but the test email still arrived."** The script tries
-  Twilio *first* and falls back to email. An error + a delivered email means
-  the Twilio fields are partially/incorrectly set. Fix: in **Script
-  Properties**, delete `TWILIO_SID`, `TWILIO_TOKEN`, `TWILIO_FROM`, and
-  `NOTIFY_SMS_TO`, leaving only `NOTIFY_EMAIL_TO`. The Twilio path is then
-  skipped and the error goes away.
+- **Upgraded from an older version?** This script no longer uses Twilio. If you
+  previously added `TWILIO_SID`, `TWILIO_TOKEN`, `TWILIO_FROM`, or
+  `NOTIFY_SMS_TO` in Script Properties, you can delete them — they're ignored
+  now. Keep only `NOTIFY_EMAIL_TO`.
 - **AT&T text doesn't arrive.** Double-check the format (10 digits, no `+1` or
   dashes) and try `@mms.att.net` instead of `@txt.att.net`.
 
@@ -57,16 +54,7 @@ sender number or guaranteed-delivery SMS (small per-message cost).
    | `NOTIFY_EMAIL_TO`      | Your email and/or carrier SMS gateway (comma-separated) |
    | `MIN_INTERVAL_SECONDS` | `60` (debounce; avoids a flood on bulk edits)    |
 
-   Optional, only for Twilio SMS:
-
-   | Property        | Value                                  |
-   | --------------- | -------------------------------------- |
-   | `TWILIO_SID`    | Your Twilio Account SID                 |
-   | `TWILIO_TOKEN`  | Your Twilio Auth Token                  |
-   | `TWILIO_FROM`   | Twilio number, E.164 e.g. `+15551234567`|
-   | `NOTIFY_SMS_TO` | Recipient number(s), E.164, comma-separated |
-
-   > Secrets live in Script Properties, which are private to this project —
+   > Settings live in Script Properties, which are private to this project —
    > they are never in the sheet's data and never leave Google.
 
 4. **Install the trigger:** in the editor's function dropdown, select
@@ -79,10 +67,10 @@ sender number or guaranteed-delivery SMS (small per-message cost).
 ## How it works
 
 An **installable `onChange` trigger** calls `onChangeHandler` whenever the
-sheet is edited (cells, rows, structure). It sends an SMS via Twilio if those
-keys are set, otherwise emails everyone in `NOTIFY_EMAIL_TO`. The
-`MIN_INTERVAL_SECONDS` debounce prevents a burst of messages when you paste or
-edit many cells at once.
+sheet is edited (cells, rows, structure). It emails everyone in
+`NOTIFY_EMAIL_TO` (which can include free carrier email-to-SMS gateways for
+texts). The `MIN_INTERVAL_SECONDS` debounce prevents a burst of messages when
+you paste or edit many cells at once.
 
 ## Notes & limits
 

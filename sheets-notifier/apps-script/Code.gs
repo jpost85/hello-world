@@ -2,13 +2,14 @@
  * Google Sheets Modification Notifier — Apps Script edition.
  *
  * Runs on Google's servers (free), fires the instant the sheet changes, and
- * sends a notification. No server or web host required.
+ * sends an email notification. No server or web host required, and no Twilio /
+ * paid SMS service needed.
  *
- * Notification channels (configured in Project Settings → Script Properties):
- *   - Email (free, built in). Tip: send to a carrier email-to-SMS gateway to
- *     receive a real text for free, e.g. 5551234567@vtext.com (Verizon),
- *     @txt.att.net (AT&T), @tmomail.net (T-Mobile).
- *   - Twilio SMS (optional, small per-message cost).
+ * Want a text message? Email your carrier's free email-to-SMS gateway by
+ * putting that address in NOTIFY_EMAIL_TO, e.g. (10-digit number, no +1):
+ *   AT&T:     5551234567@txt.att.net   (or @mms.att.net)
+ *   Verizon:  5551234567@vtext.com
+ *   T-Mobile: 5551234567@tmomail.net
  *
  * SETUP — see README.md in this folder. In short:
  *   1. Extensions → Apps Script from your sheet, paste this file in.
@@ -17,11 +18,8 @@
  *   4. (Optional) Run sendTest() to confirm notifications arrive.
  *
  * Script Properties used:
- *   NOTIFY_EMAIL_TO      Comma-separated email addresses (free channel).
- *   TWILIO_SID           Twilio Account SID (optional).
- *   TWILIO_TOKEN         Twilio Auth Token (optional).
- *   TWILIO_FROM          Twilio from-number, E.164 e.g. +15551234567 (optional).
- *   NOTIFY_SMS_TO        Comma-separated phone numbers, E.164 (optional).
+ *   NOTIFY_EMAIL_TO      Comma-separated email addresses and/or carrier
+ *                        email-to-SMS gateway addresses.
  *   MIN_INTERVAL_SECONDS Debounce window to avoid spam (default 60).
  */
 
@@ -58,12 +56,9 @@ function onChangeHandler(e) {
   notify_(subject, body);
 }
 
-/** Send via SMS first (if configured), falling back to email. */
+/** Send the notification by email (free; supports carrier SMS gateways). */
 function notify_(subject, body) {
-  var smsOk = sendSmsAll_(body);
-  if (!smsOk) {
-    sendEmailAll_(subject, body);
-  }
+  sendEmailAll_(subject, body);
 }
 
 function props_() {
@@ -104,41 +99,13 @@ function isDebounced_() {
   }
 }
 
-/** Send an SMS to every NOTIFY_SMS_TO number via Twilio. Returns true if any sent. */
-function sendSmsAll_(body) {
-  var p = props_();
-  var sid = p.getProperty('TWILIO_SID');
-  var token = p.getProperty('TWILIO_TOKEN');
-  var from = p.getProperty('TWILIO_FROM');
-  var toList = list_('NOTIFY_SMS_TO');
-  if (!sid || !token || !from || !toList.length) return false;
-
-  var url = 'https://api.twilio.com/2010-04-01/Accounts/' + sid + '/Messages.json';
-  var anyOk = false;
-  toList.forEach(function (to) {
-    try {
-      var resp = UrlFetchApp.fetch(url, {
-        method: 'post',
-        headers: {
-          Authorization: 'Basic ' + Utilities.base64Encode(sid + ':' + token),
-        },
-        payload: { To: to, From: from, Body: body },
-        muteHttpExceptions: true,
-      });
-      var code = resp.getResponseCode();
-      if (code >= 200 && code < 300) anyOk = true;
-      else Logger.log('Twilio error %s: %s', code, resp.getContentText());
-    } catch (err) {
-      Logger.log('Twilio exception for %s: %s', to, err);
-    }
-  });
-  return anyOk;
-}
-
 /** Email every NOTIFY_EMAIL_TO address. Returns true if attempted. */
 function sendEmailAll_(subject, body) {
   var toList = list_('NOTIFY_EMAIL_TO');
-  if (!toList.length) return false;
+  if (!toList.length) {
+    Logger.log('No NOTIFY_EMAIL_TO configured — nothing sent.');
+    return false;
+  }
   MailApp.sendEmail({ to: toList.join(','), subject: subject, body: body });
   return true;
 }
