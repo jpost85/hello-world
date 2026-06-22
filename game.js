@@ -1085,12 +1085,48 @@
       leadRow.classList.add("hidden");
     }
 
+    updateOdds();
     overlay.classList.remove("hidden");
   }
 
   function closeTroopDialog() {
     $("#modal-overlay").classList.add("hidden");
     pendingAction = null;
+  }
+
+  // Deterministic win probability for the pending attack, matching resolveBattle's
+  // ±25% power swings: P(effAtk*A >= effDef*D) with A,D ~ U(0.75,1.25).
+  function winChance(effAtk, effDef) {
+    if (effDef <= 0) return 1;
+    if (effAtk <= 0) return 0;
+    const a = 0.75, b = 1.25, N = 256; let hit = 0;
+    for (let i = 0; i < N; i++) {
+      const D = a + (i + 0.5) / N * (b - a);
+      hit += Math.max(0, b - Math.max(a, (effDef * D) / effAtk)); // span of A that wins
+    }
+    return hit / (N * (b - a));
+  }
+
+  // Refresh the assault-odds line in the troop dialog (attacks only). Reflects
+  // the current slider count and whether the general is leading.
+  function updateOdds() {
+    const el = $("#modal-odds");
+    if (!el) return;
+    if (!pendingAction || pendingAction.kind !== "attack") { el.classList.add("hidden"); return; }
+    const from = S.regions[pendingAction.fromId], to = S.regions[pendingAction.toId];
+    const count = clamp(parseInt($("#troop-slider").value, 10) || 1, 1, from.troops);
+    const lead = $("#lead-general");
+    const attGen = (!lead.disabled && lead.checked) ? from.general : null;
+    const effAtk = count * (attGen ? attGen.atk : 1);
+    const effDef = to.troops * defenseBonus(pendingAction.toId) * (to.general ? to.general.def : 1);
+    const p = winChance(effAtk, effDef);
+    const [band, cls] =
+      p >= 0.85 ? ["Overwhelming", "odds-great"] :
+      p >= 0.65 ? ["Favourable", "odds-good"] :
+      p >= 0.45 ? ["Even", "odds-even"] :
+      p >= 0.25 ? ["Costly", "odds-bad"] : ["Long odds", "odds-grim"];
+    el.className = "modal-odds " + cls;
+    el.textContent = `Assault outlook: ${band} (~${Math.round(p * 100)}%) · your force ≈ ${menShort(effAtk)} vs defence ≈ ${menShort(effDef)}`;
   }
 
   function confirmTroopDialog() {
@@ -1244,8 +1280,39 @@
   }
 
   /* ------------------------------ End turn -------------------------------- */
+  let pendingEndTurn = false, endTurnTimer = null;
+  // Your armies that still have a regiment, haven't acted, and sit on the front
+  // line (adjacent to an enemy region) — the ones easy to forget.
+  function countIdleArmies() {
+    const me = playerSide(), foe = enemyOf(me);
+    let n = 0;
+    for (const d of REGION_DEFS) {
+      if (d.sea) continue;
+      const r = S.regions[d.id];
+      if (r.owner !== me || r.acted || r.troops < CONFIG.regiment) continue;
+      if (ADJACENCY[d.id].some((nb) => !isSea(nb) && S.regions[nb].owner === foe)) n++;
+    }
+    return n;
+  }
+  // End Turn with a soft guard: if front-line armies sit idle, ask once.
+  function requestEndTurn() {
+    if (S.over) return;
+    if (!pendingEndTurn && countIdleArmies() > 0) {
+      const idle = countIdleArmies();
+      pendingEndTurn = true;
+      showBanner(`${idle} front-line ${idle === 1 ? "army hasn't" : "armies haven't"} acted — press End Turn again to confirm`, 4000);
+      clearTimeout(endTurnTimer);
+      endTurnTimer = setTimeout(() => { pendingEndTurn = false; }, 4200);
+      return;
+    }
+    pendingEndTurn = false;
+    clearTimeout(endTurnTimer);
+    endTurn();
+  }
+
   function endTurn() {
     if (S.over) return;
+    pendingEndTurn = false;
     selected = null;
     const me = playerSide(), foe = enemyOf(me);
 
@@ -1553,7 +1620,7 @@
     });
     $("#btn-how-to").addEventListener("click", () => show("howto-screen"));
     $("#btn-howto-back").addEventListener("click", () => show("title-screen"));
-    $("#btn-end-turn").addEventListener("click", endTurn);
+    $("#btn-end-turn").addEventListener("click", requestEndTurn);
     $("#btn-menu").addEventListener("click", () => { save(); show("title-screen"); refreshContinue(); });
     if (IS_TOUCH) document.body.classList.add("touch");
     $("#sheet-grip").addEventListener("click", () => setSheet(!$("#sidebar").classList.contains("sheet-open")));
@@ -1567,7 +1634,9 @@
     $("#modal-confirm").addEventListener("click", confirmTroopDialog);
     $("#troop-slider").addEventListener("input", (e) => {
       $("#troop-count").textContent = menFull(parseInt(e.target.value, 10));
+      updateOdds();
     });
+    $("#lead-general").addEventListener("change", updateOdds);
     $("#go-restart").addEventListener("click", () => startGame(null));
 
     // Clicking empty ocean/land (anything that isn't a region) clears selection.

@@ -309,6 +309,16 @@ html, body {
 .lead-row input { width: 17px; height: 17px; cursor: pointer; }
 .lead-row.disabled { opacity: 0.6; cursor: default; font-style: italic; }
 .lead-row.disabled input { cursor: not-allowed; }
+.modal-odds {
+  margin: 0 0 14px; padding: 8px 10px; border-radius: 5px;
+  font-size: 14px; font-weight: bold; border-left: 4px solid currentColor;
+  background: rgba(0, 0, 0, 0.05);
+}
+.modal-odds.odds-great { color: #2f7d3a; }
+.modal-odds.odds-good  { color: #4a7a2b; }
+.modal-odds.odds-even  { color: #8a6a14; }
+.modal-odds.odds-bad   { color: #a85a1e; }
+.modal-odds.odds-grim  { color: #8c2b2b; }
 .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; }
 .gameover-modal { text-align: center; }
 .gameover-modal h2 { font-size: 36px; }
