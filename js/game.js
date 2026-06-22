@@ -7,6 +7,10 @@
 (function () {
   var app = document.getElementById("app");
 
+  // Canonical home of the game — used in shared text and the image card.
+  var SITE_URL = "https://www.pixelfoundrystudios.com/copa";
+  var SITE_DISPLAY = "www.pixelfoundrystudios.com/copa";
+
   var state = {
     mode: { type: "all-time", value: null }, // see js/modes.js
     slots: window.SLOTS,                      // active slot template
@@ -471,7 +475,7 @@
       var st = liveStreak();
       if (st > 0) lines.push("🔥 " + st + " day streak");
     }
-    lines.push("", window.location.href);
+    lines.push("", SITE_URL);
     return lines.join("\n");
   }
 
@@ -840,8 +844,10 @@
     var names = xi.map(function (p) { return p.name; });
     wrapCentered(x, names.join("  •  "), cx, fy + 40, W - 160, 36);
 
-    x.fillStyle = "rgba(245,197,66,0.8)"; x.font = "700 24px Arial";
-    x.fillText("Play it yourself — Copa XI: All-Time World Cup", cx, H - 50);
+    x.fillStyle = "#9fb8ac"; x.font = "600 22px Arial";
+    x.fillText("Play it yourself at", cx, H - 64);
+    x.fillStyle = "#f5c542"; x.font = "800 30px Arial";
+    x.fillText(SITE_DISPLAY, cx, H - 28);
     return c;
   }
 

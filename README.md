@@ -1,11 +1,22 @@
 # Copa XI: All-Time World Cup ⚽🏆
 
+**▶ Play: https://www.pixelfoundrystudios.com/copa**
+
 A browser game in the spirit of the viral **82-0**: draft a team of soccer
 legends and run a gauntlet of the greatest national sides of all time. Win
 every match to be crowned champion of history — **lose once and it's over.**
 
 No build step, no dependencies. Just open `index.html` in a browser (or the
 self-contained `copa.html` build).
+
+### Deploying
+
+The game is a static page. Host either `index.html` (with the `css/` and `js/`
+folders) or the single-file `copa.html`. For rich link previews, also upload
+`og.png` so it's served at `https://www.pixelfoundrystudios.com/copa/og.png`
+(the path referenced by the Open Graph / Twitter meta tags). If your final URL
+layout differs, update the canonical/`og:*` URLs in `index.html` and the
+`SITE_URL` constant in `js/game.js`.
 
 ## How to play
 
