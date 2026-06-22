@@ -19,14 +19,29 @@ gateway address in `NOTIFY_EMAIL_TO`:
 | Carrier (US) | Address format            |
 | ------------ | ------------------------- |
 | Verizon      | `5551234567@vtext.com`    |
-| AT&T         | `5551234567@txt.att.net`  |
+| AT&T         | `5551234567@txt.att.net` (or `@mms.att.net`) |
 | T-Mobile     | `5551234567@tmomail.net`  |
 | Sprint       | `5551234567@messaging.sprintpcs.com` |
 
+Use the **10-digit number only** — no `+1`, no dashes or spaces
+(e.g. `5551234567@txt.att.net`, not `+1-555-123-4567@...`).
+
 (If your carrier isn't listed, search "<carrier> email to SMS gateway".)
 
-Prefer a guaranteed-delivery real SMS? Configure the optional Twilio keys
-below (small per-message cost).
+**You do NOT need Twilio.** The email-to-SMS gateway above is free and is all
+most people need. Twilio is optional — only add it if you want a dedicated
+sender number or guaranteed-delivery SMS (small per-message cost).
+
+## Troubleshooting
+
+- **"I got an error but the test email still arrived."** The script tries
+  Twilio *first* and falls back to email. An error + a delivered email means
+  the Twilio fields are partially/incorrectly set. Fix: in **Script
+  Properties**, delete `TWILIO_SID`, `TWILIO_TOKEN`, `TWILIO_FROM`, and
+  `NOTIFY_SMS_TO`, leaving only `NOTIFY_EMAIL_TO`. The Twilio path is then
+  skipped and the error goes away.
+- **AT&T text doesn't arrive.** Double-check the format (10 digits, no `+1` or
+  dashes) and try `@mms.att.net` instead of `@txt.att.net`.
 
 ## Setup (about 5 minutes)
 
