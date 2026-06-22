@@ -18,7 +18,9 @@ No build step, no dependencies. Just open `index.html` in a browser.
    - **🗓️ Daily Challenge** — one shared puzzle per day (from the start screen):
      everyone worldwide gets the *same* seeded draft shortlists, the *same*
      bracket, and *deterministic* match results, so it's pure drafting skill and
-     scores are directly comparable. Your best is remembered locally.
+     scores are directly comparable. Your best is remembered locally, and a
+     🔥 **play streak** tracks consecutive days completed (shown on the button,
+     the standings and the share card).
 2. **Draft your 4-3-3** — one legend per position. Your XI is laid out on a
    visual pitch with line-by-line attack / midfield / defence ratings.
 3. **Run the cup** — a freshly drawn 10-match bracket every time: a 3-game

@@ -170,11 +170,44 @@
     } catch (e) { /* storage unavailable — ignore */ }
   }
 
+  // ----- daily play streak (consecutive days completed) -----
+  function loadStreak() {
+    try { return JSON.parse(window.localStorage.getItem("wc_daily_streak")) || {}; }
+    catch (e) { return {}; }
+  }
+
+  function prevDay(date) {
+    var t = new Date(date + "T00:00:00Z");
+    t.setUTCDate(t.getUTCDate() - 1);
+    return t.toISOString().slice(0, 10);
+  }
+
+  // Bump the streak once per day when a daily run is completed.
+  function recordStreak(date) {
+    var s = loadStreak();
+    if (s.lastDate === date) return s; // already counted today
+    s.current = s.lastDate === prevDay(date) ? (s.current || 0) + 1 : 1;
+    s.best = Math.max(s.best || 0, s.current);
+    s.lastDate = date;
+    try { window.localStorage.setItem("wc_daily_streak", JSON.stringify(s)); } catch (e) {}
+    return s;
+  }
+
+  // The streak as it stands today (0 if it has lapsed).
+  function liveStreak() {
+    var s = loadStreak();
+    var today = window.Rng.today();
+    if (s.lastDate === today || s.lastDate === prevDay(today)) return s.current || 0;
+    return 0;
+  }
+
   function dailyButtonLabel() {
     var prev = loadDaily(window.Rng.today());
+    var st = liveStreak();
+    var fire = st > 0 ? "  🔥 " + st : "";
     return prev
-      ? "🗓️ Daily Challenge ✓ — today's best " + prev.won + "/" + prev.total
-      : "🗓️ Play the Daily Challenge";
+      ? "🗓️ Daily Challenge ✓ — today's best " + prev.won + "/" + prev.total + fire
+      : "🗓️ Play the Daily Challenge" + fire;
   }
 
   function startDaily() {
@@ -433,6 +466,10 @@
       lines.push("Fell to " + last.flag + " " + last.name + " " + last.year + " (" + last.home + "–" + last.away + ")");
     }
     if (s.best) lines.push("Best win: beat " + s.best.o.flag + " " + s.best.o.name + " " + s.best.o.year);
+    if (state.mode.type === "daily") {
+      var st = liveStreak();
+      if (st > 0) lines.push("🔥 " + st + " day streak");
+    }
     lines.push("", window.location.href);
     return lines.join("\n");
   }
@@ -656,8 +693,10 @@
 
   function renderSummary() {
     var s = runStats();
+    var streak = null;
     if (state.mode.type === "daily") {
       saveDaily(state.mode.value, { won: s.won, total: s.total, champion: s.champion });
+      streak = recordStreak(state.mode.value);
     }
     var headline = s.champion
       ? "👑 CHAMPIONS OF HISTORY"
@@ -676,12 +715,18 @@
       statBox(s.gf + "–" + s.ga, "Goals") +
       (s.best ? statBox(s.best.o.flag + " " + s.best.o.year, "Best Win") : statBox("–", "Best Win"));
 
+    var streakLine = streak && streak.current
+      ? '<div class="daily-streak">🔥 ' + streak.current + " day streak" +
+          (streak.best > streak.current ? " · best " + streak.best : "") + "</div>"
+      : "";
+
     app.innerHTML = "";
     app.appendChild(el(
       '<section class="screen summary ' + (s.champion ? "champ" : "out") + '">' +
         (s.champion ? '<div class="trophy big-trophy">🏆</div>' : "") +
         '<div class="summary-result">' + headline + "</div>" +
         '<p class="summary-sub">' + sub + "</p>" +
+        streakLine +
         '<div class="share-track">' + resultSquares() + "</div>" +
         '<div class="summary-stats">' + stats + "</div>" +
         '<div class="match-list">' + matchRows() + "</div>" +
@@ -739,7 +784,9 @@
     x.fillText(head, cx, 270);
     x.fillStyle = "#9fb8ac";
     x.font = "600 34px Arial";
-    x.fillText("Record: " + s.won + " / " + s.total + "    Goals: " + s.gf + "–" + s.ga, cx, 320);
+    var rec = "Record: " + s.won + " / " + s.total + "    Goals: " + s.gf + "–" + s.ga;
+    if (state.mode.type === "daily" && liveStreak() > 0) rec += "    Streak: " + liveStreak();
+    x.fillText(rec, cx, 320);
 
     // result squares
     var n = state.bracket.length;

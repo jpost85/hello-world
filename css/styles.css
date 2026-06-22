@@ -395,6 +395,16 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
 .summary.champ .summary-result { color: var(--gold); }
 .summary.out .summary-result { color: var(--loss); }
 .summary-sub { color: var(--muted); margin: 0 auto 14px; max-width: 50ch; line-height: 1.5; }
+.daily-streak {
+  display: inline-block;
+  background: rgba(245, 197, 66, 0.14);
+  border: 1px solid rgba(245, 197, 66, 0.32);
+  color: var(--gold);
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 5px 14px;
+  margin-bottom: 12px;
+}
 
 .summary-stats { display: flex; gap: 12px; justify-content: center; margin: 14px 0 18px; flex-wrap: wrap; }
 .stat-box {
