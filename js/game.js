@@ -40,7 +40,7 @@
       '<div class="player-card' + (opts.selected ? " selected" : "") + '"' +
       (opts.pickKey ? ' data-pick="' + opts.pickKey + '" data-id="' + player.id + '"' : "") +
       ' role="button" tabindex="0">' +
-        '<div class="pc-flag">' + player.flag + "</div>" +
+        '<div class="pc-flag">' + window.Flags.get(player.nation) + "</div>" +
         '<div class="pc-body">' +
           '<div class="pc-name">' + player.name + "</div>" +
           '<div class="pc-meta">' + player.club + " · " + player.decade + "</div>" +
@@ -279,7 +279,8 @@
 
     var cards = options.map(function (o) {
       var face = type === "decade" ? '<div class="filter-decade">' + o.label + "</div>"
-                                   : '<div class="filter-flag">' + o.flag + "</div>";
+               : type === "nation" ? '<div class="filter-flag">' + window.Flags.get(o.value) + "</div>"
+                                   : '<div class="filter-flag region">' + o.flag + "</div>";
       var name = type === "decade" ? "" : '<div class="filter-name">' + o.label + "</div>";
       return (
         '<div class="filter-card" data-value="' + o.value + '" role="button" tabindex="0">' +
@@ -402,7 +403,7 @@
         tokens.push(
           '<div class="pitch-token" style="left:' + x.toFixed(1) + "%;top:" + LINE_Y[line] + '%" ' +
             'title="' + p.name + " — " + p.club + " (" + p.decade + ')">' +
-            '<div class="token-badge">' + p.flag + '<span class="token-ovr">' + p.ovr + "</span></div>" +
+            '<div class="token-badge">' + window.Flags.get(p.nation) + '<span class="token-ovr">' + p.ovr + "</span></div>" +
             '<div class="token-name">' + surname + "</div>" +
           "</div>"
         );
@@ -585,7 +586,7 @@
           "</div>" +
           '<div class="vs">VS</div>' +
           '<div class="side opp">' +
-            '<div class="side-flag">' + opp.flag + "</div>" +
+            '<div class="side-flag">' + window.Flags.get(opp.name) + "</div>" +
             '<div class="side-name">' + opp.name + " " + opp.year + "</div>" +
             '<div class="side-sub">' + opp.tag + "</div>" +
           "</div>" +
@@ -604,7 +605,7 @@
       var cls = i < state.round ? "track-dot beat" : (i === state.round ? "track-dot now" : "track-dot");
       // Visual divider between the group stage and the knockout rounds.
       var sep = i === window.GAUNTLET.group ? '<span class="track-sep">▸</span>' : "";
-      return sep + '<span class="' + cls + '" title="' + o.name + " " + o.year + " (" + o.tag + ')">' + o.flag + "</span>";
+      return sep + '<span class="' + cls + '" title="' + o.name + " " + o.year + " (" + o.tag + ')">' + window.Flags.get(o.name) + "</span>";
     }).join("");
     return '<div class="track">' + dots + "</div>";
   }
@@ -633,7 +634,7 @@
         '<div class="scoreboard">' +
           '<div class="sb-team">⭐ You</div>' +
           '<div class="sb-score">' + scoreline + "</div>" +
-          '<div class="sb-team">' + opp.flag + " " + opp.name + "</div>" +
+          '<div class="sb-team">' + window.Flags.get(opp.name) + " " + opp.name + "</div>" +
         "</div>" +
         pens +
         '<p class="commentary">' + commentary(res, opp) + "</p>" +
@@ -687,7 +688,7 @@
       return (
         '<div class="match-row ' + (win ? "w" : "l") + '">' +
           '<span class="mr-stage" title="' + (stage === "G" ? "Group Stage" : "Knockout") + '">' + stage + "</span>" +
-          '<span class="mr-flag">' + opp.flag + "</span>" +
+          '<span class="mr-flag">' + window.Flags.get(opp.name) + "</span>" +
           '<span class="mr-name">' + opp.name + " " + opp.year + "</span>" +
           '<span class="mr-score">' + h.home + "–" + h.away + "</span>" +
           '<span class="mr-mark">' + (win ? "✓" : "✗") + "</span>" +
@@ -712,13 +713,13 @@
 
     var xi = xiNames();
     var chips = xi.map(function (p) {
-      return '<span class="xi-chip">' + p.flag + " " + p.name + "</span>";
+      return '<span class="xi-chip">' + window.Flags.get(p.nation) + " " + p.name + "</span>";
     }).join("");
 
     var stats =
       statBox(s.won + "/" + s.total, "Won") +
       statBox(s.gf + "–" + s.ga, "Goals") +
-      (s.best ? statBox(s.best.o.flag + " " + s.best.o.year, "Best Win") : statBox("–", "Best Win"));
+      (s.best ? statBox(window.Flags.get(s.best.o.name) + " " + s.best.o.year, "Best Win") : statBox("–", "Best Win"));
 
     var streakLine = streak && streak.current
       ? '<div class="daily-streak">🔥 ' + streak.current + " day streak" +

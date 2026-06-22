@@ -68,6 +68,7 @@ layout differs, update the canonical/`og:*` URLs in `index.html` and the
 index.html          # shell that loads everything (open this)
 css/styles.css      # all styling
 js/rng.js           # seeded RNG for the Daily Challenge
+js/flags.js         # inline-SVG national flags (portable; no emoji)
 js/players.js       # the legend database (extend this to add players)
 js/slots.js         # all-time draft tiers
 js/modes.js         # all-time / decade / nation modes + pool generation

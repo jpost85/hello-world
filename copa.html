@@ -42,6 +42,16 @@
 
 * { box-sizing: border-box; }
 
+/* inline SVG national flags (replace non-portable emoji flags) */
+.flag {
+  display: inline-block;
+  width: 1.45em;
+  height: 0.97em;
+  border-radius: 2px;
+  vertical-align: -0.14em;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -178,7 +188,9 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   transition: border-color 0.15s, transform 0.08s, background 0.15s;
 }
 .filter-card:hover { border-color: var(--gold); transform: translateY(-3px); }
-.filter-flag { font-size: 2.4rem; line-height: 1; }
+.filter-flag { line-height: 0; }
+.filter-flag .flag { width: 2.8rem; height: 1.87rem; }
+.filter-flag.region { font-size: 2.4rem; line-height: 1; }
 .filter-decade { font-size: 1.5rem; font-weight: 800; color: var(--gold); }
 .filter-name { font-weight: 700; margin-top: 6px; }
 .filter-count { color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
@@ -228,7 +240,8 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
 }
 .player-card:hover { border-color: var(--gold); transform: translateY(-2px); }
 .player-card.selected { border-color: var(--gold); background: rgba(245, 197, 66, 0.1); }
-.pc-flag { font-size: 1.6rem; line-height: 1; }
+.pc-flag { flex: 0 0 auto; line-height: 0; }
+.pc-flag .flag { width: 2rem; height: 1.33rem; }
 .pc-body { flex: 1; min-width: 0; }
 .pc-name { font-weight: 700; }
 .pc-meta { font-size: 0.78rem; color: var(--muted); }
@@ -309,13 +322,16 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
 }
 .token-badge {
   position: relative;
-  width: 38px; height: 38px;
-  display: grid; place-items: center;
-  font-size: 1.3rem;
-  background: radial-gradient(circle at 50% 35%, #1c3a2d, #0c1f18);
+  width: 46px; height: 31px;
   border: 2px solid var(--gold);
-  border-radius: 50%;
+  border-radius: 6px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+.token-badge .flag {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border-radius: 4px;
+  box-shadow: none;
 }
 .token-ovr {
   position: absolute; right: -8px; bottom: -6px;
@@ -376,7 +392,8 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
 }
 .side.opp { border-color: rgba(224, 83, 61, 0.4); }
 .side.me { border-color: rgba(245, 197, 66, 0.4); }
-.side-flag { font-size: 2.4rem; }
+.side-flag { font-size: 2.4rem; line-height: 0; }
+.side-flag .flag { width: 2.9rem; height: 1.93rem; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); }
 .side-name { font-weight: 800; margin-top: 6px; }
 .side-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
 .vs { font-weight: 900; color: var(--muted); font-size: 1.1rem; }
@@ -385,7 +402,8 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
 .odds strong { color: var(--gold); }
 
 .track { justify-content: center; margin-top: 22px; }
-.track-dot { font-size: 1.2rem; opacity: 0.35; filter: grayscale(0.6); transition: opacity 0.2s; }
+.track-dot { font-size: 1.2rem; line-height: 0; opacity: 0.35; filter: grayscale(0.6); transition: opacity 0.2s; }
+.track-dot .flag { width: 1.5rem; height: 1rem; }
 .track-dot.beat { opacity: 1; filter: none; }
 .track-dot.now { opacity: 1; filter: none; transform: scale(1.25); }
 .track-sep { color: var(--gold); opacity: 0.6; font-size: 0.9rem; margin: 0 2px; }
@@ -447,6 +465,7 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   min-width: 92px;
 }
 .sb-val { font-size: 1.3rem; font-weight: 800; color: var(--gold); }
+.sb-val .flag { width: 1.4rem; height: 0.93rem; margin-right: 3px; }
 .sb-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
 
 .match-list { display: grid; gap: 6px; margin: 0 auto 20px; max-width: 460px; text-align: left; }
@@ -471,7 +490,8 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   background: rgba(255,255,255,0.25);
 }
 .match-row.w .mr-stage { background: rgba(46,193,107,0.35); color: var(--text); }
-.mr-flag { font-size: 1.1rem; }
+.mr-flag { line-height: 0; }
+.mr-flag .flag { width: 1.45rem; height: 0.97rem; }
 .mr-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mr-score { font-weight: 800; color: var(--gold); }
 .mr-mark { font-weight: 800; text-align: center; }
@@ -497,6 +517,7 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   padding: 4px 10px;
   font-size: 0.82rem;
 }
+.xi-chip .flag { width: 1.2rem; height: 0.8rem; margin-right: 3px; }
 .share-hint { color: var(--muted); font-size: 0.78rem; margin-top: 12px; }
 
 /* ---------- win ---------- */
@@ -583,6 +604,120 @@ window.Rng = (function () {
   }
 
   return { fromString: fromString, today: today };
+})();
+
+
+/* === js/flags.js === */
+/*
+ * Inline-SVG national flags.
+ *
+ * Emoji flags (🇧🇷 …) don't render on Windows browsers — they show as letter
+ * codes or blank boxes. So instead of relying on emoji we draw small, clean,
+ * recognisable SVG flags that render identically everywhere and keep the game
+ * fully self-contained (no external image requests).
+ *
+ *   Flags.get("Brazil")  ->  '<svg class="flag" ...>…</svg>'
+ *
+ * Keyed by nation/opponent name (e.g. "West Germany" maps to the German flag).
+ * Unknown names fall back to a neutral placeholder.
+ */
+window.Flags = (function () {
+  function svg(body) {
+    return '<svg class="flag" viewBox="0 0 3 2" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' + body + "</svg>";
+  }
+  function R(x, y, w, h, c) { return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + c + '"/>'; }
+  function C(cx, cy, r, c) { return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + c + '"/>'; }
+  function poly(pts, c) { return '<polygon points="' + pts + '" fill="' + c + '"/>'; }
+  function star(cx, cy, r, c) {
+    var p = [];
+    for (var i = 0; i < 5; i++) {
+      var a = -Math.PI / 2 + i * 2 * Math.PI / 5;
+      p.push((cx + r * Math.cos(a)).toFixed(3) + "," + (cy + r * Math.sin(a)).toFixed(3));
+      var a2 = a + Math.PI / 5;
+      p.push((cx + r * 0.4 * Math.cos(a2)).toFixed(3) + "," + (cy + r * 0.4 * Math.sin(a2)).toFixed(3));
+    }
+    return poly(p.join(" "), c);
+  }
+  function vbody(a, b, c) { return R(0, 0, 1, 2, a) + R(1, 0, 1, 2, b) + R(2, 0, 1, 2, c); }
+  function hbody(a, b, c) { return R(0, 0, 3, 0.6667, a) + R(0, 0.6667, 3, 0.6666, b) + R(0, 1.3333, 3, 0.6667, c); }
+  function V(a, b, c) { return svg(vbody(a, b, c)); }
+  function H(a, b, c) { return svg(hbody(a, b, c)); }
+
+  // Scandinavian cross (offset toward hoist)
+  function nordic(field, cross) {
+    return svg(R(0, 0, 3, 2, field) + R(0.85, 0, 0.35, 2, cross) + R(0, 0.83, 3, 0.34, cross));
+  }
+  // St George style cross
+  function georgeCross(field, cross, extra) {
+    return svg(R(0, 0, 3, 2, field) + R(1.3, 0, 0.4, 2, cross) + R(0, 0.8, 3, 0.4, cross) + (extra || ""));
+  }
+  // US / Liberia striped builder
+  function striped(n, red, white, canton) {
+    var s = "";
+    for (var i = 0; i < n; i++) s += R(0, i * (2 / n), 3, 2 / n, i % 2 === 0 ? red : white);
+    return s + canton;
+  }
+
+  var GERMANY = H("#000000", "#dd0000", "#ffce00");
+
+  var F = {
+    // CONMEBOL
+    Brazil: svg(R(0, 0, 3, 2, "#009b3a") + poly("1.5,0.22 2.78,1 1.5,1.78 0.22,1", "#fedf00") + C(1.5, 1, 0.43, "#002776")),
+    Argentina: svg(hbody("#74acdf", "#ffffff", "#74acdf") + C(1.5, 1, 0.18, "#f6b40e")),
+    Uruguay: svg(R(0, 0, 3, 2, "#ffffff") + R(0, 0.9, 3, 0.17, "#0038a8") + R(0, 1.46, 3, 0.17, "#0038a8") + R(0, 0, 1.1, 0.72, "#0038a8") + C(0.55, 0.36, 0.2, "#fcd116")),
+    Colombia: svg(R(0, 0, 3, 1, "#fcd116") + R(0, 1, 3, 0.5, "#003893") + R(0, 1.5, 3, 0.5, "#ce1126")),
+    Chile: svg(R(0, 0, 3, 1, "#ffffff") + R(0, 1, 3, 1, "#d52b1e") + R(0, 0, 1, 1, "#0039a6") + star(0.5, 0.5, 0.3, "#ffffff")),
+
+    // UEFA
+    England: georgeCross("#ffffff", "#ce1126"),
+    "N. Ireland": georgeCross("#ffffff", "#ce1126", C(1.5, 1, 0.28, "#ffffff") + star(1.5, 1, 0.22, "#ce1126")),
+    Italy: V("#009246", "#ffffff", "#ce2b37"),
+    France: V("#0055a4", "#ffffff", "#ef4135"),
+    Belgium: V("#000000", "#fae042", "#ed2939"),
+    Germany: GERMANY,
+    "West Germany": GERMANY,
+    Spain: svg(R(0, 0, 3, 0.5, "#aa151b") + R(0, 0.5, 3, 1, "#f1bf00") + R(0, 1.5, 3, 0.5, "#aa151b")),
+    Netherlands: H("#ae1c28", "#ffffff", "#21468b"),
+    Portugal: svg(R(0, 0, 1.2, 2, "#006600") + R(1.2, 0, 1.8, 2, "#ff0000") + C(1.2, 1, 0.3, "#ffcc00") + C(1.2, 1, 0.16, "#003399")),
+    Croatia: svg(R(0, 0, 3, 0.6667, "#ff0000") + R(0, 0.6667, 3, 0.6666, "#ffffff") + R(0, 1.3333, 3, 0.6667, "#171796") + R(1.28, 0.62, 0.44, 0.76, "#ffffff") + R(1.28, 0.62, 0.22, 0.38, "#ff0000") + R(1.5, 1.0, 0.22, 0.38, "#ff0000")),
+    Denmark: nordic("#c8102e", "#ffffff"),
+    Sweden: nordic("#006aa7", "#fecc00"),
+    Poland: svg(R(0, 0, 3, 1, "#ffffff") + R(0, 1, 3, 1, "#dc143c")),
+    Hungary: H("#cd2a3e", "#ffffff", "#436f4d"),
+    USSR: svg(R(0, 0, 3, 2, "#cc0000") + star(0.6, 0.5, 0.24, "#ffd700")),
+    Czechoslovakia: svg(R(0, 0, 3, 1, "#ffffff") + R(0, 1, 3, 1, "#d7141a") + poly("0,0 1.3,1 0,2", "#11457e")),
+    Romania: V("#002b7f", "#fcd116", "#ce1126"),
+
+    // CAF
+    Nigeria: V("#008751", "#ffffff", "#008751"),
+    Cameroon: svg(vbody("#007a5e", "#ce1126", "#fcd116") + star(1.5, 1, 0.22, "#fcd116")),
+    "Ivory Coast": V("#f77f00", "#ffffff", "#009e60"),
+    Egypt: svg(hbody("#ce1126", "#ffffff", "#000000") + C(1.5, 1, 0.14, "#c8a13a")),
+    Senegal: svg(vbody("#00853f", "#fdef42", "#e31b23") + star(1.5, 1, 0.22, "#00853f")),
+    Ghana: svg(hbody("#ce1126", "#fcd116", "#006b3f") + star(1.5, 1, 0.24, "#000000")),
+    Algeria: svg(R(0, 0, 1.5, 2, "#006233") + R(1.5, 0, 1.5, 2, "#ffffff") + C(1.62, 1, 0.34, "#d21034") + C(1.74, 1, 0.27, "#ffffff") + star(1.95, 1, 0.18, "#d21034")),
+    Morocco: svg(R(0, 0, 3, 2, "#c1272d") + star(1.5, 1, 0.46, "#006233")),
+    Liberia: svg(striped(11, "#bf0a30", "#ffffff", R(0, 0, 0.86, 0.86, "#002868") + star(0.43, 0.43, 0.3, "#ffffff"))),
+
+    // CONCACAF
+    Mexico: svg(vbody("#006847", "#ffffff", "#ce1126") + C(1.5, 1, 0.13, "#8b5a2b")),
+    USA: svg(striped(13, "#b22234", "#ffffff", R(0, 0, 1.25, 14 / 13, "#3c3b6e"))),
+    "Costa Rica": svg(R(0, 0, 3, 0.36, "#002b7f") + R(0, 0.36, 3, 0.28, "#ffffff") + R(0, 0.64, 3, 0.72, "#ce1126") + R(0, 1.36, 3, 0.28, "#ffffff") + R(0, 1.64, 3, 0.36, "#002b7f")),
+
+    // AFC
+    Japan: svg(R(0, 0, 3, 2, "#ffffff") + C(1.5, 1, 0.5, "#bc002d")),
+    "South Korea": svg(R(0, 0, 3, 2, "#ffffff") + C(1.5, 1, 0.42, "#003478") + '<path d="M1.08,1 a0.42,0.42 0 0 1 0.84,0 z" fill="#c60c30"/>'),
+    Iran: svg(hbody("#239f40", "#ffffff", "#da0000") + C(1.5, 1, 0.1, "#da0000")),
+    Australia: svg(R(0, 0, 3, 2, "#00247d") + R(0, 0, 1.2, 0.78, "#0a17a7") + R(0.5, 0, 0.2, 0.78, "#ffffff") + R(0, 0.29, 1.2, 0.2, "#ffffff") + star(0.6, 1.5, 0.22, "#ffffff") + star(2.35, 0.55, 0.12, "#ffffff") + star(2.55, 1, 0.12, "#ffffff") + star(2.2, 1.35, 0.12, "#ffffff") + star(2.7, 1.5, 0.1, "#ffffff")),
+  };
+
+  var DEFAULT = svg(R(0, 0, 3, 2, "#2a3b34") + R(0, 0, 3, 2, "none"));
+
+  function get(name) {
+    return F[name] || DEFAULT;
+  }
+
+  return { get: get };
 })();
 
 
@@ -1512,7 +1647,7 @@ window.Engine = (function () {
       '<div class="player-card' + (opts.selected ? " selected" : "") + '"' +
       (opts.pickKey ? ' data-pick="' + opts.pickKey + '" data-id="' + player.id + '"' : "") +
       ' role="button" tabindex="0">' +
-        '<div class="pc-flag">' + player.flag + "</div>" +
+        '<div class="pc-flag">' + window.Flags.get(player.nation) + "</div>" +
         '<div class="pc-body">' +
           '<div class="pc-name">' + player.name + "</div>" +
           '<div class="pc-meta">' + player.club + " · " + player.decade + "</div>" +
@@ -1751,7 +1886,8 @@ window.Engine = (function () {
 
     var cards = options.map(function (o) {
       var face = type === "decade" ? '<div class="filter-decade">' + o.label + "</div>"
-                                   : '<div class="filter-flag">' + o.flag + "</div>";
+               : type === "nation" ? '<div class="filter-flag">' + window.Flags.get(o.value) + "</div>"
+                                   : '<div class="filter-flag region">' + o.flag + "</div>";
       var name = type === "decade" ? "" : '<div class="filter-name">' + o.label + "</div>";
       return (
         '<div class="filter-card" data-value="' + o.value + '" role="button" tabindex="0">' +
@@ -1874,7 +2010,7 @@ window.Engine = (function () {
         tokens.push(
           '<div class="pitch-token" style="left:' + x.toFixed(1) + "%;top:" + LINE_Y[line] + '%" ' +
             'title="' + p.name + " — " + p.club + " (" + p.decade + ')">' +
-            '<div class="token-badge">' + p.flag + '<span class="token-ovr">' + p.ovr + "</span></div>" +
+            '<div class="token-badge">' + window.Flags.get(p.nation) + '<span class="token-ovr">' + p.ovr + "</span></div>" +
             '<div class="token-name">' + surname + "</div>" +
           "</div>"
         );
@@ -2057,7 +2193,7 @@ window.Engine = (function () {
           "</div>" +
           '<div class="vs">VS</div>' +
           '<div class="side opp">' +
-            '<div class="side-flag">' + opp.flag + "</div>" +
+            '<div class="side-flag">' + window.Flags.get(opp.name) + "</div>" +
             '<div class="side-name">' + opp.name + " " + opp.year + "</div>" +
             '<div class="side-sub">' + opp.tag + "</div>" +
           "</div>" +
@@ -2076,7 +2212,7 @@ window.Engine = (function () {
       var cls = i < state.round ? "track-dot beat" : (i === state.round ? "track-dot now" : "track-dot");
       // Visual divider between the group stage and the knockout rounds.
       var sep = i === window.GAUNTLET.group ? '<span class="track-sep">▸</span>' : "";
-      return sep + '<span class="' + cls + '" title="' + o.name + " " + o.year + " (" + o.tag + ')">' + o.flag + "</span>";
+      return sep + '<span class="' + cls + '" title="' + o.name + " " + o.year + " (" + o.tag + ')">' + window.Flags.get(o.name) + "</span>";
     }).join("");
     return '<div class="track">' + dots + "</div>";
   }
@@ -2105,7 +2241,7 @@ window.Engine = (function () {
         '<div class="scoreboard">' +
           '<div class="sb-team">⭐ You</div>' +
           '<div class="sb-score">' + scoreline + "</div>" +
-          '<div class="sb-team">' + opp.flag + " " + opp.name + "</div>" +
+          '<div class="sb-team">' + window.Flags.get(opp.name) + " " + opp.name + "</div>" +
         "</div>" +
         pens +
         '<p class="commentary">' + commentary(res, opp) + "</p>" +
@@ -2159,7 +2295,7 @@ window.Engine = (function () {
       return (
         '<div class="match-row ' + (win ? "w" : "l") + '">' +
           '<span class="mr-stage" title="' + (stage === "G" ? "Group Stage" : "Knockout") + '">' + stage + "</span>" +
-          '<span class="mr-flag">' + opp.flag + "</span>" +
+          '<span class="mr-flag">' + window.Flags.get(opp.name) + "</span>" +
           '<span class="mr-name">' + opp.name + " " + opp.year + "</span>" +
           '<span class="mr-score">' + h.home + "–" + h.away + "</span>" +
           '<span class="mr-mark">' + (win ? "✓" : "✗") + "</span>" +
@@ -2184,13 +2320,13 @@ window.Engine = (function () {
 
     var xi = xiNames();
     var chips = xi.map(function (p) {
-      return '<span class="xi-chip">' + p.flag + " " + p.name + "</span>";
+      return '<span class="xi-chip">' + window.Flags.get(p.nation) + " " + p.name + "</span>";
     }).join("");
 
     var stats =
       statBox(s.won + "/" + s.total, "Won") +
       statBox(s.gf + "–" + s.ga, "Goals") +
-      (s.best ? statBox(s.best.o.flag + " " + s.best.o.year, "Best Win") : statBox("–", "Best Win"));
+      (s.best ? statBox(window.Flags.get(s.best.o.name) + " " + s.best.o.year, "Best Win") : statBox("–", "Best Win"));
 
     var streakLine = streak && streak.current
       ? '<div class="daily-streak">🔥 ' + streak.current + " day streak" +

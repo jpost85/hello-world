@@ -18,6 +18,16 @@
 
 * { box-sizing: border-box; }
 
+/* inline SVG national flags (replace non-portable emoji flags) */
+.flag {
+  display: inline-block;
+  width: 1.45em;
+  height: 0.97em;
+  border-radius: 2px;
+  vertical-align: -0.14em;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -154,7 +164,9 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   transition: border-color 0.15s, transform 0.08s, background 0.15s;
 }
 .filter-card:hover { border-color: var(--gold); transform: translateY(-3px); }
-.filter-flag { font-size: 2.4rem; line-height: 1; }
+.filter-flag { line-height: 0; }
+.filter-flag .flag { width: 2.8rem; height: 1.87rem; }
+.filter-flag.region { font-size: 2.4rem; line-height: 1; }
 .filter-decade { font-size: 1.5rem; font-weight: 800; color: var(--gold); }
 .filter-name { font-weight: 700; margin-top: 6px; }
 .filter-count { color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
@@ -204,7 +216,8 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
 }
 .player-card:hover { border-color: var(--gold); transform: translateY(-2px); }
 .player-card.selected { border-color: var(--gold); background: rgba(245, 197, 66, 0.1); }
-.pc-flag { font-size: 1.6rem; line-height: 1; }
+.pc-flag { flex: 0 0 auto; line-height: 0; }
+.pc-flag .flag { width: 2rem; height: 1.33rem; }
 .pc-body { flex: 1; min-width: 0; }
 .pc-name { font-weight: 700; }
 .pc-meta { font-size: 0.78rem; color: var(--muted); }
@@ -285,13 +298,16 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
 }
 .token-badge {
   position: relative;
-  width: 38px; height: 38px;
-  display: grid; place-items: center;
-  font-size: 1.3rem;
-  background: radial-gradient(circle at 50% 35%, #1c3a2d, #0c1f18);
+  width: 46px; height: 31px;
   border: 2px solid var(--gold);
-  border-radius: 50%;
+  border-radius: 6px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+.token-badge .flag {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border-radius: 4px;
+  box-shadow: none;
 }
 .token-ovr {
   position: absolute; right: -8px; bottom: -6px;
@@ -352,7 +368,8 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
 }
 .side.opp { border-color: rgba(224, 83, 61, 0.4); }
 .side.me { border-color: rgba(245, 197, 66, 0.4); }
-.side-flag { font-size: 2.4rem; }
+.side-flag { font-size: 2.4rem; line-height: 0; }
+.side-flag .flag { width: 2.9rem; height: 1.93rem; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); }
 .side-name { font-weight: 800; margin-top: 6px; }
 .side-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
 .vs { font-weight: 900; color: var(--muted); font-size: 1.1rem; }
@@ -361,7 +378,8 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
 .odds strong { color: var(--gold); }
 
 .track { justify-content: center; margin-top: 22px; }
-.track-dot { font-size: 1.2rem; opacity: 0.35; filter: grayscale(0.6); transition: opacity 0.2s; }
+.track-dot { font-size: 1.2rem; line-height: 0; opacity: 0.35; filter: grayscale(0.6); transition: opacity 0.2s; }
+.track-dot .flag { width: 1.5rem; height: 1rem; }
 .track-dot.beat { opacity: 1; filter: none; }
 .track-dot.now { opacity: 1; filter: none; transform: scale(1.25); }
 .track-sep { color: var(--gold); opacity: 0.6; font-size: 0.9rem; margin: 0 2px; }
@@ -423,6 +441,7 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   min-width: 92px;
 }
 .sb-val { font-size: 1.3rem; font-weight: 800; color: var(--gold); }
+.sb-val .flag { width: 1.4rem; height: 0.93rem; margin-right: 3px; }
 .sb-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
 
 .match-list { display: grid; gap: 6px; margin: 0 auto 20px; max-width: 460px; text-align: left; }
@@ -447,7 +466,8 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   background: rgba(255,255,255,0.25);
 }
 .match-row.w .mr-stage { background: rgba(46,193,107,0.35); color: var(--text); }
-.mr-flag { font-size: 1.1rem; }
+.mr-flag { line-height: 0; }
+.mr-flag .flag { width: 1.45rem; height: 0.97rem; }
 .mr-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mr-score { font-weight: 800; color: var(--gold); }
 .mr-mark { font-weight: 800; text-align: center; }
@@ -473,6 +493,7 @@ h2 { font-size: 1.5rem; margin: 0 0 6px; }
   padding: 4px 10px;
   font-size: 0.82rem;
 }
+.xi-chip .flag { width: 1.2rem; height: 0.8rem; margin-right: 3px; }
 .share-hint { color: var(--muted); font-size: 0.78rem; margin-top: 12px; }
 
 /* ---------- win ---------- */
