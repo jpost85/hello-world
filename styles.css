@@ -320,8 +320,30 @@ html, body {
 .modal-odds.odds-bad   { color: #a85a1e; }
 .modal-odds.odds-grim  { color: #8c2b2b; }
 .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; }
-.gameover-modal { text-align: center; }
+.gameover-modal { text-align: center; max-width: 540px; }
 .gameover-modal h2 { font-size: 36px; }
+.go-chronicle-title {
+  margin: 18px 0 8px; font-size: 15px; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--ink-soft);
+  border-top: 1px solid var(--border); padding-top: 14px;
+}
+.go-chronicle {
+  list-style: none; margin: 0 0 18px; padding: 0 4px;
+  text-align: left; max-height: 38vh; overflow-y: auto;
+  font-size: 13.5px; line-height: 1.5;
+}
+.go-chronicle .ch-entry {
+  display: flex; gap: 10px; padding: 5px 0;
+  border-bottom: 1px dashed rgba(107, 86, 56, 0.35);
+}
+.go-chronicle .ch-date {
+  flex: 0 0 104px; color: var(--ink-soft); font-style: italic; font-size: 12.5px;
+}
+.go-chronicle .ch-text { flex: 1; }
+.go-chronicle .ch-entry.l-good .ch-text { color: var(--patriot); }
+.go-chronicle .ch-entry.l-bad .ch-text { color: var(--crown); }
+.go-chronicle .ch-entry.l-event .ch-text { color: #8a6a14; font-weight: bold; }
+.go-chronicle .ch-empty { color: var(--ink-soft); font-style: italic; }
 
 /* ---------- Banner toast ---------- */
 .banner {

@@ -248,6 +248,8 @@
       franceJoined: false,
       over: false,
       log: [],
+      battleCount: {},
+      chronicle: [],
     };
   }
 
@@ -380,6 +382,14 @@
     S.log.unshift({ msg, cls: cls || "" });
     if (S.log.length > 60) S.log.pop();
     renderLog();
+  }
+
+  // A lasting record of the war's turning points, shown in the end-of-war
+  // chronicle (kept in chronological order, unlike the rolling dispatch log).
+  function chronicle(text, cls) {
+    if (!S.chronicle) S.chronicle = [];
+    S.chronicle.push({ date: dateLabel(S.turn), text, cls: cls || "" });
+    if (S.chronicle.length > 300) S.chronicle.shift();
   }
 
   function renderLog() {
@@ -1219,12 +1229,13 @@
     // Name any contested engagement after its place — "the Battle of Charleston"
     // — numbering repeat clashes at the same spot ("the Second Battle of …").
     const opposed = defenders > 0;
-    let headline = "";
+    let headline = "", battleTitle = "";
     if (opposed) {
       if (!S.battleCount) S.battleCount = {};
       const n = (S.battleCount[toId] = (S.battleCount[toId] || 0) + 1);
       const ord = n < ORDINALS.length ? ORDINALS[n] : n + "th ";
-      headline = `The ${ord}Battle of ${defName}, ${dateLabel(S.turn)} — `;
+      battleTitle = `The ${ord}Battle of ${defName}`;
+      headline = `${battleTitle}, ${dateLabel(S.turn)} — `;
     }
 
     if (result.win) {
@@ -1242,18 +1253,21 @@
           ? `${headline}its militia come over to the ${sideName(attSide)} (lost ${menFull(result.attLoss)}, militia ${menFull(defenders)}).`
           : `${defName}'s militia stand aside; the ${sideName(attSide)} march in.`, goodFor(attSide));
         showBanner("⚑  " + defName + (opposed ? " seized!" : " occupied"));
+        if (opposed) chronicle(`${battleTitle}: ${defName}'s militia join the ${sideName(attSide)}.`, goodFor(attSide));
         adjustMorale(attSide, 3); // a frontier gain, not a blow to the enemy
       } else {
         log(opposed
           ? `${headline}a ${sideName(attSide)} victory; ${defName} falls (lost ${menFull(result.attLoss)}, enemy ${menFull(defenders)}).`
           : `${defName} is occupied unopposed by the ${sideName(attSide)}.`, goodFor(attSide));
         showBanner("⚔  " + defName + (opposed ? " captured!" : " occupied"));
+        if (opposed) chronicle(`${battleTitle}: ${defName} falls to the ${sideName(attSide)}.`, goodFor(attSide));
         adjustMorale(attSide, def(toId).city ? 8 : 5);
         adjustMorale(loser, def(toId).city ? -8 : -5);
       }
       if (wasCapital) {
         adjustMorale(loser, -30);
         log(`The ${sideName(loser)}' capital at ${defName} has fallen! A grievous blow.`, "l-event");
+        chronicle(`${defName}, the ${sideName(loser)}' capital, falls — a grievous blow.`, "l-event");
       }
     } else {
       // Assault repelled; survivors retreat home.
@@ -1261,6 +1275,7 @@
       from.troops += survivors;
       to.troops -= result.defLoss;
       log(`${headline}the ${sideName(attSide)} assault is repelled (attacker lost ${menFull(result.attLoss)}, defender ${menFull(result.defLoss)}).`, goodFor(to.owner));
+      chronicle(`${battleTitle}: the ${sideName(attSide)} assault is thrown back.`, goodFor(to.owner));
       adjustMorale(attSide, -3);
       // A general leading a broken assault may be taken.
       if (attGen && survivors <= 2 * CONFIG.regiment && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, attSide, to.owner);
@@ -1292,6 +1307,7 @@
     adjustMorale(loserSide, g.chief ? -20 : -12);
     adjustMorale(captorSide, 8);
     log(`${g.name} is captured! A heavy blow to the ${loserSide === "patriot" ? "Patriots" : "Crown"}.`, "l-event");
+    chronicle(`${g.name} is captured — a heavy blow to the ${loserSide === "patriot" ? "Patriots" : "Crown"}.`, "l-event");
     showBanner("✦  " + g.name + " captured!", 3200);
   }
 
@@ -1399,6 +1415,7 @@
     if (total > 0) {
       const harsh = severity > 0.14 ? "A brutal winter" : "Winter";
       log(`${harsh} sets in — ${menFull(total)} men in the field lost to cold and disease.`, "l-event");
+      if (severity > 0.14) chronicle(`A brutal winter — ${menFull(total)} men lost to cold and disease in the open.`, "l-event");
       showBanner("❄  " + harsh + " — armies in the open suffer", 3200);
     }
   }
@@ -1545,6 +1562,7 @@
     S.regions.south.ships.patriot += CONFIG.franceFleet;
     refreshSeaControl();
     log("FRANCE ENTERS THE WAR! A French battle fleet sails into the mid-Atlantic and southern seas, and regulars land.", "l-event");
+    chronicle("France enters the war — a battle fleet and regulars join the American cause.", "l-event");
     showBanner("⚜  France joins — a fleet contests the coast!", 3800);
   }
 
@@ -1589,13 +1607,36 @@
   function gameOver(patriotWon, text) {
     S.over = true;
     S.winner = patriotWon ? "patriot" : "crown";
+    chronicle(text, patriotWon ? "l-good" : "l-bad");
     save();
     renderAll();
     const playerWon = S.winner === playerSide();
     $("#go-title").textContent = playerWon ? "Victory!" : "Defeat";
     $("#go-title").style.color = playerWon ? "var(--patriot)" : "var(--crown)";
     $("#go-text").textContent = text;
+    renderChronicle();
     $("#gameover").classList.remove("hidden");
+  }
+
+  // Render the end-of-war chronicle (chronological) into the game-over modal.
+  function renderChronicle() {
+    const ul = $("#go-chronicle");
+    if (!ul) return;
+    ul.innerHTML = "";
+    const entries = S.chronicle || [];
+    if (!entries.length) { ul.innerHTML = '<li class="ch-empty">A quiet war, with few engagements of note.</li>'; return; }
+    for (const e of entries) {
+      const li = document.createElement("li");
+      li.className = "ch-entry " + (e.cls || "");
+      const d = document.createElement("span");
+      d.className = "ch-date";
+      d.textContent = e.date;
+      const t = document.createElement("span");
+      t.className = "ch-text";
+      t.textContent = e.text;
+      li.appendChild(d); li.appendChild(t);
+      ul.appendChild(li);
+    }
   }
 
   /* ------------------------------ Persistence ----------------------------- */
