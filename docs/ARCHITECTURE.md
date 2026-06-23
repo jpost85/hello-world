@@ -101,9 +101,14 @@ guaranteed at the engine level.
 
 | Roadmap item | Where it plugs in |
 | --- | --- |
-| New scenarios | Add a `Scenario` in `scenario.ts` (warlords, holdings, officers). |
+| New scenarios | Add a `Scenario` in `scenario.ts` (warlords, holdings, officers, traits, items). |
 | New maps / theatres | Add a `genmap` config and a `registry.ts` entry; the engine is data-driven. |
-| Diplomacy / alliances | Add relation state to `GameState` and new actions in `game.ts`. |
-| Officer loyalty & defection | Loyalty already exists on `Officer`; add a defection check on low loyalty. |
+| New treasures / traits | Add to `items.ts` / the `OfficerTrait` union; `effectiveStats`/`hasTrait` apply them. |
+| Deeper diplomacy | Relations, alliances and ceasefires live in `GameState`; extend `proposePact` & AI policy. |
 | Deeper battles | `battle.ts` is isolated behind `resolveBattle`; swap the model without touching `game.ts`. |
 | Multiplayer | Serialise `GameState`, replay actions server-side; the seeded RNG makes validation deterministic. |
+
+Already implemented on top of the base loop: a **commerce/agriculture + food-supply
+economy**, **typed troops** with morale & training, **officer items and traits**,
+**prisoners** (recruit/release/execute) and officer **defection**, and
+**diplomacy** (alliances, timed ceasefires, relations).

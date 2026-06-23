@@ -15,19 +15,30 @@ historical 州/*zhou*).
 A turn is one **season**. On your turn you receive **command points** (more if you
 hold more provinces) and spend them on:
 
-- **Develop** — grow a province's economy and public order.
-- **Recruit** — raise troops from the population.
-- **Fortify** — build a rampart to strengthen defenders.
+- **Develop / Cultivate** — grow a province's commerce (gold) and agriculture
+  (grain).
+- **Recruit / Train** — raise typed troops from the population and drill them.
+- **Fortify** — raise the province walls (levels 0–5) to strengthen defenders.
 - **Scheme** — foment unrest in an adjacent rival province.
 - **March** — move troops; into hostile land this triggers a **battle**.
+- **Officers & Diplomacy** — recruit wandering heroes, take/recruit/release/
+  execute prisoners, and propose alliances or ceasefires.
 
-Battles **auto-resolve with tactical nudges**: the lead officers' stats plus
-scripted events (fire attacks, ambushes, single-combat duels) swing the outcome.
-Win by becoming **hegemon** — holding at least half of China with a commanding
-lead — or by being the last warlord standing.
+**Supply matters**: armies eat grain every season — a starving garrison deserts —
+and a campaign that outruns its supply lines fights at reduced morale.
+
+**Troops have branches** (spear ▸ cavalry ▸ archer ▸ spear, with navies ruling
+water crossings and siege battering walls), plus morale and training that swing
+the odds.
+
+Battles **auto-resolve with tactical nudges**: the lead officers' item-boosted
+stats and traits, plus scripted events (fire attacks, ambushes, single-combat
+duels), shape the outcome. Win by becoming **hegemon** — holding at least half of
+China with a commanding lead — or by being the last warlord standing.
 
 Officers are the heart of the game: famous figures (Cao Cao, Lü Bu, Zhuge Liang…)
-fight, administer, and scheme, and can be captured or recruited.
+fight, administer, and scheme, carry treasures and traits, and can defect, be
+captured, or be recruited.
 
 ## Develop
 
@@ -48,7 +59,8 @@ src/engine/      pure, deterministic game engine (no UI/DOM)
   types.ts         the serialisable domain model
   config.ts        every tunable balance number
   rng.ts           seeded mulberry32 PRNG
-  scenario.ts      the 189 AD warlords + officer roster
+  scenario.ts      the 189 AD warlords + officer roster (traits, items)
+  items.ts         treasure catalogue + effective-stat helpers
   battle.ts        auto-resolve battle with tactical events
   game.ts          setup, season loop, and all player actions
   ai.ts            the computer warlord (calls the same public actions)
