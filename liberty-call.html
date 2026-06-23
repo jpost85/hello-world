@@ -579,16 +579,18 @@ html, body {
     capitalDefenseBonus: 1.7,
     startMorale: 100,
     maxMorale: 120,
-    finalTurn: 32,          // ~1783
-    franceTurn: 9,          // earliest France may intervene
+    periodsPerSeason: 2,    // each season is split into this many turns (Early/Late)
+    finalTurn: 64,          // ~1783  (8 years x 4 seasons x 2 periods)
+    franceTurn: 18,         // earliest France may intervene (~Spring 1777)
     franceMoraleNeeded: 85, // patriot resolve required to draw France in
     franceFleet: 4,         // ships the French fleet brings to the mid & south seas (each)
     shipCost: 26,           // gold to build one ship at a port
     shipsPerPort: 1,        // ships a port can build per turn
     seasons: ["Spring", "Summer", "Autumn", "Winter"],
+    periodNames: { 2: ["Early ", "Late "], 3: ["Early ", "Mid ", "Late "] },
   };
 
-  const SAVE_KEY = "libertys-call-save-v3";
+  const SAVE_KEY = "libertys-call-save-v4";
 
   /* ------------------------------- Map data ------------------------------- */
   // Regions of the colonial seaboard. Geometry (path + label anchor) lives in
@@ -915,10 +917,13 @@ html, body {
   }
 
   function dateLabel(turn) {
+    const P = CONFIG.periodsPerSeason;
     const idx = turn - 1;
-    const season = CONFIG.seasons[idx % 4];
-    const year = 1775 + Math.floor(idx / 4);
-    return `${season} ${year}`;
+    const period = idx % P;
+    const season = CONFIG.seasons[Math.floor(idx / P) % 4];
+    const year = 1775 + Math.floor(idx / (4 * P));
+    const prefix = (CONFIG.periodNames[P] || [])[period] || "";
+    return `${prefix}${season} ${year}`;
   }
 
   /* --------------------------------- Log ---------------------------------- */
@@ -1916,7 +1921,9 @@ html, body {
   // disease. Each winter's severity is rolled afresh (mild some years, brutal
   // others). Armies wintering in a city are spared.
   function applyWinter() {
-    if ((S.turn - 1) % 4 !== 3) return; // only on winter turns
+    const P = CONFIG.periodsPerSeason;
+    // Once per year, at the onset of winter (the first winter period).
+    if ((S.turn - 1) % (4 * P) !== 3 * P) return;
     const severity = rng(0.08, 0.18);
     const FIELD = 3000; // a mobilized field army; smaller home garrisons endure
     let total = 0;
