@@ -356,11 +356,18 @@ html, body {
 .banner {
   position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
   background: var(--ink); color: var(--gold); border: 2px solid var(--gold);
-  padding: 14px 28px; border-radius: 6px; font-size: 18px; font-weight: bold;
+  padding: 12px 24px; border-radius: 6px; font-size: 18px; font-weight: bold;
   z-index: 60; box-shadow: 0 8px 30px var(--shadow); text-align: center;
   transition: opacity 0.4s ease, transform 0.4s ease;
+  display: flex; align-items: center; gap: 14px; max-width: 92vw;
 }
 .banner.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, -10px); }
+.banner-portrait { flex: none; }
+.banner-portrait:empty { display: none; }
+.banner-portrait .portrait-img {
+  width: 54px; height: auto; display: block; border-radius: 3px;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+}
 
 /* ===================== Mobile / narrow portrait layout ===================== */
 @media (max-width: 820px) {
@@ -561,7 +568,10 @@ html, body {
     </div>
 
     <!-- Banner / event toast -->
-    <div id="banner" class="banner hidden"><div id="banner-text"></div></div>
+    <div id="banner" class="banner hidden">
+      <div id="banner-portrait" class="banner-portrait"></div>
+      <div id="banner-text"></div>
+    </div>
 
     <!-- Game over -->
     <div id="gameover" class="modal-overlay hidden">
@@ -983,9 +993,14 @@ html, body {
 
   /* ------------------------------- Banner --------------------------------- */
   let bannerTimer = null;
-  function showBanner(text, ms) {
+  function showBanner(text, ms, general) {
     const b = $("#banner");
     $("#banner-text").textContent = text;
+    const port = $("#banner-portrait");
+    if (port) {
+      port.innerHTML = hasArt(general)
+        ? `<img class="portrait-img" src="${PORTRAITS[general.art]}" alt="${general.name}">` : "";
+    }
     b.classList.remove("hidden");
     if (bannerTimer) clearTimeout(bannerTimer);
     bannerTimer = setTimeout(() => b.classList.add("hidden"), ms || 2600);
@@ -1830,14 +1845,14 @@ html, body {
         log(opposed
           ? `${headline}its militia come over to the ${sideName(attSide)} (lost ${menFull(result.attLoss)}, militia ${menFull(defenders)}).`
           : `${defName}'s militia stand aside; the ${sideName(attSide)} march in.`, goodFor(attSide));
-        showBanner("⚑  " + defName + (opposed ? " seized!" : " occupied"));
+        showBanner("⚑  " + defName + (opposed ? " seized!" : " occupied"), undefined, attGen);
         if (opposed) chronicle(`${battleTitle}: ${defName}'s militia join the ${sideName(attSide)}.`, goodFor(attSide));
         adjustMorale(attSide, 3); // a frontier gain, not a blow to the enemy
       } else {
         log(opposed
           ? `${headline}a ${sideName(attSide)} victory; ${defName} falls (lost ${menFull(result.attLoss)}, enemy ${menFull(defenders)}).`
           : `${defName} is occupied unopposed by the ${sideName(attSide)}.`, goodFor(attSide));
-        showBanner("⚔  " + defName + (opposed ? " captured!" : " occupied"));
+        showBanner("⚔  " + defName + (opposed ? " captured!" : " occupied"), undefined, attGen);
         if (opposed) chronicle(`${battleTitle}: ${defName} falls to the ${sideName(attSide)}.`, goodFor(attSide));
         adjustMorale(attSide, def(toId).city ? 8 : 5);
         adjustMorale(loser, def(toId).city ? -8 : -5);
@@ -1886,7 +1901,7 @@ html, body {
     adjustMorale(captorSide, 8);
     log(`${g.name} is captured! A heavy blow to the ${loserSide === "patriot" ? "Patriots" : "Crown"}.`, "l-event");
     chronicle(`${g.name} is captured — a heavy blow to the ${loserSide === "patriot" ? "Patriots" : "Crown"}.`, "l-event");
-    showBanner("✦  " + g.name + " captured!", 3200);
+    showBanner("✦  " + g.name + " captured!", 3200, g);
   }
 
   /* ------------------------------- Morale --------------------------------- */

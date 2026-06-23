@@ -405,9 +405,14 @@
 
   /* ------------------------------- Banner --------------------------------- */
   let bannerTimer = null;
-  function showBanner(text, ms) {
+  function showBanner(text, ms, general) {
     const b = $("#banner");
     $("#banner-text").textContent = text;
+    const port = $("#banner-portrait");
+    if (port) {
+      port.innerHTML = hasArt(general)
+        ? `<img class="portrait-img" src="${PORTRAITS[general.art]}" alt="${general.name}">` : "";
+    }
     b.classList.remove("hidden");
     if (bannerTimer) clearTimeout(bannerTimer);
     bannerTimer = setTimeout(() => b.classList.add("hidden"), ms || 2600);
@@ -1252,14 +1257,14 @@
         log(opposed
           ? `${headline}its militia come over to the ${sideName(attSide)} (lost ${menFull(result.attLoss)}, militia ${menFull(defenders)}).`
           : `${defName}'s militia stand aside; the ${sideName(attSide)} march in.`, goodFor(attSide));
-        showBanner("⚑  " + defName + (opposed ? " seized!" : " occupied"));
+        showBanner("⚑  " + defName + (opposed ? " seized!" : " occupied"), undefined, attGen);
         if (opposed) chronicle(`${battleTitle}: ${defName}'s militia join the ${sideName(attSide)}.`, goodFor(attSide));
         adjustMorale(attSide, 3); // a frontier gain, not a blow to the enemy
       } else {
         log(opposed
           ? `${headline}a ${sideName(attSide)} victory; ${defName} falls (lost ${menFull(result.attLoss)}, enemy ${menFull(defenders)}).`
           : `${defName} is occupied unopposed by the ${sideName(attSide)}.`, goodFor(attSide));
-        showBanner("⚔  " + defName + (opposed ? " captured!" : " occupied"));
+        showBanner("⚔  " + defName + (opposed ? " captured!" : " occupied"), undefined, attGen);
         if (opposed) chronicle(`${battleTitle}: ${defName} falls to the ${sideName(attSide)}.`, goodFor(attSide));
         adjustMorale(attSide, def(toId).city ? 8 : 5);
         adjustMorale(loser, def(toId).city ? -8 : -5);
@@ -1308,7 +1313,7 @@
     adjustMorale(captorSide, 8);
     log(`${g.name} is captured! A heavy blow to the ${loserSide === "patriot" ? "Patriots" : "Crown"}.`, "l-event");
     chronicle(`${g.name} is captured — a heavy blow to the ${loserSide === "patriot" ? "Patriots" : "Crown"}.`, "l-event");
-    showBanner("✦  " + g.name + " captured!", 3200);
+    showBanner("✦  " + g.name + " captured!", 3200, g);
   }
 
   /* ------------------------------- Morale --------------------------------- */
