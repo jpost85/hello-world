@@ -10,15 +10,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   chinaMap,
   createGame,
+  cultivate,
   currentPlayer,
   develop,
   endTurn,
+  executePrisoner,
   fortify,
   march,
   playAITurn,
+  proposePact,
   recruit,
+  recruitOfficer,
+  releasePrisoner,
   scheme,
+  train,
   type GameState,
+  type PactKind,
+  type UnitType,
 } from "../engine/index.ts";
 import { clearGame, loadGame, saveGame } from "./persistence.ts";
 
@@ -32,10 +40,16 @@ export interface UseGame {
   resume: () => boolean;
   abandon: () => void;
   develop: (provinceId: string) => void;
-  recruit: (provinceId: string) => void;
+  cultivate: (provinceId: string) => void;
+  train: (provinceId: string) => void;
+  recruit: (provinceId: string, type?: UnitType) => void;
   fortify: (provinceId: string) => void;
   scheme: (provinceId: string) => void;
   march: (from: string, to: string, troops: number) => void;
+  recruitOfficer: (provinceId: string, officerId: string) => void;
+  releasePrisoner: (officerId: string) => void;
+  executePrisoner: (officerId: string) => void;
+  proposePact: (targetPlayerId: string, kind: PactKind) => void;
   endSeason: () => void;
 }
 
@@ -117,10 +131,16 @@ export function useGame(): UseGame {
     resume,
     abandon,
     develop: (p) => run(() => develop(state!, p)),
-    recruit: (p) => run(() => recruit(state!, p)),
+    cultivate: (p) => run(() => cultivate(state!, p)),
+    train: (p) => run(() => train(state!, p)),
+    recruit: (p, type) => run(() => recruit(state!, p, type)),
     fortify: (p) => run(() => fortify(state!, p)),
     scheme: (p) => run(() => scheme(state!, p)),
     march: (from, to, troops) => run(() => march(state!, from, to, troops)),
+    recruitOfficer: (p, officerId) => run(() => recruitOfficer(state!, p, officerId)),
+    releasePrisoner: (officerId) => run(() => releasePrisoner(state!, officerId)),
+    executePrisoner: (officerId) => run(() => executePrisoner(state!, officerId)),
+    proposePact: (target, kind) => run(() => proposePact(state!, target, kind)),
     endSeason: () => run(() => endTurn(state!)),
   };
 }

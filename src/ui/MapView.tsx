@@ -62,7 +62,11 @@ export function MapView({ state, humanId, selectedId, targetIds, onSelect }: Pro
         const { x, y } = prov.position;
         return (
           <g key={`b-${prov.id}`} className="badge" onClick={() => onSelect(prov.id)} pointerEvents="all">
-            {ps.hasRampart && <text x={x} y={y - 16} className="rampart" textAnchor="middle">⛫</text>}
+            {ps.wallLevel > 0 && (
+              <text x={x} y={y - 16} className="rampart" textAnchor="middle">
+                {"⛫".repeat(Math.min(3, ps.wallLevel))}
+              </text>
+            )}
             <circle cx={x} cy={y} r={11} className="badge-bg" />
             <text x={x} y={y + 4} textAnchor="middle" className="badge-troops">
               {Math.round(ps.troops / 1000)}

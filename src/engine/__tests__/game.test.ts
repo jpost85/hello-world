@@ -1,14 +1,24 @@
 import { describe, it, expect } from "vitest";
 import {
+  areAllied,
+  atPeace,
   commandPointsFor,
   createGame,
+  cultivate,
   currentPlayer,
   develop,
   endTurn,
+  executePrisoner,
+  fortify,
   march,
+  proposePact,
   provincesOf,
   recruit,
+  recruitableIn,
+  recruitOfficer,
+  relationOf,
   scheme,
+  train,
 } from "../game.ts";
 import { chinaMap } from "../maps/china.ts";
 import { CONFIG } from "../config.ts";
@@ -43,14 +53,28 @@ describe("setup", () => {
 });
 
 describe("commands", () => {
-  it("develop spends gold and raises development and order", () => {
+  it("develop spends gold and raises commerce and order", () => {
     const s = newGame();
     const prov = provincesOf(s, currentPlayer(s).id)[0];
     const before = s.provinces[prov];
     const after = develop(s, prov).provinces[prov];
     expect(after.gold).toBe(before.gold - CONFIG.develop.goldCost);
-    expect(after.development).toBeGreaterThan(before.development);
+    expect(after.commerce).toBeGreaterThan(before.commerce);
     expect(after.order).toBeGreaterThanOrEqual(before.order);
+  });
+
+  it("cultivate raises agriculture; train raises troop training", () => {
+    const s = newGame();
+    const prov = provincesOf(s, currentPlayer(s).id)[0];
+    expect(cultivate(s, prov).provinces[prov].agriculture).toBeGreaterThan(s.provinces[prov].agriculture);
+    expect(train(s, prov).provinces[prov].training).toBeGreaterThan(s.provinces[prov].training);
+  });
+
+  it("fortify raises the wall level toward its cap", () => {
+    const s = newGame();
+    const prov = provincesOf(s, currentPlayer(s).id)[0];
+    const after = fortify(s, prov).provinces[prov];
+    expect(after.wallLevel).toBe(s.provinces[prov].wallLevel + 1);
   });
 
   it("recruit trades gold and population for troops", () => {
@@ -106,6 +130,53 @@ describe("marching", () => {
   it("rejects marching to a non-adjacent province", () => {
     const s = newGame();
     expect(() => march(s, "sili", "jiaozhou", 1000)).toThrow(/border/);
+  });
+
+  it("an unsupplied march outruns its grain and is noted in the log", () => {
+    let s = newGame();
+    s = { ...s, provinces: { ...s.provinces, sili: { ...s.provinces["sili"], troops: 60000, food: 0 } } };
+    const out = march(s, "sili", "yuzhou", 50000);
+    expect(out.events.some((e) => /supply/.test(e.message))).toBe(true);
+  });
+});
+
+describe("prisoners", () => {
+  function withCaptive(): ReturnType<typeof newGame> {
+    const s = newGame(); // current player is Dong Zhuo
+    return {
+      ...s,
+      officers: s.officers.map((o) =>
+        o.id === "guo-jia" ? { ...o, ownerId: null, captiveOf: "dong-zhuo", provinceId: "sili" } : o,
+      ),
+    };
+  }
+
+  it("a held prisoner is recruitable in the holding province", () => {
+    const s = withCaptive();
+    expect(recruitableIn(s, "sili", "dong-zhuo").some((o) => o.id === "guo-jia")).toBe(true);
+    expect(() => recruitOfficer(s, "sili", "guo-jia")).not.toThrow();
+  });
+
+  it("executing a prisoner kills them and hardens rivals against you", () => {
+    const s = withCaptive();
+    const out = executePrisoner(s, "guo-jia");
+    expect(out.officers.find((o) => o.id === "guo-jia")!.alive).toBe(false);
+    expect(relationOf(out, "dong-zhuo", "yuan-shao")).toBeLessThan(0);
+  });
+});
+
+describe("diplomacy", () => {
+  it("a ceasefire is accepted from neutral relations and forbids attacking", () => {
+    const s = newGame(); // Dong Zhuo, neutral (0) relations with all
+    const out = proposePact(s, "cao-cao", "ceasefire");
+    expect(atPeace(out, "dong-zhuo", "cao-cao")).toBe(true);
+    expect(() => march(out, "sili", "yuzhou", 1000)).toThrow(/pact/);
+  });
+
+  it("an alliance offer is rebuffed when relations are merely neutral", () => {
+    const s = newGame();
+    const out = proposePact(s, "cao-cao", "alliance");
+    expect(areAllied(out, "dong-zhuo", "cao-cao")).toBe(false);
   });
 });
 

@@ -9,6 +9,10 @@
  * This mirrors the Dominion (Risk) branch's architecture deliberately: a single
  * serialisable `GameState`, a seeded RNG threaded through every random draw, and
  * a hard engine/UI split — so the two projects troubleshoot the same way.
+ *
+ * The model is built for RoTK depth: provincial commerce/agriculture and a real
+ * food-supply economy, typed & trained troops, officers carrying items and
+ * traits, prisoners taken in war, and diplomacy between the warlords.
  */
 
 // ---------------------------------------------------------------------------
@@ -45,7 +49,7 @@ export interface GameMap {
   regions: Region[];
   /** SVG viewBox for the path-based map. */
   viewBox?: string;
-  /** Sea/strait routes to draw as connecting lines (land borders are implicit). */
+  /** Sea/strait routes; also marks which marches cross water (navy matters). */
   connectors?: [string, string][];
 }
 
@@ -70,8 +74,45 @@ export interface Player {
 }
 
 // ---------------------------------------------------------------------------
+// Troops: types & condition
+// ---------------------------------------------------------------------------
+
+/**
+ * Army branches. A soft rock-paper-scissors (spear > cavalry > archer > spear)
+ * plus terrain roles: navy dominates water crossings, siege batters walls.
+ */
+export type UnitType = "spearmen" | "cavalry" | "archers" | "navy" | "siege";
+export const UNIT_TYPES: UnitType[] = ["spearmen", "cavalry", "archers", "navy", "siege"];
+
+// ---------------------------------------------------------------------------
 // Officers (the heart of the series)
 // ---------------------------------------------------------------------------
+
+/** Innate skills that modify an officer's effectiveness in specific situations. */
+export type OfficerTrait =
+  | "valiant" // edge in single-combat duels
+  | "strategist" // stronger fire attacks / ambushes and schemes
+  | "administrator" // greater commerce development
+  | "farmer" // greater agriculture development
+  | "orator" // better at recruiting officers and diplomacy
+  | "cavalier" // commands cavalry to greater effect
+  | "archer" // commands archers to greater effect
+  | "admiral" // commands navy to greater effect
+  | "pacifier"; // restores public order faster
+
+export type ItemKind = "weapon" | "horse" | "book" | "armor" | "treasure";
+
+/** A treasure an officer can hold; its bonuses add to the holder's stats. */
+export interface Item {
+  id: string;
+  name: string;
+  kind: ItemKind;
+  war?: number;
+  intellect?: number;
+  politics?: number;
+  charisma?: number;
+  leadership?: number;
+}
 
 /**
  * An officer is a hero unit serving a warlord. Stats are on the classic 1–100
@@ -90,31 +131,64 @@ export interface Officer {
   leadership: number;
   /** Loyalty to the current lord (0–100); low loyalty invites defection. */
   loyalty: number;
-  /** Owning player, or null if a free/wandering officer not yet recruited. */
+  /** Owning player, or null if a free/wandering officer or a prisoner. */
   ownerId: string | null;
-  /** Province the officer is stationed in, or null if unassigned/wandering. */
+  /** Province the officer is stationed/held in, or null if unassigned. */
   provinceId: string | null;
+  /** Innate skills. */
+  traits: OfficerTrait[];
+  /** Ids of items the officer carries (see `Item`). */
+  items: string[];
+  /** If captured, the player holding them prisoner; else null. */
+  captiveOf: string | null;
+  /** Cleared to false when executed; the dead are excluded from all rosters. */
+  alive: boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Per-province dynamic state
 // ---------------------------------------------------------------------------
 
-/** Who holds a province, with what forces and economy. */
+/** Who holds a province, with what forces, economy and defences. */
 export interface ProvinceState {
   ownerId: string | null;
   /** Soldiers garrisoned here. */
   troops: number;
+  /** Dominant branch of the garrison (recruited & fielded type). */
+  garrisonType: UnitType;
+  /** Troop morale 0–100: fighting spirit, fed by order and supply. */
+  morale: number;
+  /** Troop training 0–100: drill and discipline, raised by the Train command. */
+  training: number;
   gold: number;
+  /** Grain stockpile — the supply that feeds the garrison each season. */
   food: number;
   /** Population in thousands — recruiting pool and tax base. */
   population: number;
   /** Public order 0–100: low order cuts income and invites revolt. */
   order: number;
-  /** Economic development 0–100: scales seasonal income. */
-  development: number;
-  /** A rampart strengthens defenders stationed here (see battle rules). */
-  hasRampart: boolean;
+  /** Commerce 0–100: scales seasonal gold income. */
+  commerce: number;
+  /** Agriculture 0–100: scales seasonal food (grain) income. */
+  agriculture: number;
+  /** Fortification level 0–5: strengthens defenders and resists sieges. */
+  wallLevel: number;
+}
+
+// ---------------------------------------------------------------------------
+// Diplomacy
+// ---------------------------------------------------------------------------
+
+export type PactKind = "alliance" | "ceasefire";
+
+/** A standing agreement between two warlords. */
+export interface Pact {
+  /** The two player ids, stored sorted for a stable key. */
+  a: string;
+  b: string;
+  kind: PactKind;
+  /** Season-turn the pact lapses (ceasefires), or null for an open alliance. */
+  untilTurn: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +216,12 @@ export interface GameState {
   /** Keyed by province id. */
   provinces: Record<string, ProvinceState>;
   officers: Officer[];
+  /** All item definitions in play (carried by officers via `Officer.items`). */
+  items: Item[];
+  /** Standing diplomatic agreements. */
+  pacts: Pact[];
+  /** Pairwise relations, keyed `"a|b"` (sorted ids), in [-100, 100]. */
+  relations: Record<string, number>;
   /** Years since 189 AD (display only). */
   year: number;
   season: Season;
@@ -162,7 +242,7 @@ export interface GameState {
 // ---------------------------------------------------------------------------
 
 /** A scripted tactical event that can fire mid-battle. */
-export type BattleEventKind = "fire-attack" | "ambush" | "duel" | "rout";
+export type BattleEventKind = "fire-attack" | "ambush" | "duel" | "rout" | "low-supply";
 
 export interface BattleEvent {
   kind: BattleEventKind;

@@ -1,21 +1,30 @@
 /**
  * Battle resolution — "auto-resolve with tactical nudges".
  *
- * A field battle resolves automatically over several rounds of attrition, but
- * the lead officers' stats and a handful of scripted tactical events (fire
- * attack, ambush, single-combat duel) swing the outcome — honouring the iconic
- * moments of the era without trapping a phone player in a 20-minute grid battle.
+ * A field battle resolves automatically over several rounds of attrition, but a
+ * lot of RoTK texture rides on top: the lead officers' (item-boosted) stats,
+ * troop morale and training, the rock-paper-scissors of branches, walls and
+ * sieges, river crossings where navies rule, and scripted tactical events (fire
+ * attack, ambush, single-combat duel). It honours the iconic moments without
+ * trapping a phone player in a 20-minute grid battle.
  *
  * Pure and deterministic: all randomness is threaded through the RNG state, so a
  * battle replays identically from the same inputs and seed (see `battle.test.ts`).
  */
-import { CONFIG } from "./config.ts";
+import { CONFIG, typeMatchup } from "./config.ts";
+import { effectiveStats, hasTrait } from "./items.ts";
 import { nextFloat, rollRange } from "./rng.ts";
-import type { BattleEvent, BattleResult, Officer } from "./types.ts";
+import type { BattleEvent, BattleResult, Officer, UnitType } from "./types.ts";
 
 export interface BattleSide {
   playerId: string | null;
   troops: number;
+  /** Branch of the fielded army. */
+  unitType: UnitType;
+  /** Troop morale 0–100. */
+  morale: number;
+  /** Troop training 0–100. */
+  training: number;
   /** The lead officer (highest WAR) committed by this side, if any. */
   officer?: Officer;
 }
@@ -24,25 +33,47 @@ export interface BattleInputs {
   provinceId: string;
   attacker: BattleSide;
   defender: BattleSide;
-  hasRampart: boolean;
+  /** Defender fortification level 0–5. */
+  defenderWallLevel: number;
   /** Defender province order 0–100 (rallies the garrison). */
   defenderOrder: number;
+  /** True if the march crosses water — navies dominate the crossing. */
+  waterCrossing: boolean;
 }
 
 const B = CONFIG.battle;
 
-/** Combat power of a side: troops amplified by its lead officer's prowess. */
-function powerOf(troops: number, officer?: Officer): number {
-  if (troops <= 0) return 0;
-  const prowess = officer ? (officer.war + officer.leadership) / 200 : 0;
-  return troops * (1 + B.officerPowerScale * prowess);
+const cond = (v: number) => 1 + (v - 50) / 50; // 0→0, 50→1, 100→2 around resting 50
+
+/** The branch a specialist trait empowers. */
+function branchTraitBonus(side: BattleSide): number {
+  const o = side.officer;
+  if (!o) return 0;
+  if (side.unitType === "cavalry" && hasTrait(o, "cavalier")) return B.traitBranchBonus;
+  if (side.unitType === "archers" && hasTrait(o, "archer")) return B.traitBranchBonus;
+  if (side.unitType === "navy" && hasTrait(o, "admiral")) return B.traitBranchBonus;
+  return 0;
 }
 
-/** Defender's standing bonus from ramparts and public order. */
-function defenderMultiplier(hasRampart: boolean, order: number): number {
-  const rampart = hasRampart ? B.rampartMultiplier : 1;
-  const morale = 1 + B.orderMultiplier * (order / 100);
-  return rampart * morale;
+/** Combat power of a side before the opposed type/terrain matchup. */
+function basePower(side: BattleSide): number {
+  if (side.troops <= 0) return 0;
+  const prowess = side.officer ? (effectiveStats(side.officer).war + effectiveStats(side.officer).leadership) / 200 : 0;
+  let p = side.troops * (1 + B.officerPowerScale * prowess);
+  p *= 1 + B.moraleScale * (cond(side.morale) - 1);
+  p *= 1 + B.trainingScale * (cond(side.training) - 1);
+  p *= 1 + branchTraitBonus(side);
+  return p;
+}
+
+/** Apply the opposed branch / river-crossing multiplier to an attacker side. */
+function matchupMultiplier(self: BattleSide, foe: BattleSide, waterCrossing: boolean): number {
+  let m = 1 + B.typeAdvantage * typeMatchup(self.unitType, foe.unitType);
+  if (waterCrossing) {
+    if (self.unitType === "navy" && foe.unitType !== "navy") m *= 1 + B.navalCrossingBonus;
+    else if (self.unitType !== "navy" && foe.unitType === "navy") m *= 1 - B.navalCrossingBonus * 0.5;
+  }
+  return m;
 }
 
 /**
@@ -53,14 +84,22 @@ export function resolveBattle(
   inputs: BattleInputs,
   rngState: number,
 ): { result: BattleResult; rngState: number } {
-  const { attacker, defender } = inputs;
+  const { attacker, defender, waterCrossing } = inputs;
   const events: BattleEvent[] = [];
   let state = rngState;
   let atk = attacker.troops;
   let def = defender.troops;
   const atkStart = atk;
   const defStart = def;
-  const defMult = defenderMultiplier(inputs.hasRampart, inputs.defenderOrder);
+
+  // Standing multipliers that don't change as troops fall.
+  const atkMatch = matchupMultiplier(attacker, defender, waterCrossing);
+  const defMatch = matchupMultiplier(defender, attacker, waterCrossing);
+  const wall = 1 + B.wallBonusPerLevel * inputs.defenderWallLevel * (attacker.unitType === "siege" ? 1 - B.siegeWallNegation : 1);
+  const defStanding = defMatch * wall * (1 + B.orderMultiplier * (inputs.defenderOrder / 100));
+
+  const atkEff = attacker.officer ? effectiveStats(attacker.officer) : null;
+  const defEff = defender.officer ? effectiveStats(defender.officer) : null;
 
   const draw = () => {
     const r = nextFloat(state);
@@ -70,37 +109,39 @@ export function resolveBattle(
 
   // --- Pre-battle tactical events ----------------------------------------
   // Fire attack: a clever attacker burns the enemy camp (Chibi writ small).
-  if (attacker.officer && draw() < B.fireAttackChance * (attacker.officer.intellect / 100)) {
-    const resisted = defender.officer ? defender.officer.intellect / 100 : 0;
+  if (atkEff && draw() < B.fireAttackChance * (atkEff.intellect / 100) * (hasTrait(attacker.officer, "strategist") ? 1.4 : 1)) {
+    const resisted = defEff ? defEff.intellect / 100 : 0;
     const damage = Math.round(def * 0.2 * (1 - 0.6 * resisted));
     if (damage > 0) {
       def = Math.max(0, def - damage);
-      events.push({ kind: "fire-attack", against: "defender", damage, message: `${attacker.officer.name} sets fire to the enemy camp` });
+      events.push({ kind: "fire-attack", against: "defender", damage, message: `${attacker.officer!.name} sets fire to the enemy camp` });
     }
   }
   // Ambush: a sharp defender catches the marching column in the open.
-  if (defender.officer && draw() < B.fireAttackChance * (defender.officer.intellect / 100)) {
-    const resisted = attacker.officer ? attacker.officer.intellect / 100 : 0;
+  if (defEff && draw() < B.fireAttackChance * (defEff.intellect / 100) * (hasTrait(defender.officer, "strategist") ? 1.4 : 1)) {
+    const resisted = atkEff ? atkEff.intellect / 100 : 0;
     const damage = Math.round(atk * 0.15 * (1 - 0.6 * resisted));
     if (damage > 0) {
       atk = Math.max(0, atk - damage);
-      events.push({ kind: "ambush", against: "attacker", damage, message: `${defender.officer.name} springs an ambush` });
+      events.push({ kind: "ambush", against: "attacker", damage, message: `${defender.officer!.name} springs an ambush` });
     }
   }
   // Duel: two champions meet; the loser's army loses heart (and men).
-  if (attacker.officer && defender.officer && draw() < B.duelChance) {
-    const a = attacker.officer.war + rollRange(state, 0, 20).value;
+  if (atkEff && defEff && draw() < B.duelChance) {
+    const aBonus = hasTrait(attacker.officer, "valiant") ? 10 : 0;
+    const dBonus = hasTrait(defender.officer, "valiant") ? 10 : 0;
+    const a = atkEff.war + aBonus + rollRange(state, 0, 20).value;
     state = rollRange(state, 0, 20).state;
-    const d = defender.officer.war + rollRange(state, 0, 20).value;
+    const d = defEff.war + dBonus + rollRange(state, 0, 20).value;
     state = rollRange(state, 0, 20).state;
     if (a >= d) {
       const damage = Math.round(def * 0.12);
       def = Math.max(0, def - damage);
-      events.push({ kind: "duel", against: "defender", damage, message: `${attacker.officer.name} bests ${defender.officer.name} in single combat` });
+      events.push({ kind: "duel", against: "defender", damage, message: `${attacker.officer!.name} bests ${defender.officer!.name} in single combat` });
     } else {
       const damage = Math.round(atk * 0.12);
       atk = Math.max(0, atk - damage);
-      events.push({ kind: "duel", against: "attacker", damage, message: `${defender.officer.name} bests ${attacker.officer.name} in single combat` });
+      events.push({ kind: "duel", against: "attacker", damage, message: `${defender.officer!.name} bests ${attacker.officer!.name} in single combat` });
     }
   }
 
@@ -108,11 +149,9 @@ export function resolveBattle(
   const routFloor = (start: number) => Math.floor(start * B.routThreshold);
   let rounds = 0;
   while (rounds < B.maxRounds && atk > routFloor(atkStart) && def > routFloor(defStart)) {
-    const atkPower = powerOf(atk, attacker.officer);
-    const defPower = powerOf(def, defender.officer) * defMult;
+    const atkPower = basePower({ ...attacker, troops: atk }) * atkMatch;
+    const defPower = basePower({ ...defender, troops: def }) * defStanding;
     const total = atkPower + defPower || 1;
-    // Each side loses a fraction of its own strength, weighted by how much of
-    // the battlefield power the *enemy* holds, times a 0.7–1.3 luck factor.
     const atkLuck = 0.7 + draw() * 0.6;
     const defLuck = 0.7 + draw() * 0.6;
     const atkLoss = Math.round(atk * B.baseCasualtyRate * (defPower / total) ** B.casualtyPowerExponent * atkLuck);

@@ -5,7 +5,7 @@
  * an adjacent rival. Thumb-reachable and one province at a time, by design.
  */
 import { useEffect, useState } from "react";
-import type { GameState } from "../engine/index.ts";
+import { recruitableIn, type GameState } from "../engine/index.ts";
 import type { UseGame } from "./useGame.ts";
 
 interface Props {
@@ -48,6 +48,7 @@ export function ControlPanel({ state, humanId, isHumanTurn, selectedId, game, on
     .sort((a, b) => b.war - a.war);
   const wandering = state.officers.filter((o) => o.provinceId === prov.id && o.ownerId === null);
 
+  const recruitable = humanId && mine ? recruitableIn(state, prov.id, humanId) : [];
   const source = mine ? prov.id : null;
   const beginMarch = (to: string) => {
     setMarchTo(to);
@@ -65,13 +66,20 @@ export function ControlPanel({ state, humanId, isHumanTurn, selectedId, game, on
         <div className="troops-big">{ps.troops.toLocaleString()}<span> troops</span></div>
       </header>
 
+      <div className="troop-line">
+        <span className="branch">{ps.garrisonType}</span>
+        <span>morale {ps.morale}</span>
+        <span>training {ps.training}</span>
+        <span>walls {ps.wallLevel}</span>
+      </div>
+
       <div className="stats">
         <Stat label="Gold" value={ps.gold} />
         <Stat label="Food" value={ps.food} />
         <Stat label="Order" value={`${ps.order}%`} />
-        <Stat label="Develop" value={`${ps.development}%`} />
+        <Stat label="Commerce" value={`${ps.commerce}%`} />
+        <Stat label="Farming" value={`${ps.agriculture}%`} />
         <Stat label="People" value={`${ps.population}k`} />
-        <Stat label="Rampart" value={ps.hasRampart ? "Yes" : "—"} />
       </div>
 
       {(officers.length > 0 || wandering.length > 0) && (
@@ -95,9 +103,25 @@ export function ControlPanel({ state, humanId, isHumanTurn, selectedId, game, on
         <>
           <div className="actions">
             <button onClick={() => game.develop(prov.id)}>Develop</button>
+            <button onClick={() => game.cultivate(prov.id)}>Cultivate</button>
             <button onClick={() => game.recruit(prov.id)}>Recruit</button>
-            <button onClick={() => game.fortify(prov.id)} disabled={ps.hasRampart}>Fortify</button>
+            <button onClick={() => game.train(prov.id)}>Train</button>
+            <button onClick={() => game.fortify(prov.id)} disabled={ps.wallLevel >= 5}>Fortify</button>
           </div>
+          {recruitable.length > 0 && (
+            <div className="recruit-officers">
+              {recruitable.map((o) => (
+                <div key={o.id} className="recruit-row">
+                  <span>{o.captiveOf ? `Prisoner: ${o.name}` : `Wandering: ${o.name}`}</span>
+                  <span className="recruit-btns">
+                    <button onClick={() => game.recruitOfficer(prov.id, o.id)}>Recruit</button>
+                    {o.captiveOf && <button onClick={() => game.releasePrisoner(o.id)}>Release</button>}
+                    {o.captiveOf && <button className="danger" onClick={() => game.executePrisoner(o.id)}>Execute</button>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="march-targets">
             {prov.adjacentTo.map((to) => {
               const t = state.provinces[to];
@@ -116,6 +140,12 @@ export function ControlPanel({ state, humanId, isHumanTurn, selectedId, game, on
       {isHumanTurn && !mine && (
         <div className="actions">
           <button onClick={() => game.scheme(prov.id)}>Foment Unrest</button>
+          {ps.ownerId && ps.ownerId !== humanId && (
+            <>
+              <button onClick={() => game.proposePact(ps.ownerId!, "ceasefire")}>Offer Ceasefire</button>
+              <button onClick={() => game.proposePact(ps.ownerId!, "alliance")}>Offer Alliance</button>
+            </>
+          )}
           <span className="hint">Schemes need a bordering province of yours.</span>
         </div>
       )}
