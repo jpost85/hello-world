@@ -422,6 +422,10 @@
     background-size:10px 8px;
   }
   .unit-cinema.lit .u-extra { filter: drop-shadow(0 0 2px #ffd34d); }
+  .unit-laundro { --wall:#cfe6ea; }
+  .unit-laundro .u-face {
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 34'%3E%3Crect width='64' height='34' fill='#dbeef0'/%3E%3Cg stroke='#c4e0e4' stroke-width='.7'%3E%3Cline x1='0' y1='10' x2='64' y2='10'/%3E%3Cline x1='21' y1='0' x2='21' y2='10'/%3E%3Cline x1='43' y1='0' x2='43' y2='10'/%3E%3C/g%3E%3Crect y='29' width='64' height='5' fill='#7fa8b0'/%3E%3Crect y='29' width='64' height='1' fill='#6f98a0'/%3E%3Crect x='3' y='13' width='17' height='16' rx='1' fill='#eef5f6'/%3E%3Crect x='3' y='13' width='17' height='3.6' rx='1' fill='#cdd9dc'/%3E%3Ccircle cx='7' cy='14.8' r='.9' fill='#7fb0bc'/%3E%3Crect x='14' y='14' width='4' height='1.6' rx='.8' fill='#9ab8be'/%3E%3Ccircle cx='11.5' cy='22.5' r='5.4' fill='#b4c6ca'/%3E%3Ccircle cx='11.5' cy='22.5' r='4' fill='#33464e'/%3E%3Ccircle cx='9.6' cy='20.8' r='1.1' fill='#5a6e76' opacity='.6'/%3E%3Crect x='23' y='13' width='17' height='16' rx='1' fill='#eef5f6'/%3E%3Crect x='23' y='13' width='17' height='3.6' rx='1' fill='#cdd9dc'/%3E%3Ccircle cx='27' cy='14.8' r='.9' fill='#7fb0bc'/%3E%3Crect x='34' y='14' width='4' height='1.6' rx='.8' fill='#9ab8be'/%3E%3Ccircle cx='31.5' cy='22.5' r='5.4' fill='#b4c6ca'/%3E%3Ccircle cx='31.5' cy='22.5' r='4' fill='#33464e'/%3E%3Cpath d='M28,23 a3.5,3.5 0 0 1 7,0' fill='none' stroke='#e0584f' stroke-width='1.4'/%3E%3Cpath d='M28.5,21 a3,3 0 0 1 6,1' fill='none' stroke='#f3c54e' stroke-width='1.2'/%3E%3Ccircle cx='31.5' cy='24' r='1' fill='#4f9fd0'/%3E%3Crect x='43' y='13' width='17' height='16' rx='1' fill='#eef5f6'/%3E%3Crect x='43' y='13' width='17' height='3.6' rx='1' fill='#cdd9dc'/%3E%3Ccircle cx='47' cy='14.8' r='.9' fill='#7fb0bc'/%3E%3Crect x='54' y='14' width='4' height='1.6' rx='.8' fill='#9ab8be'/%3E%3Ccircle cx='51.5' cy='22.5' r='5.4' fill='#b4c6ca'/%3E%3Ccircle cx='51.5' cy='22.5' r='4' fill='#33464e'/%3E%3Ccircle cx='49.6' cy='20.8' r='1.1' fill='#5a6e76' opacity='.6'/%3E%3Crect x='48' y='5' width='12' height='2' rx='.5' fill='#bcd6da'/%3E%3Crect x='52' y='1' width='3' height='4' rx='.6' fill='#5fb0c8'/%3E%3Crect x='52.6' y='1.6' width='1.8' height='1.4' fill='#eafaff'/%3E%3Cpath d='M5,29 L19,29 L17,22 L7,22 Z' fill='#cdb98a'/%3E%3Cpath d='M5,29 L19,29 L17,22 L7,22 Z' fill='none' stroke='#a8946a' stroke-width='.6'/%3E%3Cellipse cx='9' cy='22.5' rx='2.4' ry='1.4' fill='#fff'/%3E%3Cellipse cx='13.5' cy='22.8' rx='2.2' ry='1.4' fill='#f3c54e'/%3E%3Cellipse cx='11' cy='21.4' rx='2' ry='1.2' fill='#e0584f'/%3E%3C/svg%3E") center/100% 100% no-repeat;
+  }
 
   /* Outdoor spaces — open to the sky (no walls), so the backdrop shows through */
   .unit-terrace, .unit-garden { --wall: transparent; border: none; }
@@ -954,6 +958,7 @@ const TYPES = {
   gym:       { name: "Gym",         cost: 30000, w: 3, h: 1, color: "#9fb0a6", income: 0,    cap: 0,  kind: "amenity", appeal: 14 },
   spa:       { name: "Spa",         cost: 40000, w: 3, h: 1, color: "#86b8b0", income: 0,    cap: 0,  kind: "amenity", appeal: 18, favors: "hotel" },
   conference:{ name: "Conf. Room",  cost: 34000, w: 3, h: 1, color: "#b0a48c", income: 0,    cap: 0,  kind: "amenity", appeal: 16, favors: "work" },
+  laundro:   { name: "Laundro",      cost: 26000, w: 2, h: 1, color: "#7fc6d8", income: 0,    cap: 0,  kind: "amenity", appeal: 10, favors: "home", draw: 0.6 },
   security:  { name: "Security",    cost: 30000, w: 2, h: 1, color: "#7a8aa0", income: 0,    cap: 0,  kind: "security" },
   housekeeping: { name: "Housekeeping", cost: 22000, w: 2, h: 1, color: "#8fc7d6", income: 0, cap: 0, kind: "service", serves: "clean", capacity: 40 },
   maintenance:  { name: "Maintenance",  cost: 24000, w: 2, h: 1, color: "#c79a5a", income: 0, cap: 0, kind: "service", serves: "upkeep", capacity: 15 },
@@ -969,7 +974,7 @@ const TYPES = {
 
 // Star tier at which each build type unlocks (anything unlisted is available from the start).
 const UNLOCK_STAR = {
-  elevator: 1, restaurant: 1, terrace: 1, parking: 1,
+  elevator: 1, restaurant: 1, terrace: 1, parking: 1, laundro: 1,
   condo: 2, hotel: 2, gym: 2,
   security: 2, housekeeping: 2, maintenance: 2,
   cinema: 3, garden: 3, conference: 3, playground: 3, metro: 3, skylobby: 3,
@@ -980,7 +985,7 @@ const UNLOCK_STAR = {
 // Build menu, organized into collapsible sections (the Pointer is shown above them).
 const TOOL_GROUPS = [
   { title: "Rooms",       keys: ["office","apartment","condo","hotel","shop","restaurant","cinema"] },
-  { title: "Amenities",   keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference"] },
+  { title: "Amenities",   keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference","laundro"] },
   { title: "Services",    keys: ["security","housekeeping","maintenance"] },
   { title: "Transit",     keys: ["floor","stair","elevator","expresselevator","skylobby"] },
   { title: "Underground", keys: ["parking","metro"] },
@@ -1016,6 +1021,7 @@ const TYPE_DESC = {
   gym:       "Indoor fitness center. Boosts nearby satisfaction; works mid-tower, no open sky needed.",
   spa:       "Indoor spa. Especially delights nearby hotel guests.",
   conference:"Indoor meeting space. Especially boosts nearby offices.",
+  laundro:   "Coin laundry. A cheap convenience that pleases nearby homes — and the machines earn a few coins.",
   security:  "Security office — contains fires, foils bomb threats, and reassures VIP inspectors.",
   housekeeping: "Keeps the tower clean. Cleanliness lifts satisfaction; add more as population grows.",
   maintenance:  "Keeps the building in repair. Upkeep lifts satisfaction and trims maintenance costs; scale with size.",
@@ -1472,7 +1478,7 @@ function unitInnerHTML(type) {
 function shortLabel(type) {
   return ({office:"OFF", apartment:"APT", condo:"CONDO", hotel:"🛏", shop:"SHOP", restaurant:"REST",
            cinema:"🎬", terrace:"⛱", garden:"🌳", pool:"POOL", playground:"PLAY", skybar:"BAR",
-           gym:"GYM", spa:"SPA", conference:"CONF", security:"🛡", housekeeping:"🧹", maintenance:"🔧", spire:"♛", parking:"🅿", metro:"Ⓜ",
+           gym:"GYM", spa:"SPA", conference:"CONF", laundro:"🧺", security:"🛡", housekeeping:"🧹", maintenance:"🔧", spire:"♛", parking:"🅿", metro:"Ⓜ",
            skylobby:"SKY", expresselevator:"▲", stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
 }
 
