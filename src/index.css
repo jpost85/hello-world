@@ -50,10 +50,10 @@ button:disabled { opacity: 0.4; }
 .status-left { display: flex; flex-direction: column; line-height: 1.1; }
 .year { font-weight: 700; }
 .season { color: var(--muted); font-size: 12px; }
-.status-mid { font-weight: 700; flex: 1; text-align: center; }
-.status-right { display: flex; align-items: center; gap: 8px; }
+.status-mid { font-weight: 700; flex: 1; text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.status-right { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
 .gold { color: var(--gold); font-weight: 700; }
-.log-btn { padding: 6px 10px; }
+.log-btn { padding: 6px 8px; font-size: 12px; }
 
 .map-wrap { flex: 1; min-height: 0; display: flex; background: #11202b; }
 .map { width: 100%; height: 100%; touch-action: manipulation; }
@@ -97,11 +97,39 @@ button:disabled { opacity: 0.4; }
 .troop-line { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
 .troop-line .branch { color: var(--ink); text-transform: capitalize; font-weight: 700; }
 
-.recruit-officers { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
-.recruit-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--panel-2); border-radius: 8px; padding: 6px 8px; font-size: 13px; }
-.recruit-btns { display: flex; gap: 6px; }
-.recruit-btns button { padding: 5px 9px; font-size: 12px; }
 button.danger { border-color: #8a2a22; color: #ffd9d4; }
+
+/* ---- Court (officer) screen ---- */
+.court-section { margin-bottom: 14px; }
+.court-section h3 { margin: 0 0 6px; font-size: 13px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.05em; }
+.court-card { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; margin-bottom: 7px; }
+.court-top { display: flex; justify-content: space-between; align-items: baseline; }
+.court-name { font-weight: 700; font-size: 14px; }
+.court-loc { color: var(--muted); font-size: 12px; }
+.court-stats { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 5px; font-size: 12px; color: var(--ink); }
+.court-stats .loy.low { color: #ff9a8f; }
+.court-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.tag { font-size: 11px; border-radius: 999px; padding: 2px 8px; }
+.tag.trait { background: #2a3a2c; color: #aee0b0; border: 1px solid #3c5a3f; }
+.tag.item { background: #3a2f1d; color: var(--gold); border: 1px solid #5a4a2c; }
+.court-acts { display: flex; gap: 6px; margin-top: 8px; }
+.court-acts button { flex: 1; padding: 6px 8px; font-size: 12px; }
+.court-faint { display: flex; justify-content: space-between; padding: 5px 2px; color: var(--muted); font-size: 13px; border-bottom: 1px solid var(--line); }
+
+/* ---- Diplomacy screen ---- */
+.dipl-card { background: var(--panel-2); border-left: 4px solid #555; border-radius: 10px; padding: 10px; margin-bottom: 9px; }
+.dipl-top { display: flex; justify-content: space-between; align-items: baseline; }
+.dipl-name { font-weight: 700; font-size: 15px; }
+.dipl-might { color: var(--muted); font-size: 12px; }
+.dipl-status { margin: 6px 0; }
+.pact { font-size: 12px; border-radius: 999px; padding: 2px 10px; }
+.pact.ally { background: #25406a; color: #bcd6ff; }
+.pact.truce { background: #4a3f1d; color: var(--gold); }
+.pact.none { background: #3a2723; color: #e7c0b8; }
+.rel-bar { height: 6px; background: #4a2420; border-radius: 999px; overflow: hidden; margin-bottom: 8px; }
+.rel-fill { height: 100%; background: linear-gradient(90deg, #b3322c, #d4a72c 50%, #3f9e4d); }
+.dipl-acts { display: flex; gap: 6px; }
+.dipl-acts button { flex: 1; padding: 7px 8px; font-size: 12px; }
 
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
 .stat { background: var(--panel-2); border-radius: 8px; padding: 6px 8px; display: flex; justify-content: space-between; }

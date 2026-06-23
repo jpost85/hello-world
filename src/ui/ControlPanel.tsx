@@ -1,11 +1,13 @@
 /**
  * The bottom-sheet command panel for the selected province: its garrison and
  * economy, the officers stationed there, and the verbs available this season —
- * Develop / Recruit / Fortify on your own land, March on a neighbour, Scheme on
- * an adjacent rival. Thumb-reachable and one province at a time, by design.
+ * Develop / Cultivate / Recruit / Train / Fortify on your own land, March on a
+ * neighbour, Scheme on an adjacent rival. Officer and diplomacy management live
+ * in their own screens (the Court and Diplomacy drawers). Thumb-reachable and
+ * one province at a time, by design.
  */
 import { useEffect, useState } from "react";
-import { recruitableIn, type GameState } from "../engine/index.ts";
+import type { GameState } from "../engine/index.ts";
 import type { UseGame } from "./useGame.ts";
 
 interface Props {
@@ -48,7 +50,9 @@ export function ControlPanel({ state, humanId, isHumanTurn, selectedId, game, on
     .sort((a, b) => b.war - a.war);
   const wandering = state.officers.filter((o) => o.provinceId === prov.id && o.ownerId === null);
 
-  const recruitable = humanId && mine ? recruitableIn(state, prov.id, humanId) : [];
+  const heroesHere = state.officers.filter(
+    (o) => o.alive && o.provinceId === prov.id && (o.ownerId === null || o.captiveOf),
+  );
   const source = mine ? prov.id : null;
   const beginMarch = (to: string) => {
     setMarchTo(to);
@@ -108,20 +112,7 @@ export function ControlPanel({ state, humanId, isHumanTurn, selectedId, game, on
             <button onClick={() => game.train(prov.id)}>Train</button>
             <button onClick={() => game.fortify(prov.id)} disabled={ps.wallLevel >= 5}>Fortify</button>
           </div>
-          {recruitable.length > 0 && (
-            <div className="recruit-officers">
-              {recruitable.map((o) => (
-                <div key={o.id} className="recruit-row">
-                  <span>{o.captiveOf ? `Prisoner: ${o.name}` : `Wandering: ${o.name}`}</span>
-                  <span className="recruit-btns">
-                    <button onClick={() => game.recruitOfficer(prov.id, o.id)}>Recruit</button>
-                    {o.captiveOf && <button onClick={() => game.releasePrisoner(o.id)}>Release</button>}
-                    {o.captiveOf && <button className="danger" onClick={() => game.executePrisoner(o.id)}>Execute</button>}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          {heroesHere.length > 0 && <p className="hint">Heroes are here — open the Court to recruit or judge them.</p>}
           <div className="march-targets">
             {prov.adjacentTo.map((to) => {
               const t = state.provinces[to];
@@ -140,13 +131,7 @@ export function ControlPanel({ state, humanId, isHumanTurn, selectedId, game, on
       {isHumanTurn && !mine && (
         <div className="actions">
           <button onClick={() => game.scheme(prov.id)}>Foment Unrest</button>
-          {ps.ownerId && ps.ownerId !== humanId && (
-            <>
-              <button onClick={() => game.proposePact(ps.ownerId!, "ceasefire")}>Offer Ceasefire</button>
-              <button onClick={() => game.proposePact(ps.ownerId!, "alliance")}>Offer Alliance</button>
-            </>
-          )}
-          <span className="hint">Schemes need a bordering province of yours.</span>
+          <span className="hint">Schemes need a bordering province of yours · treat with this lord in Diplomacy.</span>
         </div>
       )}
 

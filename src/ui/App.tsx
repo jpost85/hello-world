@@ -13,13 +13,17 @@ import {
 import { useGame } from "./useGame.ts";
 import { MapView } from "./MapView.tsx";
 import { ControlPanel } from "./ControlPanel.tsx";
+import { OfficerScreen } from "./OfficerScreen.tsx";
+import { DiplomacyScreen } from "./DiplomacyScreen.tsx";
+
+type Drawer = "log" | "court" | "diplomacy" | null;
 
 const SEASON_LABEL: Record<string, string> = { spring: "Spring", summer: "Summer", autumn: "Autumn", winter: "Winter" };
 
 export function App() {
   const game = useGame();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [logOpen, setLogOpen] = useState(false);
+  const [drawer, setDrawer] = useState<Drawer>(null);
 
   if (!game.state) return <StartScreen onStart={game.start} canResume={game.resume} />;
 
@@ -31,7 +35,14 @@ export function App() {
 
   return (
     <div className="app">
-      <StatusBar state={state} humanId={game.humanId} aiThinking={game.aiThinking} onLog={() => setLogOpen(true)} />
+      <StatusBar
+        state={state}
+        humanId={game.humanId}
+        aiThinking={game.aiThinking}
+        onCourt={() => setDrawer("court")}
+        onDiplomacy={() => setDrawer("diplomacy")}
+        onLog={() => setDrawer("log")}
+      />
 
       <div className="map-wrap">
         <MapView
@@ -64,18 +75,39 @@ export function App() {
         <Victory state={state} onNewGame={game.abandon} />
       )}
 
-      {logOpen && <LogDrawer state={state} onClose={() => setLogOpen(false)} />}
+      {drawer === "log" && <LogDrawer state={state} onClose={() => setDrawer(null)} />}
+      {drawer === "court" && game.humanId && (
+        <OfficerScreen state={state} humanId={game.humanId} isHumanTurn={game.isHumanTurn} game={game} onClose={() => setDrawer(null)} />
+      )}
+      {drawer === "diplomacy" && game.humanId && (
+        <DiplomacyScreen state={state} humanId={game.humanId} isHumanTurn={game.isHumanTurn} game={game} onClose={() => setDrawer(null)} />
+      )}
 
       {human && <FactionRibbon name={human.name} held={provincesOf(state, human.id).length} eliminated={human.isEliminated} />}
     </div>
   );
 }
 
-function StatusBar({ state, humanId, aiThinking, onLog }: { state: GameState; humanId: string | null; aiThinking: boolean; onLog: () => void }) {
+function StatusBar({
+  state,
+  humanId,
+  aiThinking,
+  onCourt,
+  onDiplomacy,
+  onLog,
+}: {
+  state: GameState;
+  humanId: string | null;
+  aiThinking: boolean;
+  onCourt: () => void;
+  onDiplomacy: () => void;
+  onLog: () => void;
+}) {
   const active = currentPlayer(state);
   const human = state.players.find((p) => p.id === humanId);
   const faction = state.factions.find((f) => f.id === active.id);
   const gold = humanId ? provincesOf(state, humanId).reduce((s, id) => s + state.provinces[id].gold, 0) : 0;
+  const prisoners = humanId ? state.officers.filter((o) => o.alive && o.captiveOf === humanId).length : 0;
   return (
     <header className="status">
       <div className="status-left">
@@ -87,6 +119,12 @@ function StatusBar({ state, humanId, aiThinking, onLog }: { state: GameState; hu
       </div>
       <div className="status-right">
         {human && <span className="gold">⛀ {gold}</span>}
+        {human && (
+          <button className="log-btn" onClick={onCourt}>
+            Court{prisoners > 0 ? ` ·${prisoners}` : ""}
+          </button>
+        )}
+        {human && <button className="log-btn" onClick={onDiplomacy}>Pacts</button>}
         <button className="log-btn" onClick={onLog}>Log</button>
       </div>
     </header>

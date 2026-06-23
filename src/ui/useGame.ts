@@ -8,6 +8,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  breakPact,
   chinaMap,
   createGame,
   cultivate,
@@ -50,6 +51,7 @@ export interface UseGame {
   releasePrisoner: (officerId: string) => void;
   executePrisoner: (officerId: string) => void;
   proposePact: (targetPlayerId: string, kind: PactKind) => void;
+  breakPact: (targetPlayerId: string) => void;
   endSeason: () => void;
 }
 
@@ -141,6 +143,7 @@ export function useGame(): UseGame {
     releasePrisoner: (officerId) => run(() => releasePrisoner(state!, officerId)),
     executePrisoner: (officerId) => run(() => executePrisoner(state!, officerId)),
     proposePact: (target, kind) => run(() => proposePact(state!, target, kind)),
+    breakPact: (target) => run(() => breakPact(state!, target)),
     endSeason: () => run(() => endTurn(state!)),
   };
 }
