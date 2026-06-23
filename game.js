@@ -372,6 +372,9 @@
     return `${prefix}${season} ${year}`;
   }
 
+  // Ordinal prefixes for repeat battles at the same place (index = battle number).
+  const ORDINALS = ["", "", "Second ", "Third ", "Fourth ", "Fifth ", "Sixth ", "Seventh ", "Eighth ", "Ninth ", "Tenth "];
+
   /* --------------------------------- Log ---------------------------------- */
   function log(msg, cls) {
     S.log.unshift({ msg, cls: cls || "" });
@@ -1213,6 +1216,16 @@
     from.troops -= count; // committed troops leave home region
 
     const defName = def(toId).name;
+    // Name any contested engagement after its place — "the Battle of Charleston"
+    // — numbering repeat clashes at the same spot ("the Second Battle of …").
+    const opposed = defenders > 0;
+    let headline = "";
+    if (opposed) {
+      if (!S.battleCount) S.battleCount = {};
+      const n = (S.battleCount[toId] = (S.battleCount[toId] || 0) + 1);
+      const ord = n < ORDINALS.length ? ORDINALS[n] : n + "th ";
+      headline = `The ${ord}Battle of ${defName}, ${dateLabel(S.turn)} — `;
+    }
 
     if (result.win) {
       const survivors = count - result.attLoss;
@@ -1225,12 +1238,16 @@
       to.acted = true; // freshly captured army holds position
       if (attGen) { to.general = attGen; from.general = null; } // commander rides in
       if (wasNeutral) {
-        log(`${defName} won over to the ${sideName(attSide)} (lost ${menFull(result.attLoss)}, militia ${menFull(defenders)}).`, goodFor(attSide));
-        showBanner("⚑  " + defName + " seized!");
+        log(opposed
+          ? `${headline}its militia come over to the ${sideName(attSide)} (lost ${menFull(result.attLoss)}, militia ${menFull(defenders)}).`
+          : `${defName}'s militia stand aside; the ${sideName(attSide)} march in.`, goodFor(attSide));
+        showBanner("⚑  " + defName + (opposed ? " seized!" : " occupied"));
         adjustMorale(attSide, 3); // a frontier gain, not a blow to the enemy
       } else {
-        log(`${defName} falls to the ${sideName(attSide)} (lost ${menFull(result.attLoss)}, enemy ${menFull(defenders)}).`, goodFor(attSide));
-        showBanner("⚔  " + defName + " captured!");
+        log(opposed
+          ? `${headline}a ${sideName(attSide)} victory; ${defName} falls (lost ${menFull(result.attLoss)}, enemy ${menFull(defenders)}).`
+          : `${defName} is occupied unopposed by the ${sideName(attSide)}.`, goodFor(attSide));
+        showBanner("⚔  " + defName + (opposed ? " captured!" : " occupied"));
         adjustMorale(attSide, def(toId).city ? 8 : 5);
         adjustMorale(loser, def(toId).city ? -8 : -5);
       }
@@ -1243,7 +1260,7 @@
       const survivors = count - result.attLoss;
       from.troops += survivors;
       to.troops -= result.defLoss;
-      log(`Assault on ${defName} repelled — attacker lost ${menFull(result.attLoss)}, defender ${menFull(result.defLoss)}.`, goodFor(to.owner));
+      log(`${headline}the ${sideName(attSide)} assault is repelled (attacker lost ${menFull(result.attLoss)}, defender ${menFull(result.defLoss)}).`, goodFor(to.owner));
       adjustMorale(attSide, -3);
       // A general leading a broken assault may be taken.
       if (attGen && survivors <= 2 * CONFIG.regiment && Math.random() < 0.18 * attGen.capRisk) loseGeneral(from, attSide, to.owner);
