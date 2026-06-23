@@ -388,6 +388,10 @@
   .unit-apartment { --wall:#caa06a; --glass:#ffe4b3; --frame:#9c7642; }
   .unit-condo     { --wall:#c98f53; --glass:#ffd9a0; --frame:#8f5f2c; }
   .unit-hotel     { --wall:#4fae9f; --glass:#cdeee8; --frame:#2f7d72; }
+  .unit-hotel .u-extra {       /* a made-up bed, nightstand lamp, luggage rack */
+    left:2px; right:2px; top:auto; bottom:2px; height:18px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 20'%3E%3Cellipse cx='50' cy='18.6' rx='42' ry='1.7' fill='%232f7d72' opacity='.3'/%3E%3Crect x='4' y='12' width='9' height='6' fill='%237a5a3e'/%3E%3Crect x='7.5' y='5' width='2' height='7' fill='%235e4630'/%3E%3Cellipse cx='8.5' cy='4.6' rx='3.3' ry='2.3' fill='%23ffe9a8'/%3E%3Crect x='16' y='12' width='62' height='6' rx='1.5' fill='%236e5a44'/%3E%3Crect x='16' y='9' width='62' height='4' rx='1.5' fill='%23f0ead8'/%3E%3Crect x='16' y='3' width='5' height='15' rx='1' fill='%235e4630'/%3E%3Crect x='21' y='4' width='10' height='8' rx='1.5' fill='%238a6a4a'/%3E%3Crect x='23' y='6' width='13' height='5' rx='2.5' fill='%23ffffff'/%3E%3Crect x='37' y='6' width='13' height='5' rx='2.5' fill='%23fbf6ea'/%3E%3Crect x='58' y='9' width='20' height='6' rx='1.5' fill='%233f9e8f'/%3E%3Crect x='58' y='9' width='20' height='1.5' fill='%23bfe6df'/%3E%3Crect x='82' y='12' width='10' height='1.5' fill='%238a6a4a'/%3E%3Crect x='83' y='13' width='1.5' height='4' fill='%236e5436'/%3E%3Crect x='90' y='13' width='1.5' height='4' fill='%236e5436'/%3E%3Crect x='82.5' y='9.8' width='9' height='2.6' rx='.5' fill='%23b46b6b'/%3E%3C/svg%3E") center bottom/100% 100% no-repeat;
+  }
   /* a thin balcony rail across condos */
   .unit-condo .u-extra {       /* furnished: sofa, floor lamp, coffee table, plant */
     left:2px; right:2px; top:auto; bottom:2px; height:18px;
@@ -612,9 +616,9 @@
     background: linear-gradient(180deg, #c79a5e 0 2px, #8a6a3e 2px);
     border-top:1px solid #e2c389;
   }
-  .unit-office .u-extra {          /* a row of desks */
-    left:0; right:0; top:auto; bottom:5px; height:4px;
-    background: repeating-linear-gradient(90deg, #5d6b7a 0 6px, transparent 6px 13px);
+  .unit-office .u-extra {          /* desks, monitors, chairs, plant */
+    left:2px; right:2px; top:auto; bottom:2px; height:18px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 20'%3E%3Cellipse cx='48' cy='18.6' rx='44' ry='1.7' fill='%233a4a5a' opacity='.3'/%3E%3Crect x='5' y='13' width='74' height='2.4' rx='.5' fill='%238a7a66'/%3E%3Crect x='5' y='15.4' width='74' height='2.6' fill='%236e6253'/%3E%3Cg transform='translate(17,0)'%3E%3Crect x='-9' y='12' width='1.6' height='6' fill='%2337404a'/%3E%3Crect x='1' y='10' width='2' height='6' rx='1' fill='%232c343c'/%3E%3Crect x='-4' y='15' width='8' height='2' rx='1' fill='%233a444e'/%3E%3Crect x='-6' y='5' width='12' height='6.6' rx='.6' fill='%23222a30'/%3E%3Crect x='-5' y='6' width='10' height='4.6' fill='%237fd4ff'/%3E%3Crect x='-1' y='11.6' width='2' height='1.4' fill='%231b242b'/%3E%3C/g%3E%3Cg transform='translate(42,0)'%3E%3Crect x='-9' y='12' width='1.6' height='6' fill='%2337404a'/%3E%3Crect x='1' y='10' width='2' height='6' rx='1' fill='%232c343c'/%3E%3Crect x='-4' y='15' width='8' height='2' rx='1' fill='%233a444e'/%3E%3Crect x='-6' y='5' width='12' height='6.6' rx='.6' fill='%23222a30'/%3E%3Crect x='-5' y='6' width='10' height='4.6' fill='%237fd4ff'/%3E%3Crect x='-1' y='11.6' width='2' height='1.4' fill='%231b242b'/%3E%3C/g%3E%3Cg transform='translate(67,0)'%3E%3Crect x='-9' y='12' width='1.6' height='6' fill='%2337404a'/%3E%3Crect x='1' y='10' width='2' height='6' rx='1' fill='%232c343c'/%3E%3Crect x='-4' y='15' width='8' height='2' rx='1' fill='%233a444e'/%3E%3Crect x='-6' y='5' width='12' height='6.6' rx='.6' fill='%23222a30'/%3E%3Crect x='-5' y='6' width='10' height='4.6' fill='%237fd4ff'/%3E%3Crect x='-1' y='11.6' width='2' height='1.4' fill='%231b242b'/%3E%3C/g%3E%3Crect x='85' y='13' width='8' height='5' rx='1' fill='%23a9704a'/%3E%3Cpath d='M89.0,13 Q84,7 86,4 Q88.0,8 89.0,13 Q89.0,5 92,3 Q94,9 89.0,13 Q95,8 96,5 Q94,12 89.0,13Z' fill='%234e8b46'/%3E%3C/svg%3E") center bottom/100% 100% no-repeat;
   }
   .unit-apartment .u-extra {       /* furnished: bed, nightstand lamp, plant */
     left:2px; right:2px; top:auto; bottom:2px; height:18px;
