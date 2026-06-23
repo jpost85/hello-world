@@ -90,7 +90,7 @@ export function ControlPanel({ state, humanId, isHumanTurn, selectedId, game, on
         <div className="officers">
           {officers.map((o) => (
             <span key={o.id} className="officer" title={`WAR ${o.war} · INT ${o.intellect} · POL ${o.politics} · LDR ${o.leadership} · LOY ${o.loyalty}`}>
-              {o.name} <em>武{o.war}</em>
+              {o.name} <em>WAR {o.war}</em>
             </span>
           ))}
           {wandering.map((o) => (

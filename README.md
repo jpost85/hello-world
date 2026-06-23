@@ -8,7 +8,7 @@ threaded through state so every game is reproducible and unit-testable.
 Set in 189 AD as the Han dynasty collapses, you take one of six warlords and
 contend for China across an **organic map** whose twelve provinces are drawn from
 real Han-era geography (Natural Earth provincial borders, grouped into the
-historical 州/*zhou*).
+historical *zhou*).
 
 ## Gameplay loop
 

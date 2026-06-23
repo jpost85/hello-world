@@ -37,7 +37,7 @@ validate them.
 
 Provinces are not drawn by hand. `tools/genmap.mjs` projects **real Natural Earth
 admin-1 geometry** for modern Chinese provinces, groups them into the twelve
-Han-dynasty 州, clips them to the era's frontier, simplifies the rings
+Han-dynasty provinces (zhou), clips them to the era's frontier, simplifies the rings
 (Douglas–Peucker), and emits `src/engine/maps/china.ts` — each province carrying
 a real composite-border SVG `path`, a derived adjacency graph, and region
 groupings. Adjacency symmetry and connectivity are asserted in `map.test.ts`.

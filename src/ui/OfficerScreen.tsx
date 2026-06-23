@@ -60,12 +60,12 @@ export function OfficerScreen({ state, humanId, isHumanTurn, game, onClose }: Pr
           <span className="court-loc">{provName(o.provinceId)}</span>
         </div>
         <div className="court-stats">
-          <span title="War">武 {s.war}</span>
-          <span title="Intellect">智 {s.intellect}</span>
-          <span title="Politics">政 {s.politics}</span>
-          <span title="Charisma">魅 {s.charisma}</span>
-          <span title="Leadership">統 {s.leadership}</span>
-          <span className={o.loyalty < 40 ? "loy low" : "loy"} title="Loyalty">忠 {o.loyalty}</span>
+          <span title="War">WAR {s.war}</span>
+          <span title="Intellect">INT {s.intellect}</span>
+          <span title="Politics">POL {s.politics}</span>
+          <span title="Charisma">CHA {s.charisma}</span>
+          <span title="Leadership">LDR {s.leadership}</span>
+          <span className={o.loyalty < 40 ? "loy low" : "loy"} title="Loyalty">LOY {o.loyalty}</span>
         </div>
         {(o.traits.length > 0 || items.length > 0) && (
           <div className="court-tags">

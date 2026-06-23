@@ -28,7 +28,7 @@ export interface Region {
   bonusGold: number;
 }
 
-/** A single province (州, zhou) on the board. */
+/** A single province (zhou) on the board. */
 export interface Province {
   id: string;
   name: string;
