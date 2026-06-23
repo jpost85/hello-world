@@ -389,10 +389,9 @@
   .unit-condo     { --wall:#c98f53; --glass:#ffd9a0; --frame:#8f5f2c; }
   .unit-hotel     { --wall:#4fae9f; --glass:#cdeee8; --frame:#2f7d72; }
   /* a thin balcony rail across condos */
-  .unit-condo .u-extra {
-    top:auto; bottom:5px; height:4px;
-    background: repeating-linear-gradient(90deg, #6b4a22 0 1px, transparent 1px 5px);
-    border-top:1px solid #6b4a22;
+  .unit-condo .u-extra {       /* furnished: sofa, floor lamp, coffee table, plant */
+    left:2px; right:2px; top:auto; bottom:2px; height:18px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 20'%3E%3Cellipse cx='46' cy='18.6' rx='44' ry='1.7' fill='%238f5f2c' opacity='.35'/%3E%3Crect x='14' y='9' width='34' height='8' rx='2' fill='%237a6a8c'/%3E%3Crect x='14' y='5' width='34' height='6' rx='2' fill='%238c7ba0'/%3E%3Crect x='18' y='8' width='12' height='4' rx='1.5' fill='%239d8eb2'/%3E%3Crect x='31' y='8' width='12' height='4' rx='1.5' fill='%239d8eb2'/%3E%3Crect x='13' y='7' width='4' height='10' rx='1.5' fill='%236b5c7d'/%3E%3Crect x='45' y='7' width='4' height='10' rx='1.5' fill='%236b5c7d'/%3E%3Crect x='52' y='13' width='14' height='2' rx='1' fill='%236b4a22'/%3E%3Crect x='53' y='15' width='1.5' height='2.5' fill='%23583c1c'/%3E%3Crect x='63' y='15' width='1.5' height='2.5' fill='%23583c1c'/%3E%3Crect x='71' y='2' width='1.6' height='15' fill='%235a4a2e'/%3E%3Cpath d='M68,2 L75.5,2 L74,-2 L69.5,-2 Z' fill='%23ffe9a8'/%3E%3Crect x='80' y='11' width='9' height='6' rx='1' fill='%23a9704a'/%3E%3Cpath d='M84.5,11 Q79,5 81,2 Q83.5,6 84.5,11 Q84.5,3 88,1 Q90,7 84.5,11 Q91,6 92,3 Q90,10 84.5,11Z' fill='%234e8b46'/%3E%3C/svg%3E") center bottom/100% 100% no-repeat;
   }
 
   /* Storefronts */
@@ -569,11 +568,7 @@
   .empty-buildable.underground:hover { background: rgba(255,207,77,.18); }
   .unit-parking { --wall:#565b62; }
   .unit-parking .u-face {
-    background:
-      radial-gradient(6px 3px at 24% 62%, #d06a5a 0 96%, transparent),
-      radial-gradient(6px 3px at 58% 62%, #5a8fd0 0 96%, transparent),
-      repeating-linear-gradient(90deg, transparent 0 14px, #6e747c 14px 15px),
-      linear-gradient(180deg, #565b62 0 calc(100% - 4px), #3a3e44 calc(100% - 4px));
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 34'%3E%3Crect width='96' height='34' fill='%23565b62'/%3E%3Crect y='30' width='96' height='4' fill='%233a3e44'/%3E%3Crect width='96' height='2' fill='%234b5056'/%3E%3Cg stroke='%239aa0a8' stroke-width='1' opacity='.45'%3E%3Cline x1='3' y1='21' x2='3' y2='29'/%3E%3Cline x1='48' y1='21' x2='48' y2='29'/%3E%3Cline x1='93' y1='21' x2='93' y2='29'/%3E%3C/g%3E%3Crect x='46' y='3' width='4' height='27' fill='%23474c52'/%3E%3Crect x='45' y='3' width='6' height='2' fill='%23394044'/%3E%3Cg transform='translate(5,16)'%3E%3Cellipse cx='16' cy='12.4' rx='16' ry='1.3' fill='%23000' opacity='.22'/%3E%3Cpath d='M1,8 Q1,6.5 3,6 L9,6 L12,2.3 Q12.6,1.5 14,1.5 L20,1.5 Q21.4,1.5 22.2,2.6 L25,6 L30,6.6 Q31.5,6.8 31.5,8.2 L31.5,10 L1,10 Z' fill='%23c0392b'/%3E%3Cpath d='M12.6,2.9 L16,2.9 L16,5.6 L10.4,5.6 Z' fill='%23cfe0ec'/%3E%3Cpath d='M16.8,2.9 L20.1,2.9 L23.2,5.6 L16.8,5.6 Z' fill='%23cfe0ec'/%3E%3Crect x='1' y='8.7' width='30.5' height='1.3' fill='%238c2a20'/%3E%3Ccircle cx='8' cy='10.4' r='2.7' fill='%231c1c1c'/%3E%3Ccircle cx='8' cy='10.4' r='1' fill='%239a9a9a'/%3E%3Ccircle cx='24' cy='10.4' r='2.7' fill='%231c1c1c'/%3E%3Ccircle cx='24' cy='10.4' r='1' fill='%239a9a9a'/%3E%3Ccircle cx='1.7' cy='7.5' r='.8' fill='%23ffe9a8'/%3E%3C/g%3E%3Cg transform='translate(52,16)'%3E%3Cellipse cx='16' cy='12.4' rx='16' ry='1.3' fill='%23000' opacity='.22'/%3E%3Cpath d='M1,8 Q1,6.5 3,6 L9,6 L12,2.3 Q12.6,1.5 14,1.5 L20,1.5 Q21.4,1.5 22.2,2.6 L25,6 L30,6.6 Q31.5,6.8 31.5,8.2 L31.5,10 L1,10 Z' fill='%232f6fb0'/%3E%3Cpath d='M12.6,2.9 L16,2.9 L16,5.6 L10.4,5.6 Z' fill='%23cfe0ec'/%3E%3Cpath d='M16.8,2.9 L20.1,2.9 L23.2,5.6 L16.8,5.6 Z' fill='%23cfe0ec'/%3E%3Crect x='1' y='8.7' width='30.5' height='1.3' fill='%231f4f80'/%3E%3Ccircle cx='8' cy='10.4' r='2.7' fill='%231c1c1c'/%3E%3Ccircle cx='8' cy='10.4' r='1' fill='%239a9a9a'/%3E%3Ccircle cx='24' cy='10.4' r='2.7' fill='%231c1c1c'/%3E%3Ccircle cx='24' cy='10.4' r='1' fill='%239a9a9a'/%3E%3Ccircle cx='1.7' cy='7.5' r='.8' fill='%23ffe9a8'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat;
   }
   .unit-metro { --wall:#2c3645; }
   .unit-metro .u-face {
@@ -621,10 +616,9 @@
     left:0; right:0; top:auto; bottom:5px; height:4px;
     background: repeating-linear-gradient(90deg, #5d6b7a 0 6px, transparent 6px 13px);
   }
-  .unit-apartment .u-extra {       /* a sofa / bed */
-    left:10%; right:10%; top:auto; bottom:5px; height:5px;
-    background: linear-gradient(180deg, #cf9468 0 2px, #9c6a3e 2px);
-    border-radius:2px 2px 0 0;
+  .unit-apartment .u-extra {       /* furnished: bed, nightstand lamp, plant */
+    left:2px; right:2px; top:auto; bottom:2px; height:18px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 20'%3E%3Cellipse cx='34' cy='18.6' rx='30' ry='1.7' fill='%239c7642' opacity='.35'/%3E%3Crect x='31' y='10' width='29' height='7' rx='1.5' fill='%23e8d6b0'/%3E%3Crect x='31' y='7' width='8' height='4' rx='1.5' fill='%23fff7e6'/%3E%3Cpath d='M41,11 L60,11 L60,17 L41,17 Z' fill='%23b46b6b'/%3E%3Crect x='57.5' y='5' width='2.5' height='12' rx='1' fill='%238a6a3e'/%3E%3Crect x='22' y='12' width='7' height='5' fill='%238a6a3e'/%3E%3Crect x='24.5' y='5' width='2' height='7' fill='%236b5330'/%3E%3Cellipse cx='25.5' cy='4.6' rx='3.3' ry='2.3' fill='%23ffe9a8'/%3E%3Crect x='5' y='12' width='6' height='5' rx='1' fill='%23a9704a'/%3E%3Cpath d='M8.0,12 Q4,6 6,3 Q7.0,7 8.0,12 Q8.0,4 10,2 Q12,8 8.0,12 Q13,7 14,4 Q12,11 8.0,12Z' fill='%234e8b46'/%3E%3C/svg%3E") center bottom/100% 100% no-repeat;
   }
 
   /* Elevator shaft (closed doors) + moving car */
