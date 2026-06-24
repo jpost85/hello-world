@@ -547,10 +547,11 @@
   /* no left/right borders so the row of lobby cells reads as one continuous room */
   .unit-lobby { --wall:#d4977e; border-left:0; border-right:0; }   /* light adobe-red wall */
   .unit-lobby .u-face {
-    /* solid adobe wall (no vertical stripes) with a subtle ceiling line + baseboard */
+    /* wall = the unit's var(--wall); ceiling line + baseboard are derived from it
+       via color-mix, so the whole lobby recolours from one primary colour. */
     background:
-      linear-gradient(180deg, #e0a98f 0 4px, transparent 4px),
-      linear-gradient(180deg, transparent 0 calc(100% - 6px), #b3735a calc(100% - 6px));
+      linear-gradient(180deg, color-mix(in srgb, var(--wall) 78%, #fff) 0 4px, transparent 4px),
+      linear-gradient(180deg, transparent 0 calc(100% - 6px), color-mix(in srgb, var(--wall) 72%, #000) calc(100% - 6px));
   }
 
   /* Floor slab */
@@ -1443,11 +1444,29 @@ function tryBuild(col, row, key_) {
   tutorialCheck();   // advance the onboarding if this build completes a step
 }
 
+// ---- Per-unit room colour (groundwork for redecorating) ----
+// Some room types carry their own primary "color"; it drives the --wall CSS
+// variable on the element, so the room (and any color-mix-derived accents)
+// recolour from that one value. Today only the lobby uses it (shuffled).
+const LOBBY_COLORS = ["#d4977e","#9bae8f","#8fa6c0","#c9a86a","#cdbfae","#c98f8f","#7fa8a0"];
+const RECOLORABLE = new Set(["lobby"]);
+function recolorableColor(unit) {
+  // inherit a contiguous same-type neighbour's colour (so a run stays uniform),
+  // otherwise pick a fresh palette colour (a separate room can differ).
+  for (const dc of [-1, 1]) {
+    const id = state.grid[key(unit.col + dc, unit.row)];
+    const n = id && state.units.find(x => x.id === id);
+    if (n && n.type === unit.type && n.color) return n.color;
+  }
+  return LOBBY_COLORS[Math.floor(Math.random() * LOBBY_COLORS.length)];
+}
+
 function placeUnit(unit) {
   const t = TYPES[unit.type];
   for (let dr = 0; dr < unit.h; dr++)
     for (let dc = 0; dc < unit.w; dc++)
       state.grid[key(unit.col + dc, unit.row + dr)] = unit.id;
+  if (RECOLORABLE.has(unit.type) && !unit.color) unit.color = recolorableColor(unit);
 
   const winTypes = ["office", "apartment", "condo", "hotel"];
   const el = document.createElement("div");
@@ -1460,6 +1479,7 @@ function placeUnit(unit) {
   el.style.width = (unit.w * CELL_W) + "px";
   el.style.height = (unit.h * CELL_H) + "px";
   el.dataset.id = unit.id;
+  if (unit.color) el.style.setProperty("--wall", unit.color);  // per-unit primary colour
   el.innerHTML = unitInnerHTML(unit.type);
   el.addEventListener("click", (e) => { e.stopPropagation(); onUnitClick(unit); });
   world.appendChild(el);
@@ -2964,7 +2984,7 @@ function saveGame(silent) {
     cleanliness: state.cleanliness, upkeep: state.upkeep,
     units: state.units.map(u => ({
       id: u.id, type: u.type, col: u.col, row: u.row,
-      occupants: u.occupants, satisfaction: u.satisfaction,
+      occupants: u.occupants, satisfaction: u.satisfaction, color: u.color,
     })),
   };
   try {
@@ -2991,7 +3011,7 @@ function loadGame(silent) {
     const t = TYPES[su.type];
     if (!t) return;
     placeUnit({
-      id: su.id, type: su.type, col: su.col, row: su.row, w: t.w, h: t.h,
+      id: su.id, type: su.type, col: su.col, row: su.row, w: t.w, h: t.h, color: su.color,
       occupants: su.occupants || 0,
       satisfaction: su.satisfaction == null ? 100 : su.satisfaction,
     });
