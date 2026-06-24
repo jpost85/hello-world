@@ -214,13 +214,23 @@
     border-right: 1px solid rgba(0,0,0,.08);
     border-bottom: 1px solid rgba(0,0,0,.08);
   }
-  .ground {
+    .ground {
     position: absolute;
-    background:
-      linear-gradient(180deg, #74b347 0 5px, #5a8a3c 5px 13px, #46692c 13px 16px, #6b4f33 16px);
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 18'%3E%3Crect width='22' height='4' fill='#c2c6ca'/%3E%3Crect x='10.6' width='.8' height='4' fill='#b0b4b8'/%3E%3Crect y='4' width='22' height='1' fill='#7e8286'/%3E%3Crect y='5' width='22' height='13' fill='#36393e'/%3E%3Crect y='17' width='22' height='1' fill='#2a2d31'/%3E%3Crect y='5.4' width='22' height='.7' fill='#cfd2d6' opacity='.5'/%3E%3Crect y='10.6' width='11' height='1.4' fill='#e8c14a'/%3E%3C/svg%3E") repeat-x left top / 22px 18px, #2c2f33;
     box-shadow: 0 1px 2px rgba(0,0,0,.25);
     transition: filter .8s ease;
   }
+  .street-furniture { position:absolute; pointer-events:none; z-index:8; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 26'%3E%3Crect x='27' y='25' width='7' height='1.4' fill='#2c3138'/%3E%3Crect x='29.6' y='4' width='1.8' height='21' fill='#3a4048'/%3E%3Cpath d='M30.5,5 Q36,3.5 38,7' fill='none' stroke='#3a4048' stroke-width='1.3'/%3E%3Crect x='36.6' y='6.6' width='2.8' height='2.4' rx='1' fill='#cfd6da'/%3E%3Cellipse cx='38' cy='9' rx='1.8' ry='1.2' fill='#ffe9a8'/%3E%3Crect x='93.6' y='15' width='2.6' height='11' fill='#6b4a30'/%3E%3Ccircle cx='95' cy='11' r='6.5' fill='#3f8f46'/%3E%3Ccircle cx='90.5' cy='13.5' r='4.5' fill='#4ea554'/%3E%3Ccircle cx='99.5' cy='13.5' r='4.5' fill='#4ea554'/%3E%3C/svg%3E") repeat-x left bottom / 140px 26px; }
+  .street-glow { position:absolute; pointer-events:none; z-index:7; opacity:0; transition:opacity 1s ease; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 26'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='#ffe9a8' stop-opacity='.85'/%3E%3Cstop offset='1' stop-color='#ffe9a8' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cellipse cx='38' cy='9' rx='11' ry='9' fill='url(%2523g)'/%3E%3C/svg%3E") repeat-x left bottom / 140px 26px; }
+  .night .street-glow { opacity:.9; }
+  .street-car { position:absolute; pointer-events:none; z-index:7; width:20px; height:9px; background:no-repeat center/contain; }
+  .street-car.car-bus { width:28px; }
+  .street-car.east { animation: drive-east var(--dur,7s) linear infinite; }
+  .street-car.west { animation: drive-west var(--dur,7s) linear infinite; }
+  @keyframes drive-east { 0%{transform:translateX(0);opacity:0} 7%{opacity:1} 93%{opacity:1} 100%{transform:translateX(var(--dist,640px));opacity:0} }
+  @keyframes drive-west { 0%{transform:translateX(0) scaleX(-1);opacity:0} 7%{opacity:1} 93%{opacity:1} 100%{transform:translateX(calc(-1 * var(--dist,640px))) scaleX(-1);opacity:0} }
+  .car-red{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 18'%3E%3Cpath d='M2,11 Q2,9 4,8.5 L10,8.5 L13,4 Q14,3 16,3 L24,3 Q26,3 27,4.5 L30,8.5 L36,9 Q38,9.3 38,11 L38,13.5 L2,13.5 Z' fill='#c0392b'/%3E%3Cpath d='M14,4.5 L19,4.5 L19,8 L11.5,8 Z' fill='#cfe0ec'/%3E%3Cpath d='M20,4.5 L24,4.5 L26.5,8 L20,8 Z' fill='#cfe0ec'/%3E%3Crect x='2' y='11.5' width='36' height='2' fill='#8c2a20'/%3E%3Ccircle cx='10' cy='15.5' r='2.6' fill='#1c1c1c'/%3E%3Ccircle cx='10' cy='15.5' r='1' fill='#8a8a8a'/%3E%3Ccircle cx='28' cy='15.5' r='2.6' fill='#1c1c1c'/%3E%3Ccircle cx='28' cy='15.5' r='1' fill='#8a8a8a'/%3E%3Ccircle cx='2.6' cy='10.2' r='1' fill='#ffe9a8'/%3E%3C/svg%3E")} .car-blue{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 18'%3E%3Cpath d='M2,11 Q2,9 4,8.5 L10,8.5 L13,4 Q14,3 16,3 L24,3 Q26,3 27,4.5 L30,8.5 L36,9 Q38,9.3 38,11 L38,13.5 L2,13.5 Z' fill='#2f6fb0'/%3E%3Cpath d='M14,4.5 L19,4.5 L19,8 L11.5,8 Z' fill='#cfe0ec'/%3E%3Cpath d='M20,4.5 L24,4.5 L26.5,8 L20,8 Z' fill='#cfe0ec'/%3E%3Crect x='2' y='11.5' width='36' height='2' fill='#1f4f80'/%3E%3Ccircle cx='10' cy='15.5' r='2.6' fill='#1c1c1c'/%3E%3Ccircle cx='10' cy='15.5' r='1' fill='#8a8a8a'/%3E%3Ccircle cx='28' cy='15.5' r='2.6' fill='#1c1c1c'/%3E%3Ccircle cx='28' cy='15.5' r='1' fill='#8a8a8a'/%3E%3Ccircle cx='2.6' cy='10.2' r='1' fill='#ffe9a8'/%3E%3C/svg%3E")}
+  .car-taxi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 18'%3E%3Crect x='17' y='0' width='6' height='2.4' rx='.5' fill='#222'/%3E%3Crect x='17.6' y='.4' width='4.8' height='1.4' fill='#ffe9a8'/%3E%3Cpath d='M2,11 Q2,9 4,8.5 L10,8.5 L13,4 Q14,3 16,3 L24,3 Q26,3 27,4.5 L30,8.5 L36,9 Q38,9.3 38,11 L38,13.5 L2,13.5 Z' fill='#f1c40f'/%3E%3Cpath d='M14,4.5 L19,4.5 L19,8 L11.5,8 Z' fill='#cfe0ec'/%3E%3Cpath d='M20,4.5 L24,4.5 L26.5,8 L20,8 Z' fill='#cfe0ec'/%3E%3Cg fill='#222'%3E%3Crect x='2' y='11' width='4' height='1.6'/%3E%3Crect x='10' y='11' width='4' height='1.6'/%3E%3Crect x='18' y='11' width='4' height='1.6'/%3E%3Crect x='26' y='11' width='4' height='1.6'/%3E%3Crect x='34' y='11' width='4' height='1.6'/%3E%3C/g%3E%3Ccircle cx='10' cy='15.5' r='2.6' fill='#1c1c1c'/%3E%3Ccircle cx='10' cy='15.5' r='1' fill='#8a8a8a'/%3E%3Ccircle cx='28' cy='15.5' r='2.6' fill='#1c1c1c'/%3E%3Ccircle cx='28' cy='15.5' r='1' fill='#8a8a8a'/%3E%3C/svg%3E")} .car-van{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 18'%3E%3Cpath d='M2,3.5 L26,3.5 L26,13.5 L2,13.5 Z M26,3.5 L34,3.5 L38,8 L38,13.5 L26,13.5 Z' fill='#e6ebef'/%3E%3Cpath d='M27,5 L33,5 L36,8 L27,8 Z' fill='#cfe0ec'/%3E%3Crect x='4' y='5' width='8' height='5' fill='#cfd6da'/%3E%3Crect x='2' y='11.5' width='36' height='2' fill='#b9c0c6'/%3E%3Ccircle cx='11' cy='15.5' r='2.6' fill='#1c1c1c'/%3E%3Ccircle cx='11' cy='15.5' r='1' fill='#8a8a8a'/%3E%3Ccircle cx='31' cy='15.5' r='2.6' fill='#1c1c1c'/%3E%3Ccircle cx='31' cy='15.5' r='1' fill='#8a8a8a'/%3E%3C/svg%3E")} .car-bus{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 18'%3E%3Crect x='2' y='2.5' width='52' height='11' rx='2' fill='#2f6fb0'/%3E%3Crect x='2' y='9' width='52' height='2' fill='#22507f'/%3E%3Cg fill='#bfe0ec'%3E%3Crect x='5' y='4' width='5' height='3.6' rx='.4'/%3E%3Crect x='12' y='4' width='5' height='3.6' rx='.4'/%3E%3Crect x='19' y='4' width='5' height='3.6' rx='.4'/%3E%3Crect x='26' y='4' width='5' height='3.6' rx='.4'/%3E%3Crect x='33' y='4' width='5' height='3.6' rx='.4'/%3E%3Crect x='40' y='4' width='5' height='3.6' rx='.4'/%3E%3Crect x='47' y='4' width='5' height='3.6' rx='.4'/%3E%3C/g%3E%3Ccircle cx='12' cy='15.5' r='2.6' fill='#1c1c1c'/%3E%3Ccircle cx='12' cy='15.5' r='1' fill='#8a8a8a'/%3E%3Ccircle cx='44' cy='15.5' r='2.6' fill='#1c1c1c'/%3E%3Ccircle cx='44' cy='15.5' r='1' fill='#8a8a8a'/%3E%3C/svg%3E")}
   .empty-buildable { background: rgba(255,255,255,.03); }
   .empty-buildable:hover { background: rgba(255,207,77,.25); cursor: pointer; }
 
@@ -1139,6 +1149,7 @@ const MIN_ROW = -BASEMENT_FLOORS;     // deepest buildable basement row
 let worldWidth = COLS * CELL_W;
 const OFFMAP_MARGIN = 200;            // small ground/earth overrun past the world edge (covers the scroll margin; scrolling is capped to the buildable area anyway)
 let earthEl = null, groundEl = null;  // background refs, widened on resize
+let streetFurnitureEl = null, streetGlowEl = null;
 // World is pre-sized to the fixed cap (75 floors) once; the top anchor never
 // moves, so "Keep Building" just raises MAX_FLOORS without resizing/repositioning.
 const totalRows = MAX_FLOORS_CAP - MIN_ROW + 1;
@@ -1262,6 +1273,25 @@ function buildBackground() {
   groundEl.style.width = (worldWidth + OFFMAP_MARGIN) + "px";
   groundEl.style.height = "18px";
   world.appendChild(groundEl);
+  // ---- Street scene: lamppost/tree furniture, night glow, and ambient traffic ----
+  const _streetW = worldWidth + OFFMAP_MARGIN;
+  streetFurnitureEl = document.createElement("div");
+  streetFurnitureEl.className = "street-furniture";
+  streetFurnitureEl.style.cssText = `left:0;top:${surface - 22}px;width:${_streetW}px;height:26px`;
+  world.appendChild(streetFurnitureEl);
+  streetGlowEl = document.createElement("div");
+  streetGlowEl.className = "street-glow";
+  streetGlowEl.style.cssText = `left:0;top:${surface - 22}px;width:${_streetW}px;height:26px`;
+  world.appendChild(streetGlowEl);
+  const _vehicles = ["car-red","car-blue","car-taxi","car-van","car-bus"];
+  for (let x = 30; x < _streetW; x += 300) {
+    const east = ((x / 300) | 0) % 2 === 0;
+    const car = document.createElement("div");
+    car.className = "street-car " + _vehicles[(x * 7) % _vehicles.length] + (east ? " east" : " west");
+    const dist = 280 + ((x * 13) % 220);
+    car.style.cssText = `left:${x}px;top:${surface + (east ? 5 : 9)}px;--dist:${dist}px;--dur:${(5 + (x % 5))}s;animation-delay:${-((x % 9))}s`;
+    world.appendChild(car);
+  }
 
   // buildable empty cells (basements through the top, within the centered build
   // window), one element per (col,row). The flanks open up with "Keep Building".
