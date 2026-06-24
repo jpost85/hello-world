@@ -1486,19 +1486,25 @@ function recolorableColor(unit) {
   }
   return ROOM_COLORS[Math.floor(Math.random() * ROOM_COLORS.length)];
 }
-// Recolour the clicked room and its contiguous same-type run.
+// Recolour just the clicked room, so each room can be its own colour. Exception:
+// rooms built from 1-cell tiles (the lobby) recolour as their contiguous same-type
+// run, so a single multi-cell room stays uniform.
 function recolorRoom(unit, color) {
-  const seen = new Set(), stack = [unit];
-  while (stack.length) {
-    const cur = stack.pop();
-    if (seen.has(cur.id)) continue; seen.add(cur.id);
-    cur.color = color;
-    if (cur.el) cur.el.style.setProperty("--wall", color);
-    for (const ncol of [cur.col - 1, cur.col + cur.w]) {
-      const id = state.grid[key(ncol, cur.row)];
-      const n = id && state.units.find(x => x.id === id);
-      if (n && n.type === unit.type && !seen.has(n.id)) stack.push(n);
+  const apply = u => { u.color = color; if (u.el) u.el.style.setProperty("--wall", color); };
+  if (TYPES[unit.type].w === 1) {
+    const seen = new Set(), stack = [unit];
+    while (stack.length) {
+      const cur = stack.pop();
+      if (seen.has(cur.id)) continue; seen.add(cur.id);
+      apply(cur);
+      for (const ncol of [cur.col - 1, cur.col + cur.w]) {
+        const id = state.grid[key(ncol, cur.row)];
+        const n = id && state.units.find(x => x.id === id);
+        if (n && n.type === unit.type && !seen.has(n.id)) stack.push(n);
+      }
     }
+  } else {
+    apply(unit);
   }
   saveGame(true);
 }
