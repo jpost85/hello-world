@@ -554,8 +554,8 @@
   }
 
   /* Floor slab */
-  .unit-floor { --wall:#b8bfc7; }
-  .unit-floor .u-face { background: linear-gradient(180deg, #c8cfd6, #a9b1b9); }
+  .unit-floor { --wall:#d8d2c4; }
+  .unit-floor .u-face { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 34'%3E%3Crect width='32' height='34' fill='#d8d2c4'/%3E%3Crect width='32' height='3' fill='#cac4b4'/%3E%3Cellipse cx='16' cy='1.5' rx='5' ry='1.4' fill='#fff3d2'/%3E%3Cellipse cx='16' cy='1.5' rx='2.6' ry='.8' fill='#ffe9a8'/%3E%3Crect y='15' width='32' height='1.3' fill='#b6ad99'/%3E%3Crect y='16.3' width='32' height='8' fill='#cec7b6'/%3E%3Crect x='3' y='18' width='26' height='4.6' fill='none' stroke='#bcb4a0' stroke-width='.7'/%3E%3Crect y='24.3' width='32' height='1.8' fill='#aca38d'/%3E%3Crect y='26' width='32' height='8' fill='#b08e66'/%3E%3Crect y='29' width='32' height='.7' fill='#9a7a54' opacity='.55'/%3E%3Crect y='32' width='32' height='.7' fill='#9a7a54' opacity='.55'/%3E%3Crect y='27.6' width='32' height='5.3' fill='#9a6557'/%3E%3Crect y='27.6' width='32' height='.8' fill='#7d4f44'/%3E%3Crect y='32.1' width='32' height='.8' fill='#7d4f44'/%3E%3Crect y='28.9' width='32' height='.5' fill='#caa26a' opacity='.7'/%3E%3Crect y='31.1' width='32' height='.5' fill='#caa26a' opacity='.7'/%3E%3C/svg%3E") center/100% 100% no-repeat; }
 
   /* Stairs — an actual ascending staircase */
   .unit-stair { --wall:#8d99ae; }
@@ -976,7 +976,7 @@ const TYPES = {
   elevator:  { name: "Elevator",    cost: 18000, w: 1, h: 1, color: "#5c6b7a", kind: "transit" },
   expresselevator: { name: "Express Elev.", cost: 35000, w: 1, h: 1, color: "#3f7d86", kind: "transit", express: true },
   skylobby:  { name: "Sky Lobby",   cost: 60000, w: 6, h: 1, color: "#cdbb8e", kind: "transit" },
-  floor:     { name: "Floor Slab",  cost: 8000,  w: 1, h: 1, color: "#b8bfc7", kind: "structure" },
+  floor:     { name: "Hallway",     cost: 8000,  w: 1, h: 1, color: "#cbb9a0", kind: "structure" },
 };
 
 // Star tier at which each build type unlocks (anything unlisted is available from the start).
@@ -1012,7 +1012,7 @@ const SAVE_KEY = "microtower.save.v1";
 // One-line "what it does" blurbs shown as tooltips / in the info line.
 const TYPE_DESC = {
   pointer:   "Inspect a room's stats, or sell it back for half its cost.",
-  floor:     "Structural slab. Lets people walk across a floor — earns nothing on its own.",
+  floor:     "Hallway. An empty corridor that lets people walk across a floor and links your rooms — earns nothing on its own.",
   office:    "Workspace for up to 6 staff. Pays steady daily rent.",
   apartment: "Home for up to 3 residents. Pays daily rent.",
   condo:     "Premium home for 4 residents. Each unit sells once for a lump sum — no ongoing rent.",
