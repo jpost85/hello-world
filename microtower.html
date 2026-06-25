@@ -671,7 +671,7 @@
   /* ---------- Sky backdrop ---------- */
   /* City backdrop image (stretched to the canvas) + a day/night tint over it */
   #cityBg {
-    position:absolute; pointer-events:none; opacity:0.85;   /* ~15% transparent; box set in layoutBackdrop */
+    position:absolute; pointer-events:none; opacity:0.80;   /* ~20% transparent; box set in layoutBackdrop */
     background-image:url('microtower-skyline.webp');   /* lossless cropped skyline (external file, kept beside this HTML) */
     background-size:100% 100%;           /* element is sized to imgH (aspect-locked + vscale) in layoutBackdrop */
     background-repeat:no-repeat;
@@ -984,7 +984,7 @@ const CELL_H = 36;          // px per floor
 const CITY_ASPECT = 1536 / 803;   // microtower-skyline.webp (sharper background4, checkerboard removed)
 const CITY_ROOF_FRAC = 0.20;
 const CITY_VSCALE = 0.95;   // scale the skyline height to 95% (slightly shorter) — width unchanged
-const CITY_SCALE = 0.85;    // render the skyline 15% smaller overall so its trees/buildings read smaller than the tower; centered on the build axis, bottom-anchored to the ground line
+const CITY_SCALE = 0.765;   // render the skyline ~23% smaller overall so its trees/buildings read smaller than the tower; centered on the build axis, bottom-anchored to the ground line
 // Tower grid: the world is a FIXED size (so the world + backdrop never resize).
 // Almost the whole board is buildable from the start — the full WIDTH and most of
 // the height. "Keep Building" (5 stars) only opens the topmost sky floors.
