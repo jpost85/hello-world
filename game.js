@@ -64,6 +64,90 @@
   };
   const OPP = { up: "down", down: "up", left: "right", right: "left", none: "none" };
 
+  // ---- Haptics --------------------------------------------------------------
+  function buzz(pattern) {
+    if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} }
+  }
+
+  // ---- Audio (procedural Web Audio — no asset files) ------------------------
+  const Sound = {
+    ctx: null, master: null, siren: null, chompFlip: false,
+    muted: localStorage.getItem("munchy_muted") === "1",
+
+    init() {
+      if (this.ctx) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.muted ? 0 : 0.9;
+      this.master.connect(this.ctx.destination);
+    },
+    resume() { if (this.ctx && this.ctx.state === "suspended") this.ctx.resume(); },
+    setMuted(m) {
+      this.muted = m;
+      localStorage.setItem("munchy_muted", m ? "1" : "0");
+      if (this.master) this.master.gain.value = m ? 0 : 0.9;
+      if (m) this.stopSiren();
+    },
+
+    // one-shot tone with an exponential decay; optional pitch slide
+    blip(freq, dur, type = "square", vol = 0.2, slideTo = null) {
+      if (!this.ctx || this.muted) return;
+      const t = this.ctx.currentTime;
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + dur + 0.02);
+    },
+    seq(notes, gap, dur, type, vol) {
+      notes.forEach((f, i) => setTimeout(() => this.blip(f, dur, type, vol), i * gap));
+    },
+
+    chomp() { this.chompFlip = !this.chompFlip; this.blip(this.chompFlip ? 200 : 130, 0.05, "square", 0.14); },
+    power() { this.blip(110, 0.3, "square", 0.22, 260); },
+    eatGhost() { this.blip(180, 0.3, "square", 0.26, 920); buzz(45); },
+    fruit() { this.seq([523, 659, 784, 1047], 65, 0.12, "triangle", 0.2); },
+    extraLife() { this.seq([784, 988, 1319], 90, 0.16, "triangle", 0.22); },
+    ready() { this.seq([392, 523, 659, 784], 150, 0.14, "square", 0.17); },
+    death() { this.stopSiren(); this.seq([440, 392, 349, 311, 277, 233, 196, 165], 110, 0.16, "sawtooth", 0.24); buzz([70, 40, 130]); },
+
+    startSiren() {
+      if (!this.ctx || this.muted || this.siren) return;
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      const lfo = this.ctx.createOscillator(), lg = this.ctx.createGain();
+      o.type = "sawtooth"; o.frequency.value = 380;
+      g.gain.value = 0.03;
+      lfo.type = "sine"; lfo.frequency.value = 6; lg.gain.value = 60;
+      lfo.connect(lg); lg.connect(o.frequency);
+      o.connect(g); g.connect(this.master);
+      o.start(); lfo.start();
+      this.siren = { o, g, lfo, lg };
+    },
+    stopSiren() {
+      if (!this.siren) return;
+      try { this.siren.o.stop(); this.siren.lfo.stop(); } catch (e) {}
+      this.siren = null;
+    },
+    // progress 0..1 (maze emptiness); mode "normal" | "frightened"
+    updateSiren(mode, progress) {
+      if (!this.siren) return;
+      const s = this.siren;
+      if (mode === "frightened") {
+        s.o.type = "square"; s.o.frequency.value = 300; s.lfo.frequency.value = 15; s.lg.gain.value = 130;
+      } else {
+        s.o.type = "sawtooth"; s.o.frequency.value = 360 + progress * 240;
+        s.lfo.frequency.value = 5 + progress * 5; s.lg.gain.value = 60;
+      }
+    },
+  };
+
+  function audioUnlock() { Sound.init(); Sound.resume(); }
+
   // ---- State ----------------------------------------------------------------
   let grid, dotsLeft;
   let score = 0;
@@ -75,6 +159,7 @@
   let modePhase = 0, modeTimer = 0, globalMode = "scatter";
   let animTick = 0, readyTimer = 0, dyingTimer = 0;
   let popups = [];
+  let extraAwarded = false;
 
   const MODE_SCHEDULE = [
     { mode: "scatter", t: 7000 }, { mode: "chase", t: 20000 },
@@ -133,10 +218,12 @@
     frightTimer = 0; ghostChain = 0;
     readyTimer = 1500;
     state = "ready";
+    Sound.stopSiren();
+    Sound.ready();
   }
 
   function startGame() {
-    score = 0; lives = 3; level = 1;
+    score = 0; lives = 3; level = 1; extraAwarded = false;
     startLevel(); beginRound(); hideOverlay(); updateHUD();
   }
 
@@ -201,8 +288,8 @@
   function pacCenter(p) {
     const c = colOf(p.x), r = rowOf(p.y);
     const ch = grid[r][c];
-    if (ch === ".") { grid[r][c] = " "; dotsLeft--; addScore(10); checkFruit(); checkWin(); }
-    else if (ch === "o") { grid[r][c] = " "; dotsLeft--; addScore(50); enterFrightened(); checkFruit(); checkWin(); }
+    if (ch === ".") { grid[r][c] = " "; dotsLeft--; addScore(10); Sound.chomp(); checkFruit(); checkWin(); }
+    else if (ch === "o") { grid[r][c] = " "; dotsLeft--; addScore(50); Sound.power(); enterFrightened(); checkFruit(); checkWin(); }
     if (state !== "playing") return false;
     if (p.want !== p.dir && canStep(p, p.want, false)) p.dir = p.want;
     return canStep(p, p.dir, false);
@@ -288,9 +375,9 @@
         if (g.mode === "frightened") {
           g.mode = "eyes";
           const pts = [200, 400, 800, 1600][Math.min(ghostChain, 3)];
-          ghostChain++; addScore(pts); popups.push({ x: g.x, y: g.y, txt: pts, life: 800 });
+          ghostChain++; addScore(pts); Sound.eatGhost(); popups.push({ x: g.x, y: g.y, txt: pts, life: 800 });
         } else if (g.mode !== "eyes") {
-          state = "dying"; dyingTimer = 1100; return;
+          state = "dying"; dyingTimer = 1100; Sound.death(); return;
         }
       }
     }
@@ -307,7 +394,12 @@
   }
 
   // ---- Scoring / HUD --------------------------------------------------------
-  function addScore(n) { score += n; if (score > high) high = score; updateHUD(); }
+  function addScore(n) {
+    score += n;
+    if (score > high) high = score;
+    if (!extraAwarded && score >= 10000) { extraAwarded = true; lives++; Sound.extraLife(); }
+    updateHUD();
+  }
   const el = (id) => document.getElementById(id);
   function updateHUD() {
     el("score").textContent = score;
@@ -340,11 +432,17 @@
       return;
     }
     if (state === "dying") {
+      Sound.stopSiren();
       dyingTimer -= ms;
       if (dyingTimer <= 0) loseLife();
       decayPopups(dt); return;
     }
-    if (state !== "playing") { decayPopups(dt); return; }
+    if (state !== "playing") { Sound.stopSiren(); decayPopups(dt); return; }
+
+    // Background siren: starts with play, rises as the maze empties, warbles
+    // faster while a power pellet is active.
+    Sound.startSiren();
+    Sound.updateSiren(frightTimer > 0 ? "frightened" : "normal", eaten() / DOT_TOTAL);
 
     // scatter / chase scheduling (paused while frightened)
     if (frightTimer > 0) {
@@ -374,7 +472,7 @@
       fruit.timer -= ms;
       if (fruit.timer <= 0) fruit = null;
       else if (Math.hypot(px(fruit.col) - pac.x, px(fruit.row) - pac.y) < TILE * 0.9) {
-        addScore(fruit.value); popups.push({ x: pac.x, y: pac.y, txt: fruit.value, life: 800 });
+        addScore(fruit.value); Sound.fruit(); popups.push({ x: pac.x, y: pac.y, txt: fruit.value, life: 800 });
         fruitCount++; fruit = null;
       }
     }
@@ -502,6 +600,7 @@
   // ---- Input ----------------------------------------------------------------
   function steer(dir) { if ((state === "playing" || state === "ready") && pac) pac.want = dir; }
   function primaryAction() {
+    audioUnlock();
     if (state === "menu" || state === "gameover") startGame();
     else if (state === "paused") { hideOverlay(); state = "playing"; }
   }
@@ -512,6 +611,7 @@
 
   const KEYMAP = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", w: "up", s: "down", a: "left", d: "right" };
   window.addEventListener("keydown", (e) => {
+    audioUnlock();
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (KEYMAP[k]) { e.preventDefault(); steer(KEYMAP[k]); }
     else if (k === "p") togglePause();
@@ -522,6 +622,7 @@
   let touchStart = null;
   const SWIPE_MIN = 16;
   canvas.addEventListener("touchstart", (e) => {
+    audioUnlock();
     const t = e.changedTouches[0]; touchStart = { x: t.clientX, y: t.clientY };
   }, { passive: true });
   canvas.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
@@ -539,10 +640,25 @@
   document.querySelectorAll(".dpad").forEach((btn) => {
     btn.addEventListener("pointerdown", (e) => {
       e.preventDefault();
+      audioUnlock();
       const dir = btn.dataset.dir;
       if (dir === "pause") togglePause(); else steer(dir);
     });
   });
+
+  // Mute toggle
+  const muteBtn = el("mute-btn");
+  function refreshMuteBtn() {
+    muteBtn.innerHTML = Sound.muted ? "&#128263;" : "&#128266;"; // muted vs speaker
+    muteBtn.classList.toggle("muted", Sound.muted);
+  }
+  muteBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    audioUnlock();
+    Sound.setMuted(!Sound.muted);
+    refreshMuteBtn();
+  });
+  refreshMuteBtn();
 
   oBtn.addEventListener("click", primaryAction);
 
