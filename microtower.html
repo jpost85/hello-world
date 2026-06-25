@@ -1278,7 +1278,7 @@ function buildBackground() {
   // can be hidden when a building tile covers that street-level cell (see
   // updateStreetFurniture) — furniture only shows in the open "outside" cells.
   streetFurniture = {};
-  const FURN_SPACING = 4;             // an item every 4th column (~128px) — sparse, spaced-out greenery
+  const FURN_SPACING = 5;             // an item every 5th column (~160px) — sparse, spaced-out greenery
   const FURN_W = 43.75, FURN_H = 40.625;   // ~56% larger than the original 28x26 box (two 25% bumps)
   const furnOff = (CELL_W - FURN_W) / 2;     // center the item in the 32px cell
   const furnTop = surface + 4 - FURN_H;      // keep the base on the grass (old bottom was surface+4)
