@@ -279,6 +279,8 @@
   /* While on stairs, tween vertical movement too, so the diagonal climb is smooth
      (a floor change via an elevator must stay instant, so only stairs get this). */
   .person.climbing { transition: left .25s linear, top .25s linear; }
+  /* Stepping out of the building onto the street, then dissolving away. */
+  .person.leaving { opacity: 0; transition: left .25s linear, opacity .7s ease; }
   .person::before {
     content:""; position:absolute; top:-3px; left:0; width:5px; height:3px;
     border-radius:50%; background:inherit; filter:brightness(1.25);
@@ -2399,6 +2401,9 @@ function chooseGoal(p) {
   const h = state.minutes / 60, r = Math.random();
   const leisure = u => { const k = TYPES[u.type].kind; return k === "shop" || k === "outdoor" || k === "amenity"; };
   const homeRoom = u => TYPES[u.type].kind === "home";
+  // Occasionally just head out of the tower entirely (off-site errand / going home),
+  // regardless of time — they'll exit through the ground floor and fade into the street.
+  if ((p.role === "work" || p.role === "home" || p.role === "hotel") && r < 0.06) return { filter: null, purpose: "leave" };
   if (p.role === "work") {
     if (h >= 11.5 && h < 13.5) return { filter: leisure, purpose: "errand" };   // lunch out
     if (h >= 17) return { filter: null, purpose: "leave" };                      // clock out, head home
@@ -2565,6 +2570,7 @@ function maybeCommute(p) {
   // destination toward a matching room, but falls back to any room if none fits.
   const goal = chooseGoal(p);
   const wantLeave = goal && goal.purpose === "leave";
+  if (wantLeave && p.row === 0) { p.purpose = "leave"; beginExit(p); return; }  // already at street level — just walk out
   const filter = goal && goal.filter ? goal.filter : null;
   // Each boardable run contributes its reachable destination floors; floors that
   // match the goal are preferred, otherwise any floor with a real room.
@@ -2613,9 +2619,32 @@ function maybeCommute(p) {
   p.mode = "approach";
 }
 
+// Send a sim out of the building: walk to the nearer ground-floor edge, a few
+// cells past it onto the street, then fade away (handled in the "exit" mode below).
+function beginExit(p) {
+  const ext = floorExtent(0) || { min: p.col, max: p.col };
+  const goLeft = (p.col - ext.min) <= (ext.max - p.col);
+  p.goCol = goLeft ? ext.min - 3 : ext.max + 3;   // step out past the building onto the grass/street
+  p.destCol = null; p.destUnit = null; p.fade = 0;
+  p.mode = "exit";
+}
+
 function movepeople() {
   for (let i = state.people.length - 1; i >= 0; i--) {
     const p = state.people[i];
+
+    if (p.mode === "exit") {   // walking out of the building, then dissolving on the street
+      const d = p.goCol - p.col;
+      if (Math.abs(d) <= 0.5) {
+        if (!p.fade) { p.fade = 1; p.el.classList.add("leaving"); }   // arrived outside — start the fade
+        else if (++p.fade > 3) { p.el.remove(); state.people.splice(i, 1); continue; }  // ~0.75s later, gone
+      } else {
+        p.col += Math.sign(d) * Math.min(1.3, Math.abs(d));
+      }
+      p.el.style.left = colLeft(p.col) + "px";
+      p.el.style.top = (rowTop(0) + CELL_H - 12) + "px";
+      continue;
+    }
     p.life--;
     if (p.bubble > 0 && --p.bubble === 0) p.el.classList.remove("upset", "happy"); // mood pip expires
 
@@ -2667,10 +2696,10 @@ function movepeople() {
       if (Math.abs(d) <= 0.6) {                      // arrived at the destination room
         if (p.purpose === "service") {
           p.mode = "work"; p.work = 24 + Math.random() * 24; p.goCol = null; p.destCol = null; // keep destUnit
+        } else if (p.purpose === "leave" && p.row === 0) {
+          beginExit(p);                              // step outside through the ground floor and fade away
         } else {
-          if (p.purpose === "leave" && p.row === 0) {
-            p.life = Math.min(p.life, 16);           // they're leaving the building — exit soon
-          } else if (p.purpose === "errand" || p.purpose === "visit") {
+          if (p.purpose === "errand" || p.purpose === "visit") {
             p.dwell = 50 + Math.random() * 170;      // linger at the venue (~15-55s)
             const du = p.destUnit && state.units.find(x => x.id === p.destUnit);
             if (du && TYPES[du.type].draw) du.footfall = (du.footfall || 0) + 1;  // a paying visit
@@ -2778,7 +2807,7 @@ function rebuildShafts() {
   });
   // Any sim mid-commute references shafts/columns that may be gone now: reset them.
   state.people.forEach(p => {
-    if (p.mode !== "walk") { p.el.style.display = ""; p.mode = "walk"; p.shaft = null; p.goCol = null; }
+    if (p.mode !== "walk") { p.el.style.display = ""; p.el.classList.remove("leaving"); p.fade = 0; p.mode = "walk"; p.shaft = null; p.goCol = null; }
   });
 }
 
