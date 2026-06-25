@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#05050f" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Mister Munchy!</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game-shell">
+    <header id="hud">
+      <h1>Mister Munchy!</h1>
+      <div class="stats">
+        <div class="stat"><span class="label">Score</span><span id="score">0</span></div>
+        <div class="stat"><span class="label">High</span><span id="highscore">0</span></div>
+        <div class="stat"><span class="label">Lvl</span><span id="level">1</span></div>
+        <div class="stat"><span class="label">Lives</span><span id="lives" class="lives"></span></div>
+      </div>
+    </header>
+
+    <div id="stage">
+      <canvas id="board" width="448" height="464"></canvas>
+
+      <div id="overlay" class="overlay">
+        <div class="overlay-card">
+          <h2 id="overlay-title">Mister Munchy!</h2>
+          <p id="overlay-text">Swipe to munch all the dots, dodge the ghosts, and grab a power pellet to chase them down!</p>
+          <button id="overlay-btn">Tap to Start</button>
+          <p class="hint">Swipe on the board to steer &middot; or use the buttons below</p>
+        </div>
+      </div>
+    </div>
+
+    <footer id="touch-controls">
+      <button class="dpad up" data-dir="up" aria-label="Up">&#9650;</button>
+      <div class="dpad-row">
+        <button class="dpad left" data-dir="left" aria-label="Left">&#9664;</button>
+        <button class="dpad pause" id="pause-btn" data-dir="pause" aria-label="Pause">&#10073;&#10073;</button>
+        <button class="dpad right" data-dir="right" aria-label="Right">&#9654;</button>
+      </div>
+      <button class="dpad down" data-dir="down" aria-label="Down">&#9660;</button>
+    </footer>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
