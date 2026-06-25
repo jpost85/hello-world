@@ -616,6 +616,14 @@
   }
   .elev-car i { width:2px; height:4px; background:#33414f; border-radius:1px; display:inline-block; }
   .elev-car.express { background: linear-gradient(180deg, #8fe0e8 0 2px, #5cc3cf 2px calc(100% - 3px), #2f8f99 calc(100% - 3px)); border-color:#1f5e66; }
+  /* Big gray floor numbers painted in the shaft, behind the car (z below .elev-car),
+     so the empty shaft reads its elevation like the classic game. L = lobby. */
+  .elev-floornum {
+    position:absolute; z-index:2; pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:17px; letter-spacing:.5px;
+    color: rgba(208,217,227,.34); text-shadow: 0 1px 1px rgba(0,0,0,.4);
+  }
 
   /* Express elevator shaft (distinct teal) */
   .unit-expresselevator { --wall:#1f4750; }
@@ -2751,7 +2759,7 @@ function isStopFloor(row) {
 }
 
 function rebuildShafts() {
-  state.shafts.forEach(s => s.carEl && s.carEl.remove());
+  state.shafts.forEach(s => { s.carEl && s.carEl.remove(); (s.floorEls || []).forEach(e => e.remove()); });
   state.shafts = [];
   // Local elevator shafts (stop everywhere) and express shafts (sky lobbies only) get cars.
   eachVerticalRun(u => u.type === "elevator", (col, lo, hi) => addShaft(col, lo, hi, false));
@@ -2773,6 +2781,9 @@ function rebuildShafts() {
   });
 }
 
+// Floor label: ground floor is the lobby ("L"), basements are B1/B2…, the rest count up.
+function floorTag(f) { return f === 0 ? "L" : f < 0 ? "B" + (-f) : String(f); }
+
 function addShaft(col, lo, hi, express) {
   const carEl = document.createElement("div");
   carEl.className = "elev-car" + (express ? " express" : "");
@@ -2780,7 +2791,21 @@ function addShaft(col, lo, hi, express) {
   carEl.style.width = (CELL_W - 6) + "px";
   carEl.style.height = (CELL_H - 6) + "px";
   world.appendChild(carEl);
-  state.shafts.push({ col, lo, hi, carEl, pos: lo, dir: 1, riders: [], shownRiders: -1,
+  // Paint a big gray floor number in each shaft cell so the empty shaft shows its
+  // elevation; the car (higher z) covers whichever floor it's currently on.
+  const floorEls = [];
+  for (let f = lo; f <= hi; f++) {
+    const lbl = document.createElement("div");
+    lbl.className = "elev-floornum";
+    lbl.textContent = floorTag(f);
+    lbl.style.left = colLeft(col) + "px";
+    lbl.style.top = rowTop(f) + "px";
+    lbl.style.width = CELL_W + "px";
+    lbl.style.height = CELL_H + "px";
+    world.appendChild(lbl);
+    floorEls.push(lbl);
+  }
+  state.shafts.push({ col, lo, hi, carEl, floorEls, pos: lo, dir: 1, riders: [], shownRiders: -1,
     express: !!express, cap: express ? 8 : 4, speed: express ? 0.22 : 0.12 });
 }
 
@@ -3122,7 +3147,7 @@ sidebarEl.addEventListener("touchend", e => {
 function clearWorld() {
   state.units.forEach(u => u.el && u.el.remove());
   state.people.forEach(p => p.el && p.el.remove());
-  state.shafts.forEach(s => s.carEl && s.carEl.remove());
+  state.shafts.forEach(s => { s.carEl && s.carEl.remove(); (s.floorEls || []).forEach(e => e.remove()); });
   state.units = [];
   state.grid = {};
   state.people = [];
