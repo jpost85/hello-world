@@ -1291,7 +1291,8 @@ function buildBackground() {
   const furnOff = (CELL_W - FURN_W) / 2;     // center the item in the 32px cell
   const furnTop = surface + 4 - FURN_H;      // keep the base on the grass (old bottom was surface+4)
   const TREE_VARIANTS = 4;       // distinct tree species; cycle through them along the street
-  for (let n = 0, treeN = 0, col = buildMinCol; col < buildMaxCol; n++, col += FURN_SPACING) {
+  // start one column left of the build area so the furniture doesn't line up with the backdrop's trees
+  for (let n = 0, treeN = 0, col = buildMinCol - 1; col < buildMaxCol; n++, col += FURN_SPACING) {
     const isLamp = n % 2 === 0;
     const el = document.createElement("div");
     el.className = "street-furniture " +
