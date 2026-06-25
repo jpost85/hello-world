@@ -220,8 +220,10 @@
     box-shadow: 0 1px 2px rgba(0,0,0,.25);
     transition: filter .8s ease;
   }
-  .street-furniture { position:absolute; pointer-events:none; z-index:8; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 26'%3E%3Crect x='26.5' y='24.6' width='8' height='1.4' fill='%232c3138'/%3E%3Crect x='29.4' y='4' width='2.2' height='21' fill='%234a525c'/%3E%3Crect x='29.4' y='4' width='1' height='21' fill='%235a636e'/%3E%3Cpath d='M30.5,5 Q36,3.2 38,7' fill='none' stroke='%234a525c' stroke-width='1.4'/%3E%3Crect x='36.4' y='6.4' width='3' height='2.6' rx='1' fill='%23cfd6da'/%3E%3Cellipse cx='38' cy='9' rx='2' ry='1.3' fill='%23ffe9a8'/%3E%3Crect x='93.4' y='15' width='2.8' height='11' fill='%236b4a30'/%3E%3Ccircle cx='95' cy='10.5' r='7' fill='%233f8f46'/%3E%3Ccircle cx='90' cy='13' r='5' fill='%234ea554'/%3E%3Ccircle cx='100' cy='13' r='5' fill='%234ea554'/%3E%3Ccircle cx='95' cy='14.5' r='5' fill='%2343964b'/%3E%3C/svg%3E") repeat-x left bottom / 140px 26px; }
-  .street-glow { position:absolute; pointer-events:none; z-index:7; opacity:0; transition:opacity 1s ease; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 26'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23ffe9a8' stop-opacity='.85'/%3E%3Cstop offset='1' stop-color='%23ffe9a8' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cellipse cx='38' cy='9' rx='12' ry='10' fill='url(%23g)'/%3E%3C/svg%3E") repeat-x left bottom / 140px 26px; }
+  .street-furniture { position:absolute; pointer-events:none; z-index:8; width:28px; height:26px; background:no-repeat center bottom; }
+  .sf-lamp { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 26'%3E%3Crect x='8' y='24.6' width='8' height='1.4' fill='%232c3138'/%3E%3Crect x='10.4' y='4' width='2.2' height='21' fill='%234a525c'/%3E%3Crect x='10.4' y='4' width='1' height='21' fill='%235a636e'/%3E%3Cpath d='M11.5,5 Q17,3.2 19,7' fill='none' stroke='%234a525c' stroke-width='1.4'/%3E%3Crect x='17.4' y='6.4' width='3' height='2.6' rx='1' fill='%23cfd6da'/%3E%3Cellipse cx='19' cy='9' rx='2' ry='1.3' fill='%23ffe9a8'/%3E%3C/svg%3E"); }
+  .sf-tree { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 26'%3E%3Crect x='12.4' y='15' width='2.8' height='11' fill='%236b4a30'/%3E%3Ccircle cx='14' cy='10.5' r='7' fill='%233f8f46'/%3E%3Ccircle cx='9' cy='13' r='5' fill='%234ea554'/%3E%3Ccircle cx='19' cy='13' r='5' fill='%234ea554'/%3E%3Ccircle cx='14' cy='14.5' r='5' fill='%2343964b'/%3E%3C/svg%3E"); }
+  .street-glow { position:absolute; pointer-events:none; z-index:7; width:28px; height:26px; opacity:0; transition:opacity 1s ease; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 26'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23ffe9a8' stop-opacity='.85'/%3E%3Cstop offset='1' stop-color='%23ffe9a8' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cellipse cx='19' cy='9' rx='12' ry='10' fill='url(%23g)'/%3E%3C/svg%3E") no-repeat center bottom; }
   .night .street-glow { opacity:.9; }
   .street-car { position:absolute; pointer-events:none; z-index:7; width:20px; height:9px; background:no-repeat center/contain; }
   .street-car.car-bus { width:28px; }
@@ -1148,7 +1150,7 @@ const MIN_ROW = -BASEMENT_FLOORS;     // deepest buildable basement row
 let worldWidth = COLS * CELL_W;
 const OFFMAP_MARGIN = 200;            // small ground/earth overrun past the world edge (covers the scroll margin; scrolling is capped to the buildable area anyway)
 let earthEl = null, groundEl = null;  // background refs, widened on resize
-let streetFurnitureEl = null, streetGlowEl = null;
+let streetFurniture = null;   // col -> { el, glow } so each item hides when a building covers its street cell
 // World is pre-sized to the fixed cap (75 floors) once; the top anchor never
 // moves, so "Keep Building" just raises MAX_FLOORS without resizing/repositioning.
 const totalRows = MAX_FLOORS_CAP - MIN_ROW + 1;
@@ -1274,14 +1276,28 @@ function buildBackground() {
   world.appendChild(groundEl);
   // ---- Street scene: lamppost/tree furniture, night glow, and ambient traffic ----
   const _streetW = worldWidth + OFFMAP_MARGIN;
-  streetFurnitureEl = document.createElement("div");
-  streetFurnitureEl.className = "street-furniture";
-  streetFurnitureEl.style.cssText = `left:0;top:${surface - 22}px;width:${_streetW}px;height:26px`;
-  world.appendChild(streetFurnitureEl);
-  streetGlowEl = document.createElement("div");
-  streetGlowEl.className = "street-glow";
-  streetGlowEl.style.cssText = `left:0;top:${surface - 22}px;width:${_streetW}px;height:26px`;
-  world.appendChild(streetGlowEl);
+  // Per-column furniture: a lamppost or street tree centered in each cell, on an
+  // alternating cadence. Each item is an individual element keyed by column so it
+  // can be hidden when a building tile covers that street-level cell (see
+  // updateStreetFurniture) — furniture only shows in the open "outside" cells.
+  streetFurniture = {};
+  const FURN_SPACING = 2;            // an item every other column (~64px), matching the prior strip density
+  const furnOff = (CELL_W - 28) / 2; // center the 28px item in the 32px cell
+  for (let n = 0, col = buildMinCol; col < buildMaxCol; n++, col += FURN_SPACING) {
+    const isLamp = n % 2 === 0;
+    const el = document.createElement("div");
+    el.className = "street-furniture " + (isLamp ? "sf-lamp" : "sf-tree");
+    el.style.cssText = `left:${colLeft(col) + furnOff}px;top:${surface - 22}px`;
+    world.appendChild(el);
+    let glow = null;
+    if (isLamp) {
+      glow = document.createElement("div");
+      glow.className = "street-glow";
+      glow.style.cssText = `left:${colLeft(col) + furnOff}px;top:${surface - 22}px`;
+      world.appendChild(glow);
+    }
+    streetFurniture[col] = { el, glow };
+  }
   const _vehicles = ["car-red","car-blue","car-taxi","car-van","car-bus"];
   for (let i = 0, x = 30; x < _streetW; i++, x += 300) {
     const east = i % 2 === 0;
@@ -1560,6 +1576,21 @@ function recolorRoom(unit, color) {
   saveGame(true);
 }
 
+// Hide street furniture wherever a building covers the street-level cell (row 0),
+// so lamps/trees only show in the open cells "outside" the tower. Pass a column
+// range to update just the cells a unit touches, or omit to refresh all.
+function updateStreetFurniture(fromCol, toCol) {
+  if (!streetFurniture) return;
+  for (const c in streetFurniture) {
+    const col = +c;
+    if (fromCol !== undefined && (col < fromCol || col > toCol)) continue;
+    const f = streetFurniture[col];
+    const hide = !!state.grid[key(col, 0)];
+    f.el.style.display = hide ? "none" : "";
+    if (f.glow) f.glow.style.display = hide ? "none" : "";
+  }
+}
+
 function placeUnit(unit) {
   const t = TYPES[unit.type];
   for (let dr = 0; dr < unit.h; dr++)
@@ -1585,6 +1616,8 @@ function placeUnit(unit) {
   unit.el = el;
   state.units.push(unit);
   updateUnitVisual(unit);
+  if (unit.row <= 0 && unit.row + unit.h - 1 >= 0)
+    updateStreetFurniture(unit.col, unit.col + unit.w - 1);
 }
 
 // Layered interior markup for a unit: facade + type extras + tag + vacancy sign + occupancy bar.
@@ -1658,6 +1691,8 @@ function sellUnit(unit, refund) {
   for (let dr = 0; dr < unit.h; dr++)
     for (let dc = 0; dc < unit.w; dc++)
       delete state.grid[key(unit.col + dc, unit.row + dr)];
+  if (unit.row <= 0 && unit.row + unit.h - 1 >= 0)
+    updateStreetFurniture(unit.col, unit.col + unit.w - 1);  // furniture reappears outside
   unit.el.remove();
   state.units = state.units.filter(u => u.id !== unit.id);
   if (["elevator","stair","expresselevator","skylobby"].includes(unit.type)) rebuildShafts();
