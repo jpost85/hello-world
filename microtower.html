@@ -221,10 +221,10 @@
     box-shadow: 0 1px 2px rgba(0,0,0,.25);
     transition: filter .8s ease;
   }
-  .street-furniture { position:absolute; pointer-events:none; z-index:8; width:28px; height:26px; background:no-repeat center bottom; }
+  .street-furniture { position:absolute; pointer-events:none; z-index:8; width:35px; height:32.5px; background:no-repeat center bottom; }
   .sf-lamp { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 26'%3E%3Crect x='8' y='24.6' width='8' height='1.4' fill='%232c3138'/%3E%3Crect x='10.4' y='4' width='2.2' height='21' fill='%234a525c'/%3E%3Crect x='10.4' y='4' width='1' height='21' fill='%235a636e'/%3E%3Cpath d='M11.5,5 Q17,3.2 19,7' fill='none' stroke='%234a525c' stroke-width='1.4'/%3E%3Crect x='17.4' y='6.4' width='3' height='2.6' rx='1' fill='%23cfd6da'/%3E%3Cellipse cx='19' cy='9' rx='2' ry='1.3' fill='%23ffe9a8'/%3E%3C/svg%3E"); }
   .sf-tree { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 26'%3E%3Crect x='12.4' y='15' width='2.8' height='11' fill='%236b4a30'/%3E%3Ccircle cx='14' cy='10.5' r='7' fill='%233f8f46'/%3E%3Ccircle cx='9' cy='13' r='5' fill='%234ea554'/%3E%3Ccircle cx='19' cy='13' r='5' fill='%234ea554'/%3E%3Ccircle cx='14' cy='14.5' r='5' fill='%2343964b'/%3E%3C/svg%3E"); }
-  .street-glow { position:absolute; pointer-events:none; z-index:7; width:28px; height:26px; opacity:0; transition:opacity 1s ease; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 26'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23ffe9a8' stop-opacity='.85'/%3E%3Cstop offset='1' stop-color='%23ffe9a8' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cellipse cx='19' cy='9' rx='12' ry='10' fill='url(%23g)'/%3E%3C/svg%3E") no-repeat center bottom; }
+  .street-glow { position:absolute; pointer-events:none; z-index:7; width:35px; height:32.5px; opacity:0; transition:opacity 1s ease; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 26'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23ffe9a8' stop-opacity='.85'/%3E%3Cstop offset='1' stop-color='%23ffe9a8' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cellipse cx='19' cy='9' rx='12' ry='10' fill='url(%23g)'/%3E%3C/svg%3E") no-repeat center bottom; }
   .night .street-glow { opacity:.9; }
   .empty-buildable { background: rgba(255,255,255,.03); }
   .empty-buildable:hover { background: rgba(255,207,77,.25); cursor: pointer; }
@@ -1275,19 +1275,21 @@ function buildBackground() {
   // can be hidden when a building tile covers that street-level cell (see
   // updateStreetFurniture) — furniture only shows in the open "outside" cells.
   streetFurniture = {};
-  const FURN_SPACING = 2;            // an item every other column (~64px), matching the prior strip density
-  const furnOff = (CELL_W - 28) / 2; // center the 28px item in the 32px cell
+  const FURN_SPACING = 2;             // an item every other column (~64px), matching the prior strip density
+  const FURN_W = 35, FURN_H = 32.5;   // 25% larger than the original 28x26 box
+  const furnOff = (CELL_W - FURN_W) / 2;     // center the item in the 32px cell
+  const furnTop = surface + 4 - FURN_H;      // keep the base on the grass (old bottom was surface+4)
   for (let n = 0, col = buildMinCol; col < buildMaxCol; n++, col += FURN_SPACING) {
     const isLamp = n % 2 === 0;
     const el = document.createElement("div");
     el.className = "street-furniture " + (isLamp ? "sf-lamp" : "sf-tree");
-    el.style.cssText = `left:${colLeft(col) + furnOff}px;top:${surface - 22}px`;
+    el.style.cssText = `left:${colLeft(col) + furnOff}px;top:${furnTop}px`;
     world.appendChild(el);
     let glow = null;
     if (isLamp) {
       glow = document.createElement("div");
       glow.className = "street-glow";
-      glow.style.cssText = `left:${colLeft(col) + furnOff}px;top:${surface - 22}px`;
+      glow.style.cssText = `left:${colLeft(col) + furnOff}px;top:${furnTop}px`;
       world.appendChild(glow);
     }
     streetFurniture[col] = { el, glow };
