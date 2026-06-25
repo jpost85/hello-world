@@ -671,7 +671,7 @@
   /* ---------- Sky backdrop ---------- */
   /* City backdrop image (stretched to the canvas) + a day/night tint over it */
   #cityBg {
-    position:absolute; pointer-events:none; opacity:0.9;   /* ~10% transparent; box set in layoutBackdrop */
+    position:absolute; pointer-events:none; opacity:0.85;   /* ~15% transparent; box set in layoutBackdrop */
     background-image:url('microtower-skyline.webp');   /* lossless cropped skyline (external file, kept beside this HTML) */
     background-size:100% 100%;           /* element is sized to imgH (aspect-locked + vscale) in layoutBackdrop */
     background-repeat:no-repeat;
@@ -984,6 +984,7 @@ const CELL_H = 36;          // px per floor
 const CITY_ASPECT = 1536 / 803;   // microtower-skyline.webp (sharper background4, checkerboard removed)
 const CITY_ROOF_FRAC = 0.20;
 const CITY_VSCALE = 0.95;   // scale the skyline height to 95% (slightly shorter) — width unchanged
+const CITY_SCALE = 0.85;    // render the skyline 15% smaller overall so its trees/buildings read smaller than the tower; centered on the build axis, bottom-anchored to the ground line
 // Tower grid: the world is a FIXED size (so the world + backdrop never resize).
 // Almost the whole board is buildable from the start — the full WIDTH and most of
 // the height. "Keep Building" (5 stars) only opens the topmost sky floors.
@@ -1730,7 +1731,7 @@ function celestialXY(frac) {
   // WORLD coordinates (scaled px, inside #worldWrap). The arc is anchored to the
   // skyline so it scrolls natively with the tower (no JS-on-scroll, no lag).
   const w = worldWidth * zoom;
-  const imgH = w / CITY_ASPECT * CITY_VSCALE;
+  const imgH = w * CITY_SCALE / CITY_ASPECT * CITY_VSCALE;   // match the scaled skyline height
   const rooftopY = (rowTop(0) + CITY_DROP) * zoom - imgH * (1 - CITY_ROOF_FRAC);
   const baseY = rooftopY - imgH * SUN_BASE_FRAC;   // sunrise/sunset height above the rooftops
   const peakY = rooftopY - imgH * SUN_PEAK_FRAC;    // noon apex (well above the rooftops)
@@ -1765,13 +1766,15 @@ function setBox(el, left, top, w, h) {
 function layoutBackdrop() {
   if (!cityBgEl) return;
   const w = worldWidth * zoom;                                  // full (scaled) board width
-  const imgH = w / CITY_ASPECT * CITY_VSCALE;                   // aspect-locked skyline height
-  const skylineBaseY = (rowTop(0) + CITY_DROP) * zoom;          // skyline base, ~2 floors below ground
+  const imgW = w * CITY_SCALE;                                  // skyline 15% narrower than the board
+  const imgH = imgW / CITY_ASPECT * CITY_VSCALE;                // aspect-locked skyline height (now scaled too)
+  const imgLeft = (w - imgW) / 2;                               // centered on the build axis (tower is centered)
+  const skylineBaseY = (rowTop(0) + CITY_DROP) * zoom;          // skyline base, ~2 floors below ground (unchanged anchor)
   const rooftopY = skylineBaseY - imgH * (1 - CITY_ROOF_FRAC);  // where the buildings visibly start
-  setBox(cityBgEl, 0, skylineBaseY - imgH, w, imgH);            // skyline image
+  setBox(cityBgEl, imgLeft, skylineBaseY - imgH, imgW, imgH);   // skyline image
   setBox(skyEl, 0, 0, w, worldHeight * zoom);                   // sun/moon ride world coords directly
   const bandH = imgH * STAR_BAND_FRAC;                          // star/cloud band, just above the rooftops
-  setBox(starsEl, 0, rooftopY - bandH, w, bandH);
+  setBox(starsEl, 0, rooftopY - bandH, w, bandH);              // stars/clouds stay full-width sky
   setBox(cloudsEl, 0, rooftopY - bandH, w, bandH);
 }
 
