@@ -780,6 +780,14 @@
     border-radius:14px; padding:14px 16px; box-shadow:0 12px 30px rgba(0,0,0,.55); width:min(92%,300px); }
   #inspectTitle { font-weight:700; font-size:15px; margin-bottom:6px; }
   #inspectStats { white-space:pre-line; font-size:12.5px; color:#c5d4e6; line-height:1.45; }
+  .needs-grid { display:grid; grid-template-columns:1fr auto; gap:3px 10px; font-size:12px; margin-top:5px; white-space:normal; }
+  .need-label { color:#9fb3c8; }
+  .need-val { font-weight:700; font-variant-numeric:tabular-nums; }
+  .need-val.good { color:#4ade80; }
+  .need-val.ok { color:#fbbf24; }
+  .need-val.bad { color:#f87171; }
+  .need-noise { color:#f87171; font-size:11px; margin-top:6px; white-space:normal; }
+  .need-tip { color:#fbbf24; font-size:11px; margin-top:4px; font-style:italic; white-space:normal; }
   .ins-clabel { margin-top:10px; font-size:11px; color:#9fb3c8; }
   .ins-swatches { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
   .ins-swatch { width:22px; height:22px; border-radius:50%; border:2px solid rgba(255,255,255,.25); cursor:pointer; padding:0; }
@@ -1652,19 +1660,61 @@ function showInspect(unit) {
   _inspectUnit = unit;
   const t = TYPES[unit.type];
   document.getElementById("inspectTitle").textContent = `${t.name} · floor ${unit.row}`;
-  let stats = "";
+  const statsEl = document.getElementById("inspectStats");
   if (t.cap > 0) {
     const n = unitNeeds(unit);
-    stats = `Occupants: ${unit.occupants}/${t.cap}`
-      + `\nSatisfaction: ${Math.round(unit.satisfaction)}%`
-      + `\n  Transit ${Math.round(n.transit)}/40   Recreation ${Math.round(n.recreation)}/20`
-      + `\n  Cleanliness ${Math.round(n.cleanliness)}/20   Upkeep ${Math.round(n.upkeep)}/20`;
+    const sat = Math.round(unit.satisfaction);
+    const satCls = sat >= 70 ? "good" : sat >= 40 ? "ok" : "bad";
+    const bar = (val, max) => {
+      const pct = val / max * 100;
+      const cls = pct >= 75 ? "good" : pct >= 40 ? "ok" : "bad";
+      return `<span class="need-val ${cls}">${Math.round(val)}/${max}</span>`;
+    };
+    let html = `<div style="white-space:normal;margin-bottom:4px">Occupants: <b>${unit.occupants}/${t.cap}</b>&emsp;Satisfaction: <b class="need-val ${satCls}">${sat}%</b></div>`;
+    html += `<div class="needs-grid">`
+      + `<span class="need-label">Transit</span>${bar(n.transit, 40)}`
+      + `<span class="need-label">Recreation</span>${bar(n.recreation, 20)}`
+      + `<span class="need-label">Cleanliness</span>${bar(n.cleanliness, 20)}`
+      + `<span class="need-label">Upkeep</span>${bar(n.upkeep, 20)}`
+      + `</div>`;
+    if (n.noise > 0) {
+      const noiseNames = [];
+      for (const c of [unit.col - 1, unit.col + unit.w]) {
+        const id = state.grid[key(c, unit.row)];
+        if (!id) continue;
+        const nb = state.units.find(x => x.id === id);
+        if (nb && NOISE_EMIT[nb.type]) noiseNames.push(TYPES[nb.type].name);
+      }
+      for (const dr of [-1, 1]) {
+        const seen = new Set();
+        for (let c = unit.col; c < unit.col + unit.w; c++) {
+          const id = state.grid[key(c, unit.row + dr)];
+          if (!id || seen.has(id)) continue;
+          seen.add(id);
+          const nb = state.units.find(x => x.id === id);
+          if (nb && NOISE_EMIT[nb.type]) noiseNames.push(TYPES[nb.type].name);
+        }
+      }
+      const unique = [...new Set(noiseNames)];
+      html += `<div class="need-noise">⚠ Noisy neighbors: ${unique.join(", ")} (&#8722;${Math.round(n.noise)} pts)</div>`;
+    }
+    if (sat < 60) {
+      let tip = "";
+      if (n.transit < 15) tip = "Add elevator or stairs nearby";
+      else if (n.noise > 5) tip = "Separate from noisy commercial units";
+      else if (n.recreation < 8) tip = "Add gym, pool, or garden nearby";
+      else if (n.cleanliness < 10) tip = "Add a housekeeping department";
+      else if (n.upkeep < 10) tip = "Add a maintenance department";
+      if (tip) html += `<div class="need-tip">Tip: ${tip}</div>`;
+    }
+    statsEl.innerHTML = html;
   } else {
+    let stats = "";
     if (t.appeal) stats += "Comfort: lifts nearby tenants";
     if (t.draw) stats += (stats ? "\n" : "") + "Earns from foot traffic";
     if (!stats) stats = TYPE_DESC[unit.type] || t.name;
+    statsEl.textContent = stats;
   }
-  document.getElementById("inspectStats").textContent = stats;
   const cwrap = document.getElementById("inspectColors");
   cwrap.innerHTML = "";
   if (RECOLORABLE.has(unit.type)) {
@@ -2044,8 +2094,38 @@ function updateServices() {
   }
 }
 
+// Rooms that generate noise (scale 1=mild, 2=loud, 3=very loud)
+const NOISE_EMIT = { cinema: 3, restaurant: 2, skybar: 2, shop: 1, gym: 1, playground: 1 };
+// Residential rooms that are penalized by noisy neighbors
+const NOISE_SENSITIVE = new Set(["apartment", "condo", "hotel"]);
+
+function unitNoiseHit(u) {
+  if (!NOISE_SENSITIVE.has(u.type)) return 0;
+  let noise = 0;
+  // same-floor immediate neighbors (left and right)
+  for (const c of [u.col - 1, u.col + u.w]) {
+    const id = state.grid[key(c, u.row)];
+    if (!id) continue;
+    const n = state.units.find(x => x.id === id);
+    if (n) noise += (NOISE_EMIT[n.type] || 0);
+  }
+  // floors directly above and below count at half weight
+  for (const dr of [-1, 1]) {
+    const seen = new Set();
+    for (let c = u.col; c < u.col + u.w; c++) {
+      const id = state.grid[key(c, u.row + dr)];
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      const n = state.units.find(x => x.id === id);
+      if (n) noise += (NOISE_EMIT[n.type] || 0) * 0.5;
+    }
+  }
+  return Math.min(20, noise * 5); // penalty: 0–20 pts
+}
+
 // Satisfaction is a sum of distinct needs (each capped), so the player can read
 // what's helping or hurting. Maxes: transit 40, recreation 20, clean 20, upkeep 20.
+// Noise from bad neighbors subtracts up to 20.
 function unitNeeds(u, amen) {
   if (amen == null) amen = amenityBonus(u);
   const frustHit = Math.min(40, state.frustration * 1.6);
@@ -2055,11 +2135,12 @@ function unitNeeds(u, amen) {
     recreation: Math.min(20, amen * 0.9),
     cleanliness: state.cleanliness * 0.2,
     upkeep: state.upkeep * 0.2,
+    noise: unitNoiseHit(u),
   };
 }
 function satisfactionTarget(u, amen) {
   const n = unitNeeds(u, amen);
-  return Math.max(0, Math.min(100, n.transit + n.recreation + n.cleanliness + n.upkeep));
+  return Math.max(0, Math.min(100, n.transit + n.recreation + n.cleanliness + n.upkeep - n.noise));
 }
 
 function simTenants() {
@@ -2089,7 +2170,9 @@ function simTenants() {
     // owners (sold condos) stay put; renters can leave when unhappy
     if (!t.sale && u.satisfaction < 30 && u.occupants > 0 && Math.random() < 0.1) {
       u.occupants--; state.pop--; updateUnitVisual(u);
-      log(`A tenant left ${t.name} on floor ${u.row}.`, "bad");
+      const n2 = unitNeeds(u, amen);
+      const why = n2.noise > 5 ? " (noisy neighbors)" : n2.transit < 15 ? " (poor transit)" : n2.recreation < 5 ? " (no amenities)" : n2.cleanliness < 8 ? " (unclean)" : "";
+      log(`A tenant left ${t.name} on floor ${u.row}${why}.`, "bad");
     }
   });
 }
