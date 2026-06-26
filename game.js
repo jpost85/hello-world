@@ -159,6 +159,10 @@
   let modePhase = 0, modeTimer = 0, globalMode = "scatter";
   let animTick = 0, readyTimer = 0, dyingTimer = 0;
   let popups = [];
+  let particles = [];   // {x,y,vx,vy,life,decay,color,size}
+  let pops = [];        // {x,y,r,maxR,life,color}  expanding rings
+  let shake = 0;        // screen-shake magnitude (px), decays each frame
+  let flash = 0;        // brief full-board flash alpha, decays
   let extraAwarded = false;
 
   const MODE_SCHEDULE = [
@@ -217,6 +221,7 @@
     ];
     frightTimer = 0; ghostChain = 0;
     readyTimer = 1500;
+    particles = []; pops = []; shake = 0; flash = 0;
     state = "ready";
     Sound.stopSiren();
     Sound.ready();
@@ -288,8 +293,12 @@
   function pacCenter(p) {
     const c = colOf(p.x), r = rowOf(p.y);
     const ch = grid[r][c];
-    if (ch === ".") { grid[r][c] = " "; dotsLeft--; addScore(10); Sound.chomp(); checkFruit(); checkWin(); }
-    else if (ch === "o") { grid[r][c] = " "; dotsLeft--; addScore(50); Sound.power(); enterFrightened(); checkFruit(); checkWin(); }
+    if (ch === ".") { grid[r][c] = " "; dotsLeft--; addScore(10); Sound.chomp(); spawnPop(px(c), px(r), "rgba(255,235,180,A)", 7); checkFruit(); checkWin(); }
+    else if (ch === "o") {
+      grid[r][c] = " "; dotsLeft--; addScore(50); Sound.power();
+      spawnPop(px(c), px(r), "rgba(255,210,77,A)", 26); addShake(2.5); addFlash(0.18);
+      enterFrightened(); checkFruit(); checkWin();
+    }
     if (state !== "playing") return false;
     if (p.want !== p.dir && canStep(p, p.want, false)) p.dir = p.want;
     return canStep(p, p.dir, false);
@@ -375,9 +384,12 @@
         if (g.mode === "frightened") {
           g.mode = "eyes";
           const pts = [200, 400, 800, 1600][Math.min(ghostChain, 3)];
-          ghostChain++; addScore(pts); Sound.eatGhost(); popups.push({ x: g.x, y: g.y, txt: pts, life: 800 });
+          ghostChain++; addScore(pts); Sound.eatGhost(); popups.push({ x: g.x, y: g.y, txt: pts, life: 1000 });
+          spawnBurst(g.x, g.y, "#3cf0ff", 16, 2.6); spawnPop(g.x, g.y, "rgba(120,200,255,A)", 22); addShake(3);
         } else if (g.mode !== "eyes") {
-          state = "dying"; dyingTimer = 1100; Sound.death(); return;
+          state = "dying"; dyingTimer = 1100; Sound.death();
+          spawnBurst(pac.x, pac.y, "#ffe000", 22, 3); addShake(7); addFlash(0.25);
+          return;
         }
       }
     }
@@ -425,6 +437,7 @@
   function update(dt) {
     animTick += dt;
     const ms = dt * (1000 / 60);
+    decayEffects(dt); // visual effects animate in every state
 
     if (state === "ready") {
       readyTimer -= ms;
@@ -435,9 +448,9 @@
       Sound.stopSiren();
       dyingTimer -= ms;
       if (dyingTimer <= 0) loseLife();
-      decayPopups(dt); return;
+      return;
     }
-    if (state !== "playing") { Sound.stopSiren(); decayPopups(dt); return; }
+    if (state !== "playing") { Sound.stopSiren(); return; }
 
     // Background siren: starts with play, rises as the maze empties, warbles
     // faster while a power pellet is active.
@@ -473,15 +486,41 @@
       if (fruit.timer <= 0) fruit = null;
       else if (Math.hypot(px(fruit.col) - pac.x, px(fruit.row) - pac.y) < TILE * 0.9) {
         addScore(fruit.value); Sound.fruit(); popups.push({ x: pac.x, y: pac.y, txt: fruit.value, life: 800 });
+        spawnBurst(pac.x, pac.y, "#ff2d2d", 10, 2.2); spawnBurst(pac.x, pac.y, "#2fbf2f", 6, 2);
         fruitCount++; fruit = null;
       }
     }
-    decayPopups(dt);
   }
 
-  function decayPopups(dt) {
+  // ---- Juice: shake, particles, pops ---------------------------------------
+  function addShake(m) { shake = Math.min(9, shake + m); }
+  function addFlash(a) { flash = Math.min(1, flash + a); }
+  function spawnBurst(x, y, color, count, speed) {
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = speed * (0.4 + Math.random() * 0.6);
+      particles.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        life: 1, decay: 0.03 + Math.random() * 0.03,
+        color, size: 1.5 + Math.random() * 2.5,
+      });
+    }
+  }
+  function spawnPop(x, y, color, maxR) { pops.push({ x, y, r: 1, maxR, life: 1, color }); }
+
+  function decayEffects(dt) {
     for (const p of popups) { p.life -= dt * (1000 / 60); p.y -= 0.3 * dt; }
     popups = popups.filter((p) => p.life > 0);
+    for (const p of particles) {
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= Math.pow(0.92, dt); p.vy *= Math.pow(0.92, dt);
+      p.life -= p.decay * dt;
+    }
+    particles = particles.filter((p) => p.life > 0);
+    for (const p of pops) { p.r += (p.maxR - p.r) * 0.22 * dt; p.life -= 0.07 * dt; }
+    pops = pops.filter((p) => p.life > 0);
+    if (shake > 0) shake = Math.max(0, shake - 0.5 * dt);
+    if (flash > 0) flash = Math.max(0, flash - 0.06 * dt);
   }
 
   // ---- Rendering ------------------------------------------------------------
@@ -492,6 +531,8 @@
 
   function draw() {
     ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    if (shake > 0.15) ctx.translate((Math.random() * 2 - 1) * shake, (Math.random() * 2 - 1) * shake);
     // walls + door
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       const ch = grid[r][c], x = c * TILE, y = r * TILE;
@@ -511,12 +552,33 @@
         ctx.fillStyle = "#ffd24d"; ctx.beginPath(); ctx.arc(px(c), px(r), pulse, 0, 7); ctx.fill();
       }
     }
+    drawPops();
     if (fruit) drawFruit();
     drawPac();
     for (const g of ghosts) drawGhost(g);
+    drawParticles();
     drawPopups();
     if (state === "ready") drawCenterText(readyTimer > 0 ? "READY!" : "GO!", "#ffcc00");
     if (state === "levelclear") drawCenterText("LEVEL CLEAR!", "#7bff7b");
+    ctx.restore();
+    if (flash > 0.01) { ctx.fillStyle = `rgba(255,255,255,${flash})`; ctx.fillRect(0, 0, W, H); }
+  }
+
+  function drawPops() {
+    ctx.lineWidth = 2;
+    for (const p of pops) {
+      ctx.strokeStyle = p.color.replace("A", Math.max(0, p.life).toFixed(2));
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.stroke();
+    }
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 
   function drawPac() {
