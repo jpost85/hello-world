@@ -281,6 +281,8 @@
   .person.climbing { transition: left .25s linear, top .25s linear; }
   /* Stepping out of the building onto the street, then dissolving away. */
   .person.leaving { opacity: 0; transition: left .25s linear, opacity .7s ease; }
+  /* Materializing on the street before walking in (starts at 0, fades to 1 when the class is dropped). */
+  .person.arriving { opacity: 0; transition: left .25s linear, opacity .7s ease; }
   .person::before {
     content:""; position:absolute; top:-3px; left:0; width:5px; height:3px;
     border-radius:50%; background:inherit; filter:brightness(1.25);
@@ -2547,6 +2549,29 @@ function spawnPerson() {
     baseColor: ROLE_COLOR[role], patience: 0, patience0: 1 });
 }
 
+// The mirror of leaving: a visitor fades in on the street outside a ground-floor
+// edge and walks in through the lobby, then joins the strolling crowd.
+function spawnArrival() {
+  const cap = Math.min(60, 2 + Math.round(state.pop * 0.7));
+  if (state.people.length >= cap || state.pop <= 0) return;
+  const ext = floorExtent(0);
+  if (!ext) return;                                   // no ground floor to walk into
+  const fromLeft = Math.random() < 0.5;
+  const startCol = fromLeft ? ext.min - 4 : ext.max + 4;     // out on the street
+  const goCol = fromLeft ? Math.min(ext.max, ext.min + 2) : Math.max(ext.min, ext.max - 2); // a few cells inside
+  const role = "visitor";
+  const el = document.createElement("div");
+  el.className = "person arriving role-" + role;      // starts invisible, fades in once "enter" begins
+  el.style.left = colLeft(startCol) + "px";
+  el.style.top = (rowTop(0) + CELL_H - 12) + "px";
+  el.style.animationDelay = (Math.random() * 0.5) + "s";
+  world.appendChild(el);
+  state.people.push({ el, col: startCol, row: 0, life: 200 + Math.random()*200,
+    mode: "enter", goCol, targetRow: null, transitCol: 0, y: 0, shaft: null,
+    destCol: null, destUnit: null, role, purpose: "idle", dwell: 0, bubble: 0,
+    baseColor: ROLE_COLOR[role], patience: 0, patience0: 1, arriving: true });
+}
+
 // Time-of-day traffic: morning rush goes up, evening rush goes down, lunch is busy.
 function rushPhase() {
   const h = state.minutes / 60;
@@ -2638,6 +2663,20 @@ function movepeople() {
       if (Math.abs(d) <= 0.5) {
         if (!p.fade) { p.fade = 1; p.el.classList.add("leaving"); }   // arrived outside — start the fade
         else if (++p.fade > 3) { p.el.remove(); state.people.splice(i, 1); continue; }  // ~0.75s later, gone
+      } else {
+        p.col += Math.sign(d) * Math.min(1.3, Math.abs(d));
+      }
+      p.el.style.left = colLeft(p.col) + "px";
+      p.el.style.top = (rowTop(0) + CELL_H - 12) + "px";
+      continue;
+    }
+
+    if (p.mode === "enter") {  // faded in on the street — walk into the building, then join the crowd
+      if (p.arriving) { p.el.classList.remove("arriving"); p.arriving = false; }  // trigger the fade-in (after a painted frame)
+      const d = p.goCol - p.col;
+      if (Math.abs(d) <= 0.6) {                 // inside now — become a normal stroller
+        p.mode = "walk"; p.purpose = "idle"; p.goCol = null; p.destCol = null; p.destUnit = null;
+        p.life = 200 + Math.random() * 200; p.dwell = 0;
       } else {
         p.col += Math.sign(d) * Math.min(1.3, Math.abs(d));
       }
@@ -2807,7 +2846,7 @@ function rebuildShafts() {
   });
   // Any sim mid-commute references shafts/columns that may be gone now: reset them.
   state.people.forEach(p => {
-    if (p.mode !== "walk") { p.el.style.display = ""; p.el.classList.remove("leaving"); p.fade = 0; p.mode = "walk"; p.shaft = null; p.goCol = null; }
+    if (p.mode !== "walk") { p.el.style.display = ""; p.el.classList.remove("leaving", "arriving"); p.fade = 0; p.arriving = false; p.mode = "walk"; p.shaft = null; p.goCol = null; }
   });
 }
 
@@ -2956,6 +2995,7 @@ function advanceMinute() {
   if (state.minutes % 5 === 0) { simTenants(); simHotels(); manageStaff(); }
   if (tut) tutorialCheck();   // pick up the "tenants moved in" onboarding step
   if (state.minutes % 20 === 0) spawnPerson();
+  if (state.minutes % 20 === 10) spawnArrival();   // visitors walk in off the street (offset from interior spawns)
   if (state.minutes % 30 === 0) state.frustration = Math.max(0, state.frustration * 0.9 - 0.2); // service recovers
   if (state.minutes >= 24 * 60) {
     state.minutes = 0;
