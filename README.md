@@ -6,8 +6,12 @@ See [`DESIGN.md`](./DESIGN.md) for the full architecture and roadmap.
 
 ## Status
 
-**Build step 1 of 10** — isometric grid renders with camera pan/zoom and mouse
-tile-picking. (See DESIGN.md §14.)
+**Build step 2 of 10** — deterministic fixed-timestep sim with a seeded PRNG and
+tick-stamped commands; one agent moves via click-to-move (grid A\* pathfinding)
+with smooth render interpolation. (See DESIGN.md §6, §14.)
+
+**Controls:** drag to pan · wheel to zoom · hover to pick a tile · **click a tile
+to send the agent there**.
 
 ## Stack
 
@@ -32,10 +36,17 @@ tile (shown in the HUD).
 src/
   coords.ts          grid <-> world/screen pixel conversions (the SIM/RENDER seam)
   map.ts             MapData struct-of-arrays + demo map
+  sim/               deterministic simulation (grid coords only, no pixels)
+    rng.ts           seeded PRNG carried in world state
+    world.ts         WorldState + agents
+    commands.ts      tick-stamped input commands
+    pathfind.ts      grid A* (binary heap, deterministic tie-break)
+    systems.ts       command-apply + movement + the pure simTick step
+    loop.ts          fixed-timestep accumulator loop with interpolation alpha
   render/
-    isoScene.ts      PixiJS iso renderer, camera, tile picking
-    colors.ts        placeholder tile palette
-  main.ts            app bootstrap
+    isoScene.ts      PixiJS iso renderer, camera, picking, interpolated agents
+    colors.ts        placeholder palette
+  main.ts            app bootstrap (wires sim loop + scene)
 ```
 
 The simulation works in grid coordinates only; isometric pixels exist solely in

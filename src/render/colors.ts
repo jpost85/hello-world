@@ -11,3 +11,8 @@ export const TILE_COLORS: Record<TileType, number> = {
 
 export const TILE_TOP_TINT = 0x101018; // edge line color
 export const HOVER_FILL = 0xffe07a;
+
+export const AGENT_BODY = 0x59d6ff;
+export const AGENT_OUTLINE = 0x0a2230;
+export const AGENT_SHADOW = 0x000000;
+export const PATH_LINE = 0x59d6ff;
