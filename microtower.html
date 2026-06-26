@@ -587,6 +587,27 @@
   }
   .unit-stair.stair-flip .u-face { transform: scaleX(-1); } /* alternate flights mirror (switchback) */
 
+  /* Escalator — a diagonal moving belt with scrolling treads */
+  .unit-escalator { --wall:#6f7d8c; }
+  .unit-escalator .u-face {
+    /* the slanted belt: a metallic band running bottom-left -> top-right */
+    background:
+      repeating-linear-gradient(45deg, rgba(20,26,33,.55) 0 2px, rgba(20,26,33,0) 2px 6px) 0 0 / 100% 100%,
+      linear-gradient(45deg, #c2ccd6 0 46%, #aab6c2 46% 54%, #c2ccd6 54% 100%),
+      linear-gradient(180deg, #8a96a4, #6b7785);
+    background-blend-mode: normal;
+  }
+  /* scrolling treads sit on top of the belt and animate up the slope */
+  .unit-escalator .u-face::after {
+    content:""; position:absolute; inset:0;
+    background: repeating-linear-gradient(45deg, rgba(245,248,251,.85) 0 1.5px, rgba(245,248,251,0) 1.5px 5px);
+    animation: escroll 0.9s linear infinite;
+  }
+  @keyframes escroll { from { background-position: 0 0; } to { background-position: 7px -7px; } }
+  /* descending flights mirror so the belt visually runs the other way */
+  .unit-escalator.esc-flip .u-face,
+  .unit-escalator.esc-flip .u-face::after { transform: scaleX(-1); }
+
   /* Small props — subtle furnishings */
   .unit-lobby .u-extra {           /* reception counter on the marble floor */
     left:0; right:0; top:auto; bottom:6px; height:8px;
@@ -1050,6 +1071,7 @@ const TYPES = {
   parking:   { name: "Parking",     cost: 18000, w: 3, h: 1, color: "#5a5f66", income: 0,    cap: 0,  kind: "infra", infra: 0.006 },
   metro:     { name: "Metro Station",cost: 90000,w: 4, h: 1, color: "#3a4656", income: 0,    cap: 0,  kind: "infra", infra: 0.022 },
   stair:     { name: "Stairs",      cost: 8000,  w: 1, h: 1, color: "#8d99ae", kind: "transit" },
+  escalator: { name: "Escalator",   cost: 12000, w: 1, h: 1, color: "#6f7d8c", kind: "transit", escalator: true },
   elevator:  { name: "Elevator",    cost: 18000, w: 1, h: 1, color: "#5c6b7a", kind: "transit" },
   expresselevator: { name: "Express Elev.", cost: 35000, w: 1, h: 1, color: "#3f7d86", kind: "transit", express: true },
   skylobby:  { name: "Sky Lobby",   cost: 60000, w: 6, h: 1, color: "#cdbb8e", kind: "transit" },
@@ -1058,7 +1080,7 @@ const TYPES = {
 
 // Star tier at which each build type unlocks (anything unlisted is available from the start).
 const UNLOCK_STAR = {
-  elevator: 1, restaurant: 1, terrace: 1, parking: 1, laundro: 1,
+  elevator: 1, escalator: 1, restaurant: 1, terrace: 1, parking: 1, laundro: 1,
   condo: 2, hotel: 2, gym: 2,
   security: 2, housekeeping: 2, maintenance: 2,
   cinema: 3, garden: 3, conference: 3, playground: 3, metro: 3, skylobby: 3,
@@ -1071,7 +1093,7 @@ const TOOL_GROUPS = [
   { title: "Rooms",       keys: ["office","apartment","condo","hotel","shop","restaurant","cinema"] },
   { title: "Amenities",   keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference","laundro"] },
   { title: "Services",    keys: ["security","housekeeping","maintenance","storage"] },
-  { title: "Transit",     keys: ["floor","stair","elevator","expresselevator","skylobby"] },
+  { title: "Transit",     keys: ["floor","stair","escalator","elevator","expresselevator","skylobby"] },
   { title: "Underground", keys: ["parking","metro"] },
   { title: "Landmark",    keys: ["spire"] },
 ];
@@ -1116,6 +1138,7 @@ const TYPE_DESC = {
   expresselevator: "Fast elevator that only stops at Sky Lobbies and the ground. Stack it for tall towers.",
   skylobby:  "A transfer hub at height — gives nearby transit access and is a stop for express elevators.",
   stair:     "Cheap transit. Rooms need a stair or elevator within 8 cells.",
+  escalator: "Like stairs but riders glide up faster with no waiting — great for busy floors. Stack a column to span any height.",
   elevator:  "Vertical transit. Stack several in a column to form a riding shaft.",
   lobby:     "Ground-floor entrance. Free, pre-built, and can't be sold.",
 };
@@ -1486,8 +1509,8 @@ function coversOutdoor(col, row, w) {
 function hasTransitAccess(col, row, w) {
   if (row === 0) return true;
   for (const u of state.units) {
-    // stairs, local elevators and sky lobbies provide floor access (express does not)
-    if ((u.type === "stair" || u.type === "elevator" || u.type === "skylobby") &&
+    // stairs, escalators, local elevators and sky lobbies provide floor access (express does not)
+    if ((u.type === "stair" || u.type === "escalator" || u.type === "elevator" || u.type === "skylobby") &&
         u.row <= row && u.row + u.h - 1 >= row) {
       const gap = Math.max(u.col - (col + w), col - (u.col + u.w), 0);
       if (gap <= 8) return true;
@@ -1531,7 +1554,7 @@ function tryBuild(col, row, key_) {
     revenueTimer: Math.random() * 60,
   };
   placeUnit(unit);
-  if (["elevator","stair","expresselevator","skylobby"].includes(key_)) rebuildShafts();
+  if (["elevator","stair","escalator","expresselevator","skylobby"].includes(key_)) rebuildShafts();
   rebuildFacade();
   state.cash -= t.cost;
   log(`Built ${t.name} on floor ${row} for $${t.cost.toLocaleString()}`, "good");
@@ -1614,6 +1637,7 @@ function placeUnit(unit) {
   el.className = "unit unit-" + unit.type
     + (winTypes.includes(unit.type) ? " win" : "")
     + (unit.type === "stair" && unit.row % 2 === 1 ? " stair-flip" : "")  // switchback flights
+    + (unit.type === "escalator" && unit.row % 2 === 1 ? " esc-flip" : "")  // alternate belt direction
     + (unit.type === "storage" ? " var-" + (unit.id % 3) : "");  // shuffle storehouse / bikes / warehouse
   el.style.left = colLeft(unit.col) + "px";
   el.style.top = rowTop(unit.row + unit.h - 1) + "px";
@@ -1651,7 +1675,7 @@ function shortLabel(type) {
   return ({office:"OFF", apartment:"APT", condo:"CONDO", hotel:"🛏", shop:"SHOP", restaurant:"REST",
            cinema:"🎬", terrace:"⛱", garden:"🌳", pool:"POOL", playground:"PLAY", skybar:"BAR",
            gym:"GYM", spa:"SPA", conference:"CONF", laundro:"🧺", security:"🛡", housekeeping:"🧹", maintenance:"🔧", storage:"📦", spire:"♛", parking:"🅿", metro:"Ⓜ",
-           skylobby:"SKY", expresselevator:"▲", stair:"⇅", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
+           skylobby:"SKY", expresselevator:"▲", stair:"⇅", escalator:"⇗", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
 }
 
 let _inspectUnit = null;
@@ -1748,7 +1772,7 @@ function sellUnit(unit, refund) {
     updateStreetFurniture(unit.col, unit.col + unit.w - 1);  // furniture reappears outside
   unit.el.remove();
   state.units = state.units.filter(u => u.id !== unit.id);
-  if (["elevator","stair","expresselevator","skylobby"].includes(unit.type)) rebuildShafts();
+  if (["elevator","stair","escalator","expresselevator","skylobby"].includes(unit.type)) rebuildShafts();
   rebuildFacade();
   state.cash += refund;
   log(`Sold ${TYPES[unit.type].name} for $${refund.toLocaleString()}`, "bad");
@@ -2453,7 +2477,7 @@ function walkRange(p) {
 // ---- Trip destinations ----
 // Transit (stairs/elevators) is only for getting from one real room to another,
 // so a sim never rides or climbs to a floor that is nothing but transit.
-const VERTICAL_TRANSIT = ["stair", "elevator", "expresselevator"];
+const VERTICAL_TRANSIT = ["stair", "escalator", "elevator", "expresselevator"];
 function isTripDestination(u) {
   // Rooms, lobbies, amenities, outdoor, infra — anything that isn't bare floor
   // structure or a pure vertical-transit shaft.
@@ -2787,9 +2811,9 @@ function movepeople() {
       }
     }
 
-    if (p.mode === "climb") { // taking the stairs: move diagonally along the flight
+    if (p.mode === "climb") { // taking the stairs/escalator: move diagonally along the flight
       const dir = p.targetRow >= p.y ? 1 : -1;
-      p.y += dir * 0.2;   // ~one floor per ~1.25s at the steady cadence (CSS tweens the step)
+      p.y += dir * (p.onEscalator ? 0.34 : 0.2);   // escalators glide ~1.7x faster than stairs (CSS tweens the step)
       const done = (dir > 0 && p.y >= p.targetRow) || (dir < 0 && p.y <= p.targetRow);
       if (done) {
         p.y = p.targetRow; p.row = p.targetRow; p.col = p.transitCol;
@@ -2861,7 +2885,11 @@ function movepeople() {
       if (Math.abs(d) <= 0.4) {
         p.transitCol = p.goCol;
         if (p.shaft) { p.mode = "wait"; p.patience = p.patience0 = 90 + Math.random() * 90; }
-        else { p.mode = "climb"; p.y = p.row; p.el.classList.add("climbing"); }
+        else { // stairs or escalator — escalators carry riders up faster with no waiting
+          const tu = state.units.find(x => x.id === state.grid[key(p.transitCol, p.row)]);
+          p.onEscalator = !!(tu && tu.type === "escalator");
+          p.mode = "climb"; p.y = p.row; p.el.classList.add("climbing");
+        }
       } else p.col += Math.sign(d) * Math.min(1.3, Math.abs(d));
     } else if (p.dwell > 0) { // lingering at a venue — shuffle in place, then perk up and move on
       p.dwell--;
@@ -2916,9 +2944,9 @@ function rebuildShafts() {
   // Local elevator shafts (stop everywhere) and express shafts (sky lobbies only) get cars.
   eachVerticalRun(u => u.type === "elevator", (col, lo, hi) => addShaft(col, lo, hi, false));
   eachVerticalRun(u => u.type === "expresselevator", (col, lo, hi) => addShaft(col, lo, hi, true));
-  // Local transit runs (stairs OR elevators) let pedestrians change any floor.
+  // Local transit runs (stairs, escalators OR elevators) let pedestrians change any floor.
   state.transitRuns = [];
-  eachVerticalRun(u => u.type === "stair" || u.type === "elevator",
+  eachVerticalRun(u => u.type === "stair" || u.type === "escalator" || u.type === "elevator",
     (col, lo, hi) => state.transitRuns.push({ col, lo, hi }));
   // Express runs only connect their stop floors (≥2 to be useful).
   state.expressRuns = [];
