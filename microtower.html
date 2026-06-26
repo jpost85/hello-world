@@ -671,10 +671,10 @@
   .fe-top, .fe-left, .fe-right, .fe-base { position:absolute; display:none; pointer-events:none; z-index:5; }
   /* Facade edges sit OUTSIDE the cell so the room interior keeps its full size
      (roof above, walls to the sides, base below — only on exposed sides). */
-  .fe-top  { top:-5px; left:-4px; right:-4px; height:5px; }
-  .fe-base { bottom:-5px; left:-4px; right:-4px; height:5px; }
-  .fe-left { top:0; bottom:0; left:-4px; width:4px; }
-  .fe-right{ top:0; bottom:0; right:-4px; width:4px; }
+  .fe-top  { top:-5.5px; left:-4.4px; right:-4.4px; height:5.5px; }  /* cornice + walls ~10% thicker */
+  .fe-base { bottom:-5px; left:-4.4px; right:-4.4px; height:5px; }
+  .fe-left { top:0; bottom:0; left:-4.4px; width:4.4px; }
+  .fe-right{ top:0; bottom:0; right:-4.4px; width:4.4px; }
   /* show an edge only when a façade style is active AND that edge is exposed */
   .facade-brick .edge-top .fe-top, .facade-concrete .edge-top .fe-top, .facade-deco .edge-top .fe-top,
   .facade-brick .edge-base .fe-base, .facade-concrete .edge-base .fe-base, .facade-deco .edge-base .fe-base,
@@ -687,22 +687,22 @@
     box-shadow: inset -1px 0 1px rgba(0,0,0,.25);
   }
   .facade-brick .fe-top {
-    height:6px; background: linear-gradient(180deg, #888e94 0 3px, #5c6268 3px 6px);
+    height:6.6px; background: linear-gradient(180deg, #888e94 0 3.3px, #5c6268 3.3px 6.6px);
     box-shadow: 0 1px 1px rgba(0,0,0,.3);
   }
   .facade-brick .fe-base { background: linear-gradient(180deg, #6f6a63 0 2px, #4f4b45 2px); }
 
   /* Poured Concrete Frame: uniform light-gray band all around */
   .facade-concrete .fe-left, .facade-concrete .fe-right { background:#bcc1c5; box-shadow: inset -1px 0 2px rgba(0,0,0,.18); }
-  .facade-concrete .fe-top  { height:6px; background:#c6cacd; border-bottom:1px solid #9aa0a5; }
+  .facade-concrete .fe-top  { height:6.6px; background:#c6cacd; border-bottom:1px solid #9aa0a5; }
   .facade-concrete .fe-base { background:#aeb3b8; }
 
   /* Art-Deco: stepped parapet cornice, pier strips, dark granite base */
   .facade-deco .fe-left, .facade-deco .fe-right {
-    width:5px; background: linear-gradient(90deg, #cdbb91 0 1px, #a8946a 1px 4px, #7e6d49 4px 5px);
+    width:5.5px; background: linear-gradient(90deg, #cdbb91 0 1.1px, #a8946a 1.1px 4.4px, #7e6d49 4.4px 5.5px);
   }
   .facade-deco .fe-top {
-    height:7px; background: linear-gradient(180deg, #e0d2b0 0 1px, #c2ac7c 1px 4px, #93805330 4px, #8a784f 4px 7px);
+    height:7.7px; background: linear-gradient(180deg, #e0d2b0 0 1.1px, #c2ac7c 1.1px 4.4px, #93805330 4.4px, #8a784f 4.4px 7.7px);
     box-shadow: 0 1px 2px rgba(0,0,0,.35);
   }
   .facade-deco .fe-base { height:6px; background: linear-gradient(180deg, #4a4a52 0 2px, #303036 2px); }
