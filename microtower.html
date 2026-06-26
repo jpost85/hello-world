@@ -859,6 +859,26 @@
     .hot-tool.on { outline: 2px solid var(--accent); background: #36495b; }
     .hot-tool.locked { opacity: .45; }
     .hot-sw { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #000; flex: 0 0 auto; }
+    /* category chips — the default mobile view: pick a category, then its tools */
+    .hot-cat {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 11px;
+      border: 2px solid #000; border-radius: 8px; background: #28384a; color: var(--text);
+      font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer;
+    }
+    .hot-cat .hc-ico { font-size: 16px; line-height: 1; }
+    .hot-cat .hc-n { font-size: 10px; font-weight: 700; opacity: .55; }
+    .hot-cat:active { transform: translateY(1px); }
+    /* "‹ All" button that returns from a category's tools to the category list */
+    .hot-back {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 12px;
+      border: 2px solid #000; border-radius: 8px; background: var(--accent); color: #1a1a1a;
+      font-size: 13px; font-weight: 800; white-space: nowrap; cursor: pointer;
+    }
+    .hot-back:active { transform: translateY(1px); }
+    .hot-catname {
+      flex: 0 0 auto; align-self: center; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px; color: var(--muted); padding: 0 2px 0 4px;
+    }
     /* left-edge handle to summon the drawer (hidden while it's open) */
     #edgeHandle {
       position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 14;
@@ -1421,13 +1441,18 @@ function buildToolbar() {
   });
 }
 
-// Mobile bottom hotbar: a flat, scrollable row of build tools (Pointer first).
+/// Mobile bottom hotbar: category-first to avoid one long horizontal scroll of every
+// tool. Default view shows category chips; tapping one swaps the bar to just that
+// category's tools (with a "‹ All" button back). hotbarCat null = showing categories.
+const CAT_ICONS = { Rooms: "🏢", Amenities: "🌿", Services: "🧰", Transit: "↕", Underground: "🚇", Landmark: "♛" };
+let hotbarCat = null;
+
 function buildHotbar() {
   const bar = document.getElementById("hotbarTools");
   if (!bar) return;
   bar.innerHTML = "";
-  const keys = ["pointer"].concat(...TOOL_GROUPS.map(g => g.keys));
-  keys.forEach(key => {
+
+  const addTool = (key) => {
     const t = TYPES[key];
     const need = UNLOCK_STAR[key] || 0;
     const locked = state.stars < need;
@@ -1441,7 +1466,35 @@ function buildHotbar() {
       selectTool(key);
     });
     bar.appendChild(b);
-  });
+  };
+
+  if (hotbarCat == null) {
+    addTool("pointer"); // Inspect stays one tap away from any screen
+    TOOL_GROUPS.forEach(g => {
+      const total = g.keys.length;
+      const open = g.keys.filter(k => (UNLOCK_STAR[k] || 0) <= state.stars).length;
+      const c = document.createElement("button");
+      c.className = "hot-cat";
+      c.innerHTML = `<span class="hc-ico">${CAT_ICONS[g.title] || "▦"}</span>`
+        + `<span>${g.title}</span>`
+        + `<span class="hc-n">${open}${open < total ? "/" + total : ""}</span>`;
+      c.addEventListener("click", () => { hotbarCat = g.title; buildHotbar(); });
+      bar.appendChild(c);
+    });
+  } else {
+    const back = document.createElement("button");
+    back.className = "hot-back";
+    back.textContent = "‹ All";
+    back.addEventListener("click", () => { hotbarCat = null; buildHotbar(); });
+    bar.appendChild(back);
+    const name = document.createElement("span");
+    name.className = "hot-catname";
+    name.textContent = hotbarCat;
+    bar.appendChild(name);
+    const grp = TOOL_GROUPS.find(g => g.title === hotbarCat);
+    (grp ? grp.keys : []).forEach(addTool);
+  }
+  bar.scrollLeft = 0; // entering a view always starts at the left (so "‹ All" / first tools show)
 }
 
 function selectTool(key) {
