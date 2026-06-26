@@ -47,8 +47,10 @@
   const H = ROWS * TILE;
 
   const canvas = document.getElementById("board");
-  canvas.width = W;
-  canvas.height = H;
+  // Render at device resolution for crisp neon lines on retina screens.
+  const DPR = Math.min(2.5, window.devicePixelRatio || 1);
+  canvas.width = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
   const ctx = canvas.getContext("2d");
 
   const DOT_TOTAL = (() => {
@@ -191,6 +193,59 @@
   const px = (col) => col * TILE + TILE / 2;
   const colOf = (x) => Math.round((x - TILE / 2) / TILE);
   const rowOf = (y) => Math.round((y - TILE / 2) / TILE);
+
+  // ---- Maze pre-render (classic thin neon walls) ----------------------------
+  // Walls never change, so we trace them once into an offscreen canvas and blit
+  // it each frame. Each wall edge that faces open space becomes a thin glowing
+  // line, inset slightly so corners round and corridors read wide and open.
+  const mazeChar = (c, r) => {
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return "#"; // off-grid = wall
+    return MAZE[r][c];
+  };
+  const wallCanvas = (() => {
+    const cvs = document.createElement("canvas");
+    cvs.width = Math.round(W * DPR);
+    cvs.height = Math.round(H * DPR);
+    const g = cvs.getContext("2d");
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    g.lineCap = "round";
+    g.lineJoin = "round";
+    const open = (c, r) => mazeChar(c, r) !== "#"; // door counts as open for outlining
+    const M = 3.2; // inset from tile boundary into the wall
+    // glowing neon stroke
+    g.shadowColor = "#4f6bff";
+    g.shadowBlur = 6;
+    g.strokeStyle = "#3550ff";
+    g.lineWidth = 2.4;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (mazeChar(c, r) !== "#") continue;
+        const x0 = c * TILE, y0 = r * TILE, x1 = x0 + TILE, y1 = y0 + TILE;
+        const U = open(c, r - 1), D = open(c, r + 1), L = open(c - 1, r), R = open(c + 1, r);
+        g.beginPath();
+        if (U) { g.moveTo(L ? x0 + M : x0, y0 + M); g.lineTo(R ? x1 - M : x1, y0 + M); }
+        if (D) { g.moveTo(L ? x0 + M : x0, y1 - M); g.lineTo(R ? x1 - M : x1, y1 - M); }
+        if (L) { g.moveTo(x0 + M, U ? y0 + M : y0); g.lineTo(x0 + M, D ? y1 - M : y1); }
+        if (R) { g.moveTo(x1 - M, U ? y0 + M : y0); g.lineTo(x1 - M, D ? y1 - M : y1); }
+        g.stroke();
+      }
+    }
+    // ghost-house door (pink bar)
+    g.shadowColor = "#ff7bd5";
+    g.shadowBlur = 5;
+    g.strokeStyle = "#ff7bd5";
+    g.lineWidth = 3;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (MAZE[r][c] !== "-") continue;
+        g.beginPath();
+        g.moveTo(c * TILE, r * TILE + TILE / 2);
+        g.lineTo(c * TILE + TILE, r * TILE + TILE / 2);
+        g.stroke();
+      }
+    }
+    return cvs;
+  })();
 
   // ---- Setup ----------------------------------------------------------------
   function resetGrid() {
@@ -530,26 +585,25 @@
   }
 
   function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, W, H);
     ctx.save();
     if (shake > 0.15) ctx.translate((Math.random() * 2 - 1) * shake, (Math.random() * 2 - 1) * shake);
-    // walls + door
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      const ch = grid[r][c], x = c * TILE, y = r * TILE;
-      if (ch === "#") {
-        ctx.fillStyle = "#1414b8"; roundRect(x + 1.5, y + 1.5, TILE - 3, TILE - 3, 4); ctx.fill();
-        ctx.strokeStyle = "#3b3bff"; ctx.lineWidth = 1.5; roundRect(x + 1.5, y + 1.5, TILE - 3, TILE - 3, 4); ctx.stroke();
-      } else if (ch === "-") {
-        ctx.fillStyle = "#ff7bd5"; ctx.fillRect(x, y + TILE / 2 - 2, TILE, 4);
-      }
-    }
+
+    // pre-rendered neon walls + door
+    ctx.drawImage(wallCanvas, 0, 0, W, H);
+
     // pellets
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       const ch = grid[r][c];
-      if (ch === ".") { ctx.fillStyle = "#ffe6b3"; ctx.beginPath(); ctx.arc(px(c), px(r), 2, 0, 7); ctx.fill(); }
-      else if (ch === "o") {
-        const pulse = 3 + Math.sin(animTick * 0.18) * 1.3;
-        ctx.fillStyle = "#ffd24d"; ctx.beginPath(); ctx.arc(px(c), px(r), pulse, 0, 7); ctx.fill();
+      if (ch === ".") {
+        ctx.fillStyle = "#ffe6c2"; ctx.beginPath(); ctx.arc(px(c), px(r), 2.1, 0, 7); ctx.fill();
+      } else if (ch === "o") {
+        const pulse = 3.4 + Math.sin(animTick * 0.18) * 1.4;
+        ctx.save();
+        ctx.shadowColor = "#ffd24d"; ctx.shadowBlur = 10;
+        ctx.fillStyle = "#ffe27a"; ctx.beginPath(); ctx.arc(px(c), px(r), pulse, 0, 7); ctx.fill();
+        ctx.restore();
       }
     }
     drawPops();
@@ -589,7 +643,10 @@
     const a = open * Math.PI;
     const base = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 }[pac.dir] || 0;
     ctx.save(); ctx.translate(pac.x, pac.y); ctx.rotate(base);
-    ctx.fillStyle = "#ffe000";
+    ctx.shadowColor = "#ffd000"; ctx.shadowBlur = 8;
+    const grd = ctx.createRadialGradient(-2, -2, 1, 0, 0, TILE * 0.5);
+    grd.addColorStop(0, "#fff27a"); grd.addColorStop(1, "#ffd000");
+    ctx.fillStyle = grd;
     ctx.beginPath(); ctx.moveTo(0, 0);
     ctx.arc(0, 0, TILE * 0.46, a, Math.PI * 2 - a); ctx.closePath(); ctx.fill();
     ctx.restore();
@@ -603,6 +660,9 @@
     if (g.mode === "eyes") body = null;
 
     if (body) {
+      ctx.save();
+      ctx.shadowColor = g.mode === "frightened" ? "#3a6bff" : body;
+      ctx.shadowBlur = 7;
       ctx.fillStyle = body;
       ctx.beginPath();
       ctx.arc(x, y - 1, rad, Math.PI, 0);
@@ -614,6 +674,7 @@
         ctx.lineTo(fx - step, y + rad - 2);
       }
       ctx.closePath(); ctx.fill();
+      ctx.restore();
     }
 
     if (g.mode === "frightened" && !flashing) {
