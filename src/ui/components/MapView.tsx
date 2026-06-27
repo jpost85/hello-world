@@ -129,35 +129,56 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
   // Board container ref — used to read actual pixel dimensions for initial zoom.
   const boardRef = useRef<HTMLDivElement>(null);
 
+  // Portrait mode: on narrow/tall screens we switch to `slice` so the map fills
+  // the board height. The slice creates a horizontal window into the landscape
+  // viewBox; overlayX is the left edge of that window in viewBox units.
+  const [isPortrait, setIsPortrait] = useState(false);
+  const portraitRef = useRef({ overlayX: 0, screenVbW: vbW });
+
   // Set the initial view when the map changes: zoom to fit the mapArea in the
   // visible board, centered. Uses RAF so layout is complete before measuring.
   useEffect(() => {
     const area = state.map.mapArea;
-    if (!area) {
-      setView({ x: 0, y: 0, k: 1 });
-      return;
-    }
     const raf = requestAnimationFrame(() => {
       const el = boardRef.current;
       const bw = el?.clientWidth ?? vbW;
       const bh = el?.clientHeight ?? vbH;
-      if (!bw || !bh) { setView({ x: 0, y: 0, k: 1 }); return; }
+      if (!bw || !bh) { setIsPortrait(false); setView({ x: 0, y: 0, k: 1 }); return; }
 
-      // SVG meet-scale: how the viewBox fits the board at k=1.
-      const meetScale = Math.min(bw / vbW, bh / vbH);
+      const portrait = bw < bh;
+      setIsPortrait(portrait);
 
-      // Target: fill ~88% of the board height, but don't require more than
-      // 2× horizontal panning (keeps the map navigable without feeling lost).
-      const kFillH  = (bh * 0.88) / (area.height * meetScale);
-      const kMaxPan = (bw * 2.0)  / (area.width  * meetScale);
-      const k = Math.max(1, Math.min(4, Math.min(kFillH, kMaxPan)));
+      if (!area) { setView({ x: 0, y: 0, k: 1 }); return; }
 
-      // Center on the mapArea centroid.
-      const mcx = area.x + area.width  / 2;
-      const mcy = area.y + area.height / 2;
-      const x = clamp(vbW / 2 - mcx * k, vbW * (1 - k), 0);
-      const y = clamp(vbH / 2 - mcy * k, vbH * (1 - k), 0);
-      setView({ x, y, k });
+      if (portrait) {
+        // `slice` scales so the board HEIGHT is filled; the content overflows
+        // horizontally and the user pans left/right to explore.
+        const sliceScale = Math.max(bw / vbW, bh / vbH);
+        const screenVbW  = bw / sliceScale;          // visible width in vb units
+        const overlayX   = (vbW - screenVbW) / 2;   // left edge of visible window
+        portraitRef.current = { overlayX, screenVbW };
+
+        // Center the view on the mapArea centroid horizontally; k=1 fills height.
+        const mcx = area.x + area.width  / 2;
+        const mcy = area.y + area.height / 2;
+        const k   = 1;
+        const x   = clamp(overlayX + screenVbW / 2 - mcx * k,
+                          overlayX + screenVbW - vbW * k, overlayX);
+        const y   = clamp(vbH / 2 - mcy * k, vbH * (1 - k), 0);
+        setView({ x, y, k });
+      } else {
+        portraitRef.current = { overlayX: 0, screenVbW: vbW };
+        // `meet` fits the whole viewBox; zoom so mapArea fills ~88% of height.
+        const meetScale = Math.min(bw / vbW, bh / vbH);
+        const kFillH  = (bh * 0.88) / (area.height * meetScale);
+        const kMaxPan = (bw * 2.0)  / (area.width  * meetScale);
+        const k = Math.max(1, Math.min(4, Math.min(kFillH, kMaxPan)));
+        const mcx = area.x + area.width  / 2;
+        const mcy = area.y + area.height / 2;
+        const x = clamp(vbW / 2 - mcx * k, vbW * (1 - k), 0);
+        const y = clamp(vbH / 2 - mcy * k, vbH * (1 - k), 0);
+        setView({ x, y, k });
+      }
     });
     return () => cancelAnimationFrame(raf);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -173,12 +194,24 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
   }, []);
 
   // Keep the scaled content covering the viewport (no panning into empty space).
+  // In portrait/slice mode the horizontal bounds differ: the slice window is
+  // centred at vbW/2, so valid tx ranges from (overlayX + screenVbW - vbW*k)
+  // to overlayX rather than the meet-mode [vbW*(1-k), 0].
   const clampPan = useCallback(
-    (x: number, y: number, k: number): [number, number] => [
-      clamp(x, vbW * (1 - k), 0),
-      clamp(y, vbH * (1 - k), 0),
-    ],
-    [vbW, vbH],
+    (x: number, y: number, k: number): [number, number] => {
+      if (isPortrait) {
+        const { overlayX, screenVbW } = portraitRef.current;
+        return [
+          clamp(x, overlayX + screenVbW - vbW * k, overlayX),
+          clamp(y, vbH * (1 - k), 0),
+        ];
+      }
+      return [
+        clamp(x, vbW * (1 - k), 0),
+        clamp(y, vbH * (1 - k), 0),
+      ];
+    },
+    [vbW, vbH, isPortrait],
   );
 
   const zoomAround = useCallback(
@@ -335,7 +368,7 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
         ref={svgRef}
         className={dragging ? "grabbing" : "grab"}
         viewBox={viewBox}
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio={isPortrait ? "xMidYMid slice" : "xMidYMid meet"}
         onPointerDown={onPointerDown}
       >
         <defs>
@@ -452,7 +485,21 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
       <div className="zoom-controls">
         <button title="Zoom in" onClick={() => zoomButton(1.4)}>+</button>
         <button title="Zoom out" onClick={() => zoomButton(1 / 1.4)}>−</button>
-        <button title="Reset view" onClick={() => setView({ x: 0, y: 0, k: 1 })}>⤢</button>
+        <button title="Reset view" onClick={() => {
+          const area = state.map.mapArea;
+          if (isPortrait && area) {
+            const { overlayX, screenVbW } = portraitRef.current;
+            const mcx = area.x + area.width / 2;
+            const mcy = area.y + area.height / 2;
+            setView({
+              x: clamp(overlayX + screenVbW / 2 - mcx, overlayX + screenVbW - vbW, overlayX),
+              y: clamp(vbH / 2 - mcy, vbH * (1 - 1), 0),
+              k: 1,
+            });
+          } else {
+            setView({ x: 0, y: 0, k: 1 });
+          }
+        }}>⤢</button>
       </div>
     </div>
   );
