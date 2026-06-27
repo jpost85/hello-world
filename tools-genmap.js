@@ -121,7 +121,7 @@ function ringPath(ring) {
   }
   return d + "Z";
 }
-function geomPath(geom) { return ringsOf(geom).map((r) => ringPath(simplifyRing(r, 0.12))).join(" "); }
+function geomPath(geom, tol) { return ringsOf(geom).map((r) => ringPath(simplifyRing(r, tol || 0.12))).join(" "); }
 function polygonsOfName(n) {
   const g = featByName(n).geometry;
   return g.type === "Polygon" ? [g.coordinates] : g.coordinates;
@@ -205,13 +205,14 @@ for (const id in SEA_POINTS) {
 const playableNames = new Set();
 for (const id in PLAYABLE) for (const n of statesOf(PLAYABLE[id])) playableNames.add(n);
 const M = 1.0; // window margin (degrees)
-const TERRAIN_MIN_LON = -125; // include the whole continent west to the Pacific
+const TERRAIN_MIN_LON = -105; // far enough west to fill the wide-screen letterbox, but
+                              // short of the heavy Pacific coastlines (mobile perf)
 const terrain = [];
 for (const f of FEATURES) {
   if (playableNames.has(f.properties.name)) continue;
   const b = bboxOf(f.geometry);
   if (b.mxx < TERRAIN_MIN_LON || b.mnx > maxLon + M || b.mxy < minLat - M || b.mny > maxLat + M) continue;
-  terrain.push(geomPath(f.geometry));
+  terrain.push(geomPath(f.geometry, 0.22)); // backdrop only — simplify harder
 }
 
 const MAPDATA = {
