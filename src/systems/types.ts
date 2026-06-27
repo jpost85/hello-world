@@ -64,6 +64,12 @@ export interface Enemy {
   reward: number;
   behavior: "drift" | "flee" | "hunt";
   visual: { color: string; shape: "circle" | "triangle" | "rect"; radius: number };
+  /**
+   * Banked EVO points before this enemy starts appearing in the spawn pool.
+   * Drives the difficulty ramp: dangerous hunters have a higher threshold, so
+   * the opening minute is only harmless prey. Defaults to 0 (always present).
+   */
+  appearsAtPoints?: number;
   /** Bosses are era-gate enemies: tougher, single-spawn, and advance the era when eaten. */
   isBoss?: boolean;
 }

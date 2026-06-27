@@ -10,7 +10,7 @@ import {
   canAdvanceEra,
   advanceEra,
 } from "../ProgressionSystem";
-import { pickSpawn, enemiesForEra } from "../EcosystemSystem";
+import { pickSpawn, enemiesForEra, availableEnemies } from "../EcosystemSystem";
 import { tickSurvival, feed, maxHunger } from "../SurvivalSystem";
 import { ENEMY_BY_ID } from "../../data/enemies";
 
@@ -18,8 +18,9 @@ describe("CreatureModel", () => {
   it("derives stats by summing equipped parts", () => {
     const c = createStarterCreature("era.primordial");
     const stats = computeStats(c);
-    expect(stats.maxHealth).toBe(10); // body.cell only
+    expect(stats.maxHealth).toBe(30); // body.cell only
     expect(c.currentHealth).toBe(stats.maxHealth);
+    expect(stats.attack).toBe(3); // mouth.none lets a fresh cell actually eat
   });
 });
 
@@ -118,7 +119,21 @@ describe("EcosystemSystem", () => {
     const roster = enemiesForEra("era.primordial").map((e) => e.id);
     expect(roster).not.toContain("trilobite");
     for (let roll = 0; roll < 1; roll += 0.1) {
-      expect(roster).toContain(pickSpawn("era.primordial", roll)!.id);
+      // High points => whole roster unlocked; result is always a roster member.
+      expect(roster).toContain(pickSpawn("era.primordial", 999, roll)!.id);
     }
+  });
+
+  it("ramps difficulty: no hunters until enough points are banked", () => {
+    // At the very start only harmless prey is eligible.
+    for (let roll = 0; roll < 1; roll += 0.05) {
+      const id = pickSpawn("era.primordial", 0, roll)!.id;
+      expect(["stinger", "predatorcell"]).not.toContain(id);
+    }
+    // Stinger unlocks at 45, predator cell only at 75.
+    const at50 = availableEnemies("era.primordial", 50).map((e) => e.id);
+    expect(at50).toContain("stinger");
+    expect(at50).not.toContain("predatorcell");
+    expect(availableEnemies("era.primordial", 80).map((e) => e.id)).toContain("predatorcell");
   });
 });

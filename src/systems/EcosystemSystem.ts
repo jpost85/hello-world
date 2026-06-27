@@ -8,7 +8,7 @@ import { ERA_BY_ID } from "../data/eras";
  * no opinion about pixels or positions.
  */
 
-/** The enemy roster for an era. */
+/** The full enemy roster for an era (ignores difficulty thresholds). */
 export function enemiesForEra(eraId: string): Enemy[] {
   const era = ERA_BY_ID[eraId];
   if (!era) return [];
@@ -16,12 +16,22 @@ export function enemiesForEra(eraId: string): Enemy[] {
 }
 
 /**
- * Pick the next enemy to spawn, weighted toward weaker prey so the world stays
- * mostly edible. `roll` is a 0..1 value supplied by the caller (keeps this
- * function deterministic and testable instead of calling Math.random itself).
+ * The enemies eligible to spawn right now: an era's roster filtered to those
+ * the player has progressed far enough to face (`appearsAtPoints <= evoPoints`).
+ * This is the difficulty ramp — early on only harmless prey is eligible.
  */
-export function pickSpawn(eraId: string, roll: number): Enemy | undefined {
-  const roster = enemiesForEra(eraId);
+export function availableEnemies(eraId: string, evoPoints: number): Enemy[] {
+  return enemiesForEra(eraId).filter((e) => (e.appearsAtPoints ?? 0) <= evoPoints);
+}
+
+/**
+ * Pick the next enemy to spawn, weighted toward weaker prey so the world stays
+ * mostly edible. Only enemies unlocked by the player's `evoPoints` are eligible.
+ * `roll` is a 0..1 value supplied by the caller (keeps this function
+ * deterministic and testable instead of calling Math.random itself).
+ */
+export function pickSpawn(eraId: string, evoPoints: number, roll: number): Enemy | undefined {
+  const roster = availableEnemies(eraId, evoPoints);
   if (roster.length === 0) return undefined;
 
   // Weight inversely to total stats: weak prey is common, predators are rare.

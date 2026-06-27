@@ -260,7 +260,7 @@ export class GameScene extends Phaser.Scene {
     this.spawnAcc += dt;
     if (this.spawnAcc >= GAME_CONFIG.spawnIntervalSec && this.enemies.length < GAME_CONFIG.maxEnemies) {
       this.spawnAcc = 0;
-      const def = pickSpawn(this.creature.eraId, Math.random());
+      const def = pickSpawn(this.creature.eraId, this.creature.evoPoints, Math.random());
       if (def) this.enemies.push(this.spawnEnemy(def));
     }
   }
