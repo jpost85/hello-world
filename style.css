@@ -100,9 +100,8 @@ body {
 .lives { display: flex; gap: 4px; min-height: 14px; }
 .life-dot {
   width: 14px; height: 14px; border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 6px rgba(255, 204, 0, .8);
-  clip-path: polygon(100% 28%, 48% 50%, 100% 72%, 100% 100%, 0 100%, 0 0, 100% 0);
+  background: radial-gradient(circle at 35% 30%, #8effdd, #16c79a 70%);
+  box-shadow: 0 0 6px rgba(31, 224, 168, .8);
 }
 
 /* ---------- Stage / canvas ---------- */

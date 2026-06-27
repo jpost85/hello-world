@@ -1,7 +1,9 @@
 # Mister Munchy!
 
-A mobile-first, browser-based Pac-Man style arcade game. No build step, no
-dependencies — just open it in a browser.
+A mobile-first, browser-based maze-muncher arcade game. Guide **Mister
+Munchy** — a hungry teal critter — around an original maze, gobbling dots
+while dodging the ghosts. No build step, no dependencies — just open it in a
+browser.
 
 ## Play
 
@@ -27,8 +29,9 @@ played in portrait.
 - Munch every dot to clear the level.
 - Glowing **power pellets** turn the ghosts blue — chase them down for big,
   escalating points (200 → 400 → 800 → 1600).
-- Each ghost hunts with its own personality (the classic Blinky / Pinky /
-  Inky / Clyde targeting behaviours), alternating between scatter and chase.
+- Each ghost hunts with its own personality (distinct chaser / ambusher /
+  flanker / wanderer targeting behaviours), alternating between scatter and
+  chase.
 - Grab the bonus **fruit** that appears mid-level for extra points.
 - You get 3 lives, plus a bonus life at 10,000 points. Clear the board to
   advance — every level the ghosts get a little faster and a little hungrier.
@@ -48,3 +51,11 @@ also get a haptic buzz on big moments. Tap the speaker icon to mute.
 - `index.html` — markup and HUD
 - `style.css` — mobile-first responsive layout (safe-area aware, no scroll/zoom)
 - `game.js` — the game engine (maze, movement, ghost AI, rendering)
+
+## A note on originality
+
+The character (Mister Munchy) and the maze layout are original to this
+project, intentionally distinct from any trademarked maze-arcade property.
+The gameplay genre and mechanics are not copyrightable, but specific
+character/maze artwork can be — so the visuals here are our own. This is not
+legal advice; review with a professional before any commercial release.

@@ -10,14 +10,14 @@
   // T tunnel mouth (walkable + wraps horizontally)
   const MAZE = [
     "############################",
-    "#............##............#",
-    "#.####.#####.##.#####.####.#",
-    "#o####.#####.##.#####.####o#",
-    "#.####.#####.##.#####.####.#",
+    "#o........................o#",
+    "#.####.##.##.##.##.##.####.#",
+    "#.####.##.##.##.##.##.####.#",
     "#..........................#",
-    "#.####.##.########.##.####.#",
-    "#.####.##.########.##.####.#",
-    "#......##....##....##......#",
+    "#.##.###.##.#..#.##.###.##.#",
+    "#..........................#",
+    "#.####.##.##.##.##.##.####.#",
+    "#..........................#",
     "######.##### ## #####.######",
     "######.##### ## #####.######",
     "######.##          ##.######",
@@ -29,14 +29,14 @@
     "######.##          ##.######",
     "######.##### ## #####.######",
     "######.##### ## #####.######",
-    "#............##............#",
-    "#.####.#####.##.#####.####.#",
-    "#o..##.......  .......##..o#",
-    "###.##.##.########.##.##.###",
-    "###.##.##.########.##.##.###",
-    "#......##....##....##......#",
-    "#.##########.##.##########.#",
     "#..........................#",
+    "#.####.##.##.##.##.##.####.#",
+    "#o........................o#",
+    "#.####.##..........##.####.#",
+    "#.####.##.##.##.##.##.####.#",
+    "#.####.##.##.##.##.##.####.#",
+    "#..........................#",
+    "#.####.##.##.##.##.##.####.#",
     "############################",
   ];
 
@@ -175,7 +175,7 @@
   ];
 
   const HOME = { col: 13, row: 14 };
-  const PAC_START = { col: 13.5, row: 22 };
+  const PAC_START = { col: 13.5, row: 23 };
   const eaten = () => DOT_TOTAL - dotsLeft;
 
   // ---- Tile helpers ---------------------------------------------------------
@@ -443,7 +443,7 @@
           spawnBurst(g.x, g.y, "#3cf0ff", 16, 2.6); spawnPop(g.x, g.y, "rgba(120,200,255,A)", 22); addShake(3);
         } else if (g.mode !== "eyes") {
           state = "dying"; dyingTimer = 1100; Sound.death();
-          spawnBurst(pac.x, pac.y, "#ffe000", 22, 3); addShake(7); addFlash(0.25);
+          spawnBurst(pac.x, pac.y, "#22d6a2", 22, 3); addShake(7); addFlash(0.25);
           return;
         }
       }
@@ -608,7 +608,7 @@
     }
     drawPops();
     if (fruit) drawFruit();
-    drawPac();
+    drawPlayer();
     for (const g of ghosts) drawGhost(g);
     drawParticles();
     drawPopups();
@@ -635,21 +635,66 @@
     ctx.globalAlpha = 1;
   }
 
-  function drawPac() {
+  // Mister Munchy: an original teal slime-critter — googly eyes that track
+  // movement, two antennae, and a chomping tongue-out mouth that leans into
+  // the travel direction. Deliberately distinct from a certain yellow circle.
+  function drawPlayer() {
     if (!pac) return;
-    let open;
-    if (state === "dying") open = Math.min(0.99, (1100 - dyingTimer) / 1100); // chomp shut
-    else open = (Math.sin(animTick * 0.35) * 0.5 + 0.5) * 0.32 + 0.04;
-    const a = open * Math.PI;
-    const base = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 }[pac.dir] || 0;
-    ctx.save(); ctx.translate(pac.x, pac.y); ctx.rotate(base);
-    ctx.shadowColor = "#ffd000"; ctx.shadowBlur = 8;
-    const grd = ctx.createRadialGradient(-2, -2, 1, 0, 0, TILE * 0.5);
-    grd.addColorStop(0, "#fff27a"); grd.addColorStop(1, "#ffd000");
+    const x = pac.x, y = pac.y, R = TILE * 0.47;
+    const d = DIRS[pac.dir] || DIRS.left;
+    const dying = state === "dying";
+    const chomp = Math.sin(animTick * 0.32) * 0.5 + 0.5; // 0..1
+    const lx = d.x * 1.3, ly = d.y * 1.3;                // lean toward travel
+
+    // body
+    ctx.save();
+    ctx.shadowColor = "#1fe0a8"; ctx.shadowBlur = 8;
+    const grd = ctx.createRadialGradient(x - 3, y - 3, 1, x, y, R * 1.15);
+    grd.addColorStop(0, "#8effdd"); grd.addColorStop(0.6, "#22d6a2"); grd.addColorStop(1, "#0f9e78");
     ctx.fillStyle = grd;
-    ctx.beginPath(); ctx.moveTo(0, 0);
-    ctx.arc(0, 0, TILE * 0.46, a, Math.PI * 2 - a); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.fill();
     ctx.restore();
+
+    // antennae
+    ctx.strokeStyle = "#0f9e78"; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(x + s * 2.6, y - R * 0.88);
+      ctx.lineTo(x + s * 3.8, y - R * 1.4);
+      ctx.stroke();
+      ctx.fillStyle = "#ffe27a";
+      ctx.beginPath(); ctx.arc(x + s * 3.9, y - R * 1.45, 1.5, 0, 7); ctx.fill();
+    }
+
+    // mouth (opens vertically with a little tongue)
+    const mY = y + R * 0.24 + ly * 0.5;
+    const mW = R * 1.02;
+    const mH = dying ? R * 0.95 : 1.2 + chomp * R * 0.72;
+    ctx.fillStyle = "#06372f";
+    ctx.beginPath(); ctx.ellipse(x + lx * 0.5, mY, mW * 0.5, mH * 0.5, 0, 0, 7); ctx.fill();
+    if (mH > 4) {
+      ctx.fillStyle = "#ff5d7a";
+      ctx.beginPath(); ctx.ellipse(x + lx * 0.5, mY + mH * 0.16, mW * 0.3, mH * 0.24, 0, 0, 7); ctx.fill();
+    }
+
+    // eyes
+    const eY = y - R * 0.32 + ly;
+    const eXoff = R * 0.44;
+    for (const s of [-1, 1]) {
+      const ex = x + s * eXoff + lx;
+      ctx.fillStyle = "#fff";
+      ctx.beginPath(); ctx.arc(ex, eY, R * 0.34, 0, 7); ctx.fill();
+      if (dying) {
+        ctx.strokeStyle = "#1a3a2f"; ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(ex - 1.8, eY - 1.8); ctx.lineTo(ex + 1.8, eY + 1.8);
+        ctx.moveTo(ex + 1.8, eY - 1.8); ctx.lineTo(ex - 1.8, eY + 1.8);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = "#15324a";
+        ctx.beginPath(); ctx.arc(ex + d.x * 1.5, eY + d.y * 1.5, R * 0.17, 0, 7); ctx.fill();
+      }
+    }
   }
 
   function drawGhost(g) {
