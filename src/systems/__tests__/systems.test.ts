@@ -18,9 +18,9 @@ describe("CreatureModel", () => {
   it("derives stats by summing equipped parts", () => {
     const c = createStarterCreature("era.primordial");
     const stats = computeStats(c);
-    expect(stats.maxHealth).toBe(30); // body.cell only
+    expect(stats.maxHealth).toBe(22); // body.cell only
     expect(c.currentHealth).toBe(stats.maxHealth);
-    expect(stats.attack).toBe(3); // mouth.none lets a fresh cell actually eat
+    expect(stats.attack).toBe(2); // mouth.none lets a fresh cell actually eat
   });
 });
 

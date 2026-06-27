@@ -18,16 +18,20 @@ import { PART_BY_ID } from "../data/bodyParts";
 import { buildSave, save } from "../persistence/SaveManager";
 import { sound } from "../audio/SoundManager";
 
-/** A live enemy on screen: definition, sprite, and remaining health. */
+/** A live enemy on screen: definition, sprite, remaining health, and age. */
 interface LiveEnemy {
   def: Enemy;
   gfx: Phaser.GameObjects.Shape;
   health: number;
+  /** Seconds alive; non-boss enemies despawn past ENEMY_TTL so the pool churns. */
+  age: number;
 }
 
 const DASH_SPEED_MULT = 2.8;
 const DASH_DURATION = 0.18;
 const DASH_COOLDOWN = 1.1;
+/** How long a regular enemy lingers before drifting off and despawning. */
+const ENEMY_TTL = 15;
 
 /**
  * The gameplay scene: the swim/eat/grow loop with survival pressure and a boss
@@ -220,6 +224,7 @@ export class GameScene extends Phaser.Scene {
     this.tickSpawning(dt);
     this.maybeSpawnBoss();
     this.moveEnemies(dt);
+    this.cullEnemies(dt);
 
     this.biteCooldown = Math.max(0, this.biteCooldown - dt);
     this.dashCooldown = Math.max(0, this.dashCooldown - dt);
@@ -258,10 +263,25 @@ export class GameScene extends Phaser.Scene {
   private tickSpawning(dt: number): void {
     if (this.boss) return; // freeze the soup during a boss fight
     this.spawnAcc += dt;
-    if (this.spawnAcc >= GAME_CONFIG.spawnIntervalSec && this.enemies.length < GAME_CONFIG.maxEnemies) {
-      this.spawnAcc = 0;
-      const def = pickSpawn(this.creature.eraId, this.creature.evoPoints, Math.random());
-      if (def) this.enemies.push(this.spawnEnemy(def));
+    if (this.spawnAcc < GAME_CONFIG.spawnIntervalSec) return;
+    // Always reset the cadence; just skip the spawn itself when at capacity, so
+    // the timer can never get stuck and silently stop the world.
+    this.spawnAcc = 0;
+    if (this.enemies.length >= GAME_CONFIG.maxEnemies) return;
+    const def = pickSpawn(this.creature.eraId, this.creature.evoPoints, Math.random());
+    if (def) this.enemies.push(this.spawnEnemy(def));
+  }
+
+  /** Age out lingering enemies so the pool keeps turning over and spawning. */
+  private cullEnemies(dt: number): void {
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const e = this.enemies[i];
+      e.age += dt;
+      if (e.age > ENEMY_TTL) {
+        const g = e.gfx;
+        this.tweens.add({ targets: g, alpha: 0, duration: 300, onComplete: () => g.destroy() });
+        this.enemies.splice(i, 1);
+      }
     }
   }
 
@@ -287,7 +307,7 @@ export class GameScene extends Phaser.Scene {
       gfx = this.add.circle(x, y, rad, color);
     }
     gfx.setDepth(5);
-    return { def, gfx, health: def.stats.maxHealth };
+    return { def, gfx, health: def.stats.maxHealth, age: 0 };
   }
 
   private maybeSpawnBoss(): void {
