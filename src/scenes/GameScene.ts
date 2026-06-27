@@ -79,6 +79,7 @@ export class GameScene extends Phaser.Scene {
 
     this.buildPlayer();
     this.buildHud();
+    this.seedInitialPrey();
     this.announce(era?.name ?? "", era?.description ?? "");
 
     this.target.set(this.player.x, this.player.y);
@@ -260,6 +261,14 @@ export class GameScene extends Phaser.Scene {
     this.burst(this.player.x, this.player.y, 0x9ecae1, 6);
   }
 
+  /** Populate the world with prey at the start of a run so there's food at t=0. */
+  private seedInitialPrey(): void {
+    for (let i = 0; i < GAME_CONFIG.initialPrey; i++) {
+      const def = pickSpawn(this.creature.eraId, this.creature.evoPoints, Math.random());
+      if (def) this.enemies.push(this.spawnEnemy(def));
+    }
+  }
+
   private tickSpawning(dt: number): void {
     if (this.boss) return; // freeze the soup during a boss fight
     this.spawnAcc += dt;
@@ -286,15 +295,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnEnemy(def: Enemy, atCenter = false): LiveEnemy {
+    const { width, height } = GAME_CONFIG;
     let x: number;
     let y: number;
     if (atCenter) {
-      x = GAME_CONFIG.width * 0.78;
-      y = GAME_CONFIG.height * 0.5;
-    } else {
+      x = width * 0.5;
+      y = height * 0.22;
+    } else if (def.behavior === "hunt") {
+      // Predators sweep in from an edge for a sense of threat/arrival.
       const edge = Math.floor(Math.random() * 4);
-      x = edge === 1 ? GAME_CONFIG.width + 20 : edge === 3 ? -20 : Math.random() * GAME_CONFIG.width;
-      y = edge === 0 ? -20 : edge === 2 ? GAME_CONFIG.height + 20 : Math.random() * GAME_CONFIG.height;
+      x = edge === 1 ? width + 20 : edge === 3 ? -20 : Math.random() * width;
+      y = edge === 0 ? -20 : edge === 2 ? height + 20 : Math.random() * height;
+    } else {
+      // Passive prey appears within view so there's always food to chase —
+      // but never right on top of the player.
+      const margin = 40;
+      x = margin + Math.random() * (width - 2 * margin);
+      y = margin + Math.random() * (height - 2 * margin);
+      for (let tries = 0; tries < 6; tries++) {
+        if (Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) > 120) break;
+        x = margin + Math.random() * (width - 2 * margin);
+        y = margin + Math.random() * (height - 2 * margin);
+      }
     }
     const color = Phaser.Display.Color.HexStringToColor(def.visual.color).color;
     const rad = def.visual.radius;

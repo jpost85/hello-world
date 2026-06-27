@@ -10,10 +10,12 @@ export const GAME_CONFIG = {
   height: 1170,
   /** Vertical padding (px) kept clear of the top edge for notches/status bars. */
   safeTop: 40,
-  /** Seconds between enemy spawns. */
-  spawnIntervalSec: 1.3,
+  /** Seconds between enemy spawns. Tuned for the tall portrait field's density. */
+  spawnIntervalSec: 0.8,
   /** Max concurrent enemies on screen. */
-  maxEnemies: 9,
+  maxEnemies: 14,
+  /** Prey present in the world the moment a run begins (so there's food at t=0). */
+  initialPrey: 7,
   /** Distance (px) within which a bite connects. */
   biteRange: 28,
 } as const;
