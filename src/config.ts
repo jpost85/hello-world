@@ -1,12 +1,19 @@
 /** Tunable presentation-layer constants. Game-balance numbers live in `src/data`. */
 export const GAME_CONFIG = {
-  /** Logical design resolution; Phaser's Scale.FIT letterboxes to the device. */
-  width: 960,
-  height: 540,
+  /**
+   * Logical design resolution — PORTRAIT, sized to a modern phone aspect
+   * (~19.5:9). Phaser's Scale.FIT scales this to the device and centers it; the
+   * page background matches the game, so any letterbox on off-ratio screens is
+   * nearly invisible. Tall, narrow play area that fills a phone held upright.
+   */
+  width: 540,
+  height: 1170,
+  /** Vertical padding (px) kept clear of the top edge for notches/status bars. */
+  safeTop: 40,
   /** Seconds between enemy spawns. */
-  spawnIntervalSec: 1.4,
+  spawnIntervalSec: 1.3,
   /** Max concurrent enemies on screen. */
-  maxEnemies: 8,
+  maxEnemies: 9,
   /** Distance (px) within which a bite connects. */
   biteRange: 28,
 } as const;

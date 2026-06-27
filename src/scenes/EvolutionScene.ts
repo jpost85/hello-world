@@ -11,38 +11,41 @@ import { sound } from "../audio/SoundManager";
  */
 export class EvolutionScene extends Phaser.Scene {
   private creature!: CreatureState;
-  private rows: Phaser.GameObjects.Text[] = [];
+  private rows: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super("Evolution");
   }
 
   create(): void {
+    const { width, height, safeTop } = GAME_CONFIG;
     this.creature = this.registry.get("creature") as CreatureState;
 
-    this.add
-      .rectangle(0, 0, GAME_CONFIG.width, GAME_CONFIG.height, 0x000000, 0.78)
-      .setOrigin(0, 0);
+    this.add.rectangle(0, 0, width, height, 0x000000, 0.82).setOrigin(0, 0);
 
-    this.add.text(40, 30, "EVOLVE", {
+    this.add.text(24, safeTop, "EVOLVE", {
       fontFamily: "monospace",
-      fontSize: "28px",
+      fontSize: "30px",
       color: "#ffd27f",
     });
-    this.add.text(40, 66, `EVO points: ${this.creature.evoPoints}`, {
+    this.add.text(24, safeTop + 40, `EVO points available: ${this.creature.evoPoints}`, {
       fontFamily: "monospace",
-      fontSize: "18px",
+      fontSize: "16px",
       color: "#e8f6f3",
     });
 
     this.renderOptions();
 
+    // Big bottom-of-screen close button for thumbs.
     this.add
-      .text(40, GAME_CONFIG.height - 40, "[ CLOSE (Esc) ]", {
+      .text(width / 2, height - 36, "✕  CLOSE", {
         fontFamily: "monospace",
-        fontSize: "18px",
+        fontSize: "22px",
         color: "#9ecae1",
+        backgroundColor: "#16323d",
+        padding: { x: 24, y: 14 },
       })
+      .setOrigin(0.5, 1)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => this.close());
 
@@ -57,31 +60,51 @@ export class EvolutionScene extends Phaser.Scene {
       (a, b) => a.part.slot.localeCompare(b.part.slot) || a.part.cost - b.part.cost,
     );
 
+    const startY = GAME_CONFIG.safeTop + 80;
+    const rowH = 64;
+    const rowW = GAME_CONFIG.width - 48;
+
     options.forEach((opt, i) => {
-      const y = 110 + i * 34;
+      const y = startY + i * rowH;
       const mods = Object.entries(opt.part.statMods)
         .map(([k, v]) => `${k}+${v}`)
-        .join(" ");
-      const label = `${opt.part.slot.padEnd(6)} ${opt.part.name.padEnd(16)} ${String(opt.part.cost).padStart(4)}p   ${mods}`;
-      const row = this.add
-        .text(40, y, (opt.affordable ? "▶ " : "  ") + label, {
-          fontFamily: "monospace",
-          fontSize: "16px",
-          color: opt.affordable ? "#a8e6a1" : "#7a8a90",
-        })
-        .setInteractive({ useHandCursor: opt.affordable });
+        .join("  ");
+      const affordable = opt.affordable;
 
-      if (opt.affordable) {
-        row.on("pointerdown", () => this.choose(opt.part.id));
+      // Tappable card: slot+name+cost on top, stat mods below.
+      const card = this.add
+        .rectangle(24, y, rowW, rowH - 10, affordable ? 0x1c3a47 : 0x14222a, 0.9)
+        .setOrigin(0, 0)
+        .setStrokeStyle(1, affordable ? 0x4fb0c6 : 0x2a3a42);
+      const title = this.add.text(38, y + 9, `${opt.part.name}`, {
+        fontFamily: "monospace",
+        fontSize: "17px",
+        color: affordable ? "#a8e6a1" : "#7a8a90",
+      });
+      const cost = this.add
+        .text(24 + rowW - 14, y + 9, `${opt.part.cost}p`, {
+          fontFamily: "monospace",
+          fontSize: "17px",
+          color: affordable ? "#ffd27f" : "#6a7a82",
+        })
+        .setOrigin(1, 0);
+      const sub = this.add.text(38, y + 32, `${opt.part.slot} · ${mods}`, {
+        fontFamily: "monospace",
+        fontSize: "13px",
+        color: affordable ? "#bcd9d4" : "#5e7077",
+      });
+
+      if (affordable) {
+        card.setInteractive({ useHandCursor: true }).on("pointerdown", () => this.choose(opt.part.id));
       }
-      this.rows.push(row);
+      this.rows.push(card, title, cost, sub);
     });
 
     if (options.length === 0) {
       this.rows.push(
-        this.add.text(40, 110, "No mutations available — go eat something.", {
+        this.add.text(24, startY, "No mutations available — go eat something.", {
           fontFamily: "monospace",
-          fontSize: "16px",
+          fontSize: "15px",
           color: "#7a8a90",
         }),
       );

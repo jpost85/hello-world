@@ -159,49 +159,54 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildHud(): void {
+    const { width, height, safeTop } = GAME_CONFIG;
     this.hudGfx = this.add.graphics().setScrollFactor(0).setDepth(1000);
+
+    // Status readout sits just under the bars, clear of the notch zone.
     this.hudText = this.add
-      .text(16, 70, "", { fontFamily: "monospace", fontSize: "13px", color: "#cfeae6" })
+      .text(16, safeTop + 64, "", { fontFamily: "monospace", fontSize: "14px", color: "#cfeae6" })
       .setScrollFactor(0)
       .setDepth(1000);
 
-    const evolveBtn = this.add
-      .text(GAME_CONFIG.width - 14, 12, "EVOLVE [E]", {
+    // Boss banner: centered, below the status bars.
+    this.bossText = this.add
+      .text(width / 2, safeTop + 86, "", {
         fontFamily: "monospace",
         fontSize: "15px",
+        color: "#ff9ad1",
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(1000);
+
+    // Bottom thumb-zone controls — large tap targets, one per corner.
+    const evolveBtn = this.add
+      .text(16, height - 20, "EVOLVE", {
+        fontFamily: "monospace",
+        fontSize: "22px",
         color: "#ffd27f",
         backgroundColor: "#1c3a47",
-        padding: { x: 8, y: 5 },
+        padding: { x: 20, y: 16 },
       })
-      .setOrigin(1, 0)
+      .setOrigin(0, 1)
       .setScrollFactor(0)
       .setDepth(1000)
       .setInteractive({ useHandCursor: true });
     evolveBtn.on("pointerdown", () => this.openEvolution());
 
     this.dashBtn = this.add
-      .text(GAME_CONFIG.width - 14, GAME_CONFIG.height - 14, "DASH", {
+      .text(width - 16, height - 20, "DASH", {
         fontFamily: "monospace",
-        fontSize: "18px",
+        fontSize: "22px",
         color: "#9ecae1",
         backgroundColor: "#16323d",
-        padding: { x: 14, y: 12 },
+        padding: { x: 20, y: 16 },
       })
       .setOrigin(1, 1)
       .setScrollFactor(0)
       .setDepth(1000)
       .setInteractive({ useHandCursor: true });
     this.dashBtn.on("pointerdown", () => this.tryDash());
-
-    this.bossText = this.add
-      .text(GAME_CONFIG.width / 2, 16, "", {
-        fontFamily: "monospace",
-        fontSize: "14px",
-        color: "#ff9ad1",
-      })
-      .setOrigin(0.5, 0)
-      .setScrollFactor(0)
-      .setDepth(1000);
   }
 
   // ---- main loop ----------------------------------------------------------
@@ -437,33 +442,37 @@ export class GameScene extends Phaser.Scene {
     const g = this.hudGfx;
     g.clear();
 
+    const top = GAME_CONFIG.safeTop;
+    const barW = GAME_CONFIG.width - 32; // full-width bars read better in portrait
     const bar = (y: number, frac: number, color: number, label: string) => {
-      const w = 180;
       g.fillStyle(0x000000, 0.4);
-      g.fillRect(16, y, w, 12);
+      g.fillRect(16, y, barW, 14);
       g.fillStyle(color, 1);
-      g.fillRect(16, y, w * Phaser.Math.Clamp(frac, 0, 1), 12);
+      g.fillRect(16, y, barW * Phaser.Math.Clamp(frac, 0, 1), 14);
       g.lineStyle(1, 0xffffff, 0.25);
-      g.strokeRect(16, y, w, 12);
+      g.strokeRect(16, y, barW, 14);
       this.hudLabel(label, y);
     };
 
-    bar(14, this.creature.currentHealth / stats.maxHealth, 0xe5534b, "HP");
-    bar(32, this.creature.hunger / maxHunger(this.creature), 0xe0a23c, "FOOD");
+    bar(top, this.creature.currentHealth / stats.maxHealth, 0xe5534b, "HP");
+    bar(top + 20, this.creature.hunger / maxHunger(this.creature), 0xe0a23c, "FOOD");
     const goal = era?.advanceAtPoints ?? 1;
-    bar(50, this.creature.evoPoints / goal, 0x4fb0c6, "EVO");
+    bar(top + 40, this.creature.evoPoints / goal, 0x4fb0c6, "EVO");
 
     this.hudText.setText(
-      `${era?.name ?? "?"}   EVO ${this.creature.evoPoints}/${goal}   ATK ${stats.attack} DEF ${stats.defense} SIZE ${stats.size}`,
+      `${era?.name ?? "?"}   ATK ${stats.attack}  DEF ${stats.defense}  SIZE ${stats.size}`,
     );
 
-    // Boss banner + health.
+    // Boss banner + health (centered under the status bars).
     if (this.boss) {
       const frac = this.boss.health / this.boss.def.stats.maxHealth;
+      const bw = GAME_CONFIG.width - 80;
+      const bx = 40;
+      const by = top + 110;
       g.fillStyle(0x000000, 0.5);
-      g.fillRect(GAME_CONFIG.width / 2 - 150, 36, 300, 10);
+      g.fillRect(bx, by, bw, 10);
       g.fillStyle(0xff5fa2, 1);
-      g.fillRect(GAME_CONFIG.width / 2 - 150, 36, 300 * Phaser.Math.Clamp(frac, 0, 1), 10);
+      g.fillRect(bx, by, bw * Phaser.Math.Clamp(frac, 0, 1), 10);
       this.bossText.setText(`☠ ${this.boss.def.name}`);
     } else {
       this.bossText.setText(isBossReady(this.creature) ? "The boss is near…" : "");
@@ -475,12 +484,13 @@ export class GameScene extends Phaser.Scene {
 
   private hudLabel(text: string, y: number): void {
     const key = `hudlbl_${y}`;
-    let t = this.children.getByName(key) as Phaser.GameObjects.Text | null;
-    if (!t) {
-      t = this.add
-        .text(16 + 184, y - 1, text, { fontFamily: "monospace", fontSize: "11px", color: "#cfeae6" })
+    const exists = this.children.getByName(key) as Phaser.GameObjects.Text | null;
+    if (!exists) {
+      // Label sits inside the left edge of its (now full-width) bar.
+      this.add
+        .text(22, y + 1, text, { fontFamily: "monospace", fontSize: "11px", color: "#f3faf8" })
         .setScrollFactor(0)
-        .setDepth(1000)
+        .setDepth(1001)
         .setName(key);
     }
   }

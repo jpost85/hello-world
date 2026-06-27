@@ -4,7 +4,7 @@
   "description": "Evolve from a single cell to a complex creature.",
   "start_url": "./",
   "display": "fullscreen",
-  "orientation": "landscape",
+  "orientation": "portrait",
   "background_color": "#0b1d2a",
   "theme_color": "#0b1d2a",
   "icons": []
