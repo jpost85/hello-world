@@ -44,10 +44,13 @@ src/
     Projectile.ts    in-flight munition + MIRV split logic
     Physics.ts       gravity/wind constants, ballistics helpers
     Weapons.ts       data-driven arsenal catalogue
+    Items.ts         defensive items (shields, parachutes)
+    Particles.ts     spark + debris particle field
     AI.ts            trajectory-sampling opponent + shop logic
     Economy.ts       payouts and starting cash
   input/TouchControls.ts   drag-to-aim pointer handling
   render/Renderer.ts       canvas drawing
+  audio/Sound.ts           WebAudio-synthesized SFX (no asset files)
   ui/Hud.ts                top status bar + bottom control panel
   ui/Shop.ts               menu / shop / game-over overlays
 ```
@@ -60,5 +63,11 @@ trajectory preview, fall damage, a 6-weapon arsenal (incl. MIRV and terrain-
 building Dirt Clod), an economy with a between-rounds shop, and multi-round
 matches with a scoreboard.
 
-Planned next: defensive items (shields, parachutes), explosion particles &
-sound, smarter weapon-buying AI, and a PWA manifest for offline install.
+Polish pass: explosion particles + flying debris, decaying screen shake,
+fully synthesized sound effects (fire / explosion / death, with a mute
+toggle), and the two iconic defensive items — **shields** (absorb blast
+damage, with a bubble visual) and **parachutes** (auto-deploy to cancel fall
+damage). The AI buys defences between rounds too.
+
+Planned next: a PWA manifest + service worker for offline install, smarter
+AI weapon selection, and optional local hotseat play.

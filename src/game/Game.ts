@@ -4,6 +4,8 @@ import { Terrain, makeRng } from "./Terrain";
 import { Tank, TANK_BODY_H, TANK_HIT_RADIUS } from "./Tank";
 import { Projectile } from "./Projectile";
 import { getWeapon } from "./Weapons";
+import { getItem } from "./Items";
+import { ParticleField } from "./Particles";
 import { planShot, aiBuy, type Shot } from "./AI";
 import {
   STARTING_CASH,
@@ -11,6 +13,8 @@ import {
   awardKill,
   awardSurvival,
 } from "./Economy";
+
+export type SoundType = "fire" | "explode" | "death";
 
 export interface Explosion {
   x: number;
@@ -41,6 +45,9 @@ export class Game {
   projectiles: Projectile[] = [];
   explosions: Explosion[] = [];
 
+  /** Decaying screen-shake magnitude (world px), read by the renderer. */
+  shake = 0;
+
   wind = 0;
   round = 0;
   config: MatchConfig = { opponents: 1, difficulty: "normal", rounds: 5 };
@@ -53,6 +60,7 @@ export class Game {
   aimLine: Vec2[] = [];
 
   private rng = makeRng(Date.now() >>> 0);
+  particles = new ParticleField(() => this.rng());
   private acc = 0;
   private aiTimer = 0;
   private pendingShot: Shot | null = null;
@@ -63,6 +71,7 @@ export class Game {
   // UI hooks (wired by main.ts).
   onStateChange: ((next: GameState, prev: GameState) => void) | null = null;
   onBanner: ((text: string) => void) | null = null;
+  onSound: ((type: SoundType, intensity?: number) => void) | null = null;
 
   constructor(width: number, height: number) {
     this.width = width;
@@ -106,6 +115,8 @@ export class Game {
       t.selectedWeapon = "baby";
       t.cash = STARTING_CASH;
       t.score = 0;
+      t.shield = 0;
+      t.parachutes = 1;
     }
 
     this.startRound();
@@ -117,6 +128,8 @@ export class Game {
     this.terrain.generate(this.rng);
     this.projectiles = [];
     this.explosions = [];
+    this.particles.clear();
+    this.shake = 0;
     this.wind = (this.rng() * 2 - 1) * MAX_WIND;
 
     // Place tanks in evenly spaced lanes with a little jitter.
@@ -206,6 +219,7 @@ export class Game {
     const vel = launchVelocity(t.angle, t.power);
     this.projectiles.push(new Projectile(muzzle, vel, weapon, t.id));
     this.aimLine = [];
+    this.onSound?.("fire");
     this.setState("firing");
   }
 
@@ -216,6 +230,8 @@ export class Game {
     dt = Math.min(dt, 0.05);
 
     this.updateExplosions(dt);
+    this.particles.update(dt, this.height - 2);
+    if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 60);
 
     if (this.state === "aiming" && this.current?.isAI) {
       this.aiTimer -= dt;
@@ -315,11 +331,19 @@ export class Game {
       w.id === "nuke" ? "#fff2c2" : w.kind === "dirt" ? "#a9743b" : "#ffb347";
     this.explosions.push({ x, y, r: 0, maxR: w.radius, t: 0, dur: 0.42, color });
 
+    // Juice: particles, screen shake, and sound scaled to the blast.
+    const scale = w.radius / 40;
+    this.shake = Math.min(16, Math.max(this.shake, 3 + w.radius * 0.12));
+    this.onSound?.("explode", scale);
+
     if (w.kind === "dirt") {
       this.terrain.deposit(x, y, w.radius);
+      this.particles.spawnDebris({ x, y }, Math.round(14 * scale), "#a9743b", 140 + w.radius * 2);
       return;
     }
     this.terrain.carve(x, y, w.radius);
+    this.particles.spawnSparks({ x, y }, Math.round(16 * scale), color, 180 + w.radius * 3);
+    this.particles.spawnDebris({ x, y }, Math.round(12 * scale), "#6b4a2a", 120 + w.radius * 2);
     this.applyBlast(x, y, w.radius, w.damage, p.ownerId);
   }
 
@@ -335,9 +359,15 @@ export class Game {
       const cy = t.y - TANK_BODY_H / 2;
       const d = Math.hypot(t.x - x, cy - y);
       if (d >= radius) continue;
-      const dmg = damage * (1 - d / radius);
+      let dmg = damage * (1 - d / radius);
       if (dmg <= 0) continue;
-      t.health -= dmg;
+      // Shields soak damage first.
+      if (t.shield > 0) {
+        const absorbed = Math.min(t.shield, dmg);
+        t.shield -= absorbed;
+        dmg -= absorbed;
+      }
+      if (dmg > 0) t.health -= dmg;
       this.lastHitBy.set(t.id, ownerId);
       if (ownerId !== t.id) {
         const owner = this.tanks.find((o) => o.id === ownerId);
@@ -352,7 +382,12 @@ export class Game {
       if (!t.alive) continue;
       const fall = t.settle(this.terrain);
       if (fall > 8) {
-        t.health -= Math.min(45, fall * 0.14);
+        if (t.parachutes > 0) {
+          t.parachutes -= 1;
+          this.banner(`${t.name}'s parachute deployed!`);
+        } else {
+          t.health -= Math.min(45, fall * 0.14);
+        }
       }
     }
     this.resolved = false;
@@ -377,15 +412,13 @@ export class Game {
         if (killer) awardKill(killer);
         this.banner(`${t.name} destroyed!`);
         // Big explosion where the tank was.
-        this.explosions.push({
-          x: t.x,
-          y: t.y - TANK_BODY_H,
-          r: 0,
-          maxR: 48,
-          t: 0,
-          dur: 0.5,
-          color: "#ff7a3c",
-        });
+        const ex = t.x;
+        const ey = t.y - TANK_BODY_H;
+        this.explosions.push({ x: ex, y: ey, r: 0, maxR: 48, t: 0, dur: 0.5, color: "#ff7a3c" });
+        this.particles.spawnSparks({ x: ex, y: ey }, 30, "#ffd24d", 280);
+        this.particles.spawnDebris({ x: ex, y: ey }, 22, t.color, 220);
+        this.shake = Math.min(20, Math.max(this.shake, 12));
+        this.onSound?.("death", 1.4);
       }
     }
   }
@@ -426,6 +459,21 @@ export class Game {
     if (!human || human.cash < w.price) return false;
     human.cash -= w.price;
     human.inventory[id] = (human.inventory[id] ?? 0) + 1;
+    return true;
+  }
+
+  buyItem(id: string): boolean {
+    const human = this.humanTank();
+    const item = getItem(id);
+    if (!human || human.cash < item.price) return false;
+    const current = item.kind === "shield" ? human.shield : human.parachutes;
+    if (current >= item.cap) return false; // already maxed out
+    human.cash -= item.price;
+    if (item.kind === "shield") {
+      human.shield = Math.min(item.cap, human.shield + item.amount);
+    } else {
+      human.parachutes = Math.min(item.cap, human.parachutes + item.amount);
+    }
     return true;
   }
 

@@ -1,6 +1,7 @@
 import type { Game, MatchConfig } from "../game/Game";
 import type { Difficulty } from "../types";
 import { PURCHASABLE } from "../game/Weapons";
+import { ITEMS } from "../game/Items";
 
 /**
  * Full-screen modal overlays: the start menu, the between-rounds shop, and the
@@ -86,38 +87,76 @@ export class Overlays {
     const list = el("div", "shop-list");
     const refresh = () => {
       if (human) cash.textContent = `$${human.cash}`;
+      list.querySelectorAll<HTMLElement>(".shop-row").forEach((r) => r.dispatchEvent(new Event("sync")));
     };
 
-    for (const w of PURCHASABLE) {
+    // Generic buyable row: `owned` reports the current stock, `buy` returns
+    // whether the purchase succeeded.
+    const makeRow = (
+      label: string,
+      desc: string,
+      price: number,
+      owned: () => string,
+      affordable: () => boolean,
+      buy: () => boolean,
+    ): HTMLElement => {
       const row = el("div", "shop-row");
       const info = el("div", "info");
       const name = el("div", "name");
-      name.textContent = `${w.name} — $${w.price}`;
-      const desc = el("div", "desc");
-      desc.textContent = w.desc;
-      info.append(name, desc);
+      name.textContent = `${label} — $${price}`;
+      const d = el("div", "desc");
+      d.textContent = desc;
+      info.append(name, d);
 
-      const owned = el("div", "owned");
-      const buy = el("button", "buy") as HTMLButtonElement;
-
+      const ownedEl = el("div", "owned");
+      const buyBtn = el("button", "buy") as HTMLButtonElement;
+      buyBtn.textContent = "Buy";
       const sync = () => {
-        const count = human?.inventory[w.id] ?? 0;
-        owned.textContent = `×${count}`;
-        buy.disabled = !human || human.cash < w.price;
+        ownedEl.textContent = owned();
+        buyBtn.disabled = !affordable();
       };
-      buy.textContent = "Buy";
-      buy.addEventListener("click", () => {
-        if (game.buyWeapon(w.id)) {
-          refresh();
-          // Re-sync every row (affordability changes with cash).
-          list.querySelectorAll<HTMLElement>(".shop-row").forEach((r) => r.dispatchEvent(new Event("sync")));
-        }
+      buyBtn.addEventListener("click", () => {
+        if (buy()) refresh();
       });
       row.addEventListener("sync", sync);
       sync();
+      row.append(info, ownedEl, buyBtn);
+      return row;
+    };
 
-      row.append(info, owned, buy);
-      list.append(row);
+    for (const w of PURCHASABLE) {
+      list.append(
+        makeRow(
+          w.name,
+          w.desc,
+          w.price,
+          () => `×${human?.inventory[w.id] ?? 0}`,
+          () => !!human && human.cash >= w.price,
+          () => game.buyWeapon(w.id),
+        ),
+      );
+    }
+
+    const defHead = el("div", "desc");
+    defHead.style.cssText = "margin:6px 2px 0;text-transform:uppercase;letter-spacing:.05em";
+    defHead.textContent = "Defensive";
+    list.append(defHead);
+
+    for (const it of ITEMS) {
+      list.append(
+        makeRow(
+          it.name,
+          it.desc,
+          it.price,
+          () => (it.kind === "shield" ? `⛨${Math.ceil(human?.shield ?? 0)}` : `×${human?.parachutes ?? 0}`),
+          () => {
+            if (!human || human.cash < it.price) return false;
+            const cur = it.kind === "shield" ? human.shield : human.parachutes;
+            return cur < it.cap;
+          },
+          () => game.buyItem(it.id),
+        ),
+      );
     }
 
     const cont = el("button", "primary") as HTMLButtonElement;

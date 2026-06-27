@@ -3,6 +3,7 @@ import { GRAVITY, launchVelocity } from "./Physics";
 import type { Terrain } from "./Terrain";
 import type { Tank } from "./Tank";
 import { getWeapon } from "./Weapons";
+import { getItem } from "./Items";
 
 export interface Shot {
   angle: number;
@@ -134,7 +135,19 @@ function clamp(v: number, lo: number, hi: number): number {
 
 /** Spend an AI tank's winnings between rounds (simple greedy budget). */
 export function aiBuy(tank: Tank, rng: () => number): void {
-  // Roughly aim to keep a stock of mid-tier ordnance; splurge occasionally.
+  // Top up defences first — a shield and a spare parachute if affordable.
+  const shield = getItem("shield");
+  if (tank.shield < shield.cap * 0.6 && tank.cash >= shield.price) {
+    tank.cash -= shield.price;
+    tank.shield = Math.min(shield.cap, tank.shield + shield.amount);
+  }
+  const para = getItem("parachute");
+  if (tank.parachutes < 2 && tank.cash >= para.price) {
+    tank.cash -= para.price;
+    tank.parachutes += 1;
+  }
+
+  // Then stock mid-tier ordnance; splurge on a nuke occasionally.
   const wishlist = rng() < 0.3 ? ["nuke", "missile", "dirt"] : ["missile", "funky", "dirt"];
   let guard = 0;
   while (guard++ < 30) {

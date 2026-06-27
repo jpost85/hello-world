@@ -5,6 +5,7 @@ import { Renderer } from "./render/Renderer";
 import { TouchControls } from "./input/TouchControls";
 import { Hud } from "./ui/Hud";
 import { Overlays } from "./ui/Shop";
+import { Sound } from "./audio/Sound";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const uiRoot = document.getElementById("ui") as HTMLElement;
@@ -29,12 +30,17 @@ window.addEventListener("orientationchange", fitToViewport);
 const game = new Game(canvas.width, canvas.height);
 game.terrain.generate(makeRng(Date.now() >>> 0)); // backdrop behind the menu
 
+const sound = new Sound();
+// Browsers require a user gesture before audio can start.
+window.addEventListener("pointerdown", () => sound.unlock(), { once: true });
+
 const renderer = new Renderer(canvas);
-const hud = new Hud(uiRoot, game);
+const hud = new Hud(uiRoot, game, () => sound.toggleMute());
 const overlays = new Overlays(uiRoot);
 new TouchControls(canvas, game).attach();
 
 game.onBanner = (text) => hud.showBanner(text);
+game.onSound = (type, intensity) => sound.play(type, intensity);
 game.onStateChange = (next) => {
   if (next === "roundover") {
     overlays.showShop(game, () => game.continueFromShop());

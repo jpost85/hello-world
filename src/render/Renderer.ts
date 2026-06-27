@@ -20,6 +20,16 @@ export class Renderer {
     const { ctx } = this;
     const { width, height } = game;
 
+    ctx.save();
+    // Screen shake: jitter the whole battlefield while shake decays.
+    if (game.shake > 0) {
+      const s = game.shake;
+      ctx.translate(
+        (Math.random() * 2 - 1) * s,
+        (Math.random() * 2 - 1) * s,
+      );
+    }
+
     this.drawSky(width, height);
     this.drawTerrain(game);
 
@@ -27,7 +37,20 @@ export class Renderer {
 
     for (const t of game.tanks) this.drawTank(ctx, t, t === game.current);
     for (const p of game.projectiles) this.drawProjectile(p);
+    this.drawParticles(game);
     for (const e of game.explosions) this.drawExplosion(e);
+
+    ctx.restore();
+  }
+
+  private drawParticles(game: Game): void {
+    const { ctx } = this;
+    for (const p of game.particles.items) {
+      ctx.globalAlpha = Math.max(0, Math.min(1, p.life / p.maxLife));
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
   }
 
   private drawSky(w: number, h: number): void {
@@ -141,6 +164,18 @@ export class Renderer {
     const frac = Math.max(0, t.health / 100);
     ctx.fillStyle = frac > 0.5 ? "#57d977" : frac > 0.25 ? "#ffd24d" : "#ff5a5a";
     ctx.fillRect(bx, by, bw * frac, 4);
+
+    // Shield bubble.
+    if (t.shield > 0) {
+      const alpha = 0.18 + Math.min(0.4, t.shield / 400);
+      ctx.strokeStyle = `rgba(120, 200, 255, ${alpha + 0.25})`;
+      ctx.fillStyle = `rgba(120, 200, 255, ${alpha * 0.4})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y - TANK_BODY_H / 2, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
 
     void BARREL_LEN; // (referenced via muzzle())
   }

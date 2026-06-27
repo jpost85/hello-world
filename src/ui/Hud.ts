@@ -24,6 +24,7 @@ export class Hud {
   constructor(
     root: HTMLElement,
     private game: Game,
+    onToggleMute?: () => boolean,
   ) {
     // ---- Top status bar ----
     const bar = el("div", "statusbar");
@@ -40,6 +41,17 @@ export class Hud {
     this.hpEl = el("div", "chip");
     this.cashEl = el("div", "chip");
     bar.append(turn, this.windEl, this.roundEl, spacer, this.hpEl, this.cashEl);
+
+    if (onToggleMute) {
+      const mute = el("div", "chip") as HTMLElement;
+      mute.style.cursor = "pointer";
+      mute.textContent = "🔊";
+      mute.addEventListener("click", () => {
+        const muted = onToggleMute();
+        mute.textContent = muted ? "🔇" : "🔊";
+      });
+      bar.append(mute);
+    }
 
     // ---- Center banner ----
     this.banner = el("div", "banner");
@@ -104,7 +116,9 @@ export class Hud {
 
     const human = g.humanTank();
     if (human) {
-      this.hpEl.textContent = `❤ ${Math.ceil(human.health)}`;
+      const shield = human.shield > 0 ? ` <span style="color:#78c8ff">⛨${Math.ceil(human.shield)}</span>` : "";
+      const para = human.parachutes > 0 ? ` <span style="color:#cfd6ee">🪂${human.parachutes}</span>` : "";
+      this.hpEl.innerHTML = `❤ ${Math.ceil(human.health)}${shield}${para}`;
       this.cashEl.textContent = `$${human.cash}`;
     }
 

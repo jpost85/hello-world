@@ -26,6 +26,9 @@ export class Tank {
   cash = 0;
   score = 0; // round wins
 
+  shield = 0; // remaining shield points; absorbs damage before health
+  parachutes = 0; // auto-deploy to cancel fall damage
+
   inventory: Record<string, number> = {};
   selectedWeapon = "baby";
 
