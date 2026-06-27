@@ -47,6 +47,8 @@ export function ControlPanel(g: UseGame) {
 
   return (
     <div className="panel">
+      {/* Drag handle — visible on mobile bottom-sheet only */}
+      <div className="panel-handle" aria-hidden="true" />
       <section>
         <h2>
           Turn {state.turn} · {phaseLabel(state.phase)}

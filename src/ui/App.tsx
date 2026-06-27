@@ -30,6 +30,16 @@ import { ControlPanel } from "./components/ControlPanel.tsx";
 import { HowToPlay } from "./components/HowToPlay.tsx";
 import { Flag } from "./components/Flag.tsx";
 
+function phaseShort(phase: string): string {
+  switch (phase) {
+    case "reinforce": return "Reinforce";
+    case "attack":   return "Attack";
+    case "fortify":  return "Fortify";
+    case "gameover": return "Game Over";
+    default:         return phase;
+  }
+}
+
 export function App() {
   const g = useGame();
   const [panelOpen, setPanelOpen] = useState(true);
@@ -52,45 +62,60 @@ export function App() {
   }
 
   const active = currentPlayer(g.state);
+  const faction = g.state.factions.find((f) => f.id === active.factionId)!;
 
   return (
     <div className={`app${panelOpen ? "" : " panel-collapsed"}`}>
       <div className="topbar">
-        <button title="Return to the main menu" onClick={g.quit}>☰ Menu</button>
+        <button title="Return to the main menu" onClick={g.quit}>
+          ☰<span className="btn-label"> Menu</span>
+        </button>
+        <button title="How to play" onClick={() => setShowRules(true)}>
+          ?<span className="btn-label"> Help</span>
+        </button>
+        <button title={muted ? "Unmute sound" : "Mute sound"} onClick={toggleMute}>
+          {muted ? "🔇" : "🔊"}
+        </button>
+        {/* Phase chip — visible on mobile so players know their status without
+            opening the panel. Hidden on desktop where the panel is always open. */}
+        <span className="phase-chip">
+          <Flag id={active.factionId} color={faction.color} size={14} />
+          {" T"}{g.state.turn} · {phaseShort(g.state.phase)}
+        </span>
+        <h1>DOMINION · BALANCE OF POWER</h1>
+        {g.isAITurn && <span className="badge ai-badge">🤖 {active.name}…</span>}
+        <div className="spacer" />
+        <div className="players">
+          {g.state.players.map((p) => {
+            const f = g.state!.factions.find((x) => x.id === p.factionId)!;
+            return (
+              <span
+                key={p.id}
+                className="badge"
+                style={{
+                  opacity: p.isEliminated ? 0.35 : 1,
+                  outline: p.id === active.id ? "2px solid var(--accent)" : "none",
+                  outlineOffset: "1px",
+                }}
+              >
+                <Flag id={p.factionId} color={f.color} size={18} />
+                <span className="player-label">
+                  {p.name}
+                  {p.isAI && " 🤖"}
+                  {p.isEliminated && " ✗"}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+        {/* Panel toggle — visible on mobile, hidden on desktop */}
         <button
           className="panel-toggle"
           onClick={() => setPanelOpen((o) => !o)}
           title="Show or hide the controls"
         >
-          {panelOpen ? "▾ Map" : "▴ Controls"}
+          {panelOpen ? "▾" : "▴"}<span className="btn-label"> {panelOpen ? "Map" : "Controls"}</span>
         </button>
-        <button title="How to play" onClick={() => setShowRules(true)}>? Help</button>
-        <button title={muted ? "Unmute sound" : "Mute sound"} onClick={toggleMute}>
-          {muted ? "🔇" : "🔊"}
-        </button>
-        <h1>DOMINION · BALANCE OF POWER</h1>
-        {g.isAITurn && <span className="badge">🤖 {active.name} is planning…</span>}
-        <div className="spacer" />
-        <div className="players">
-        {g.state.players.map((p) => {
-          const faction = g.state!.factions.find((f) => f.id === p.factionId)!;
-          return (
-            <span
-              key={p.id}
-              className="badge"
-              style={{
-                opacity: p.isEliminated ? 0.4 : 1,
-                outline: p.id === active.id ? "1px solid var(--accent)" : "none",
-              }}
-            >
-              <Flag id={p.factionId} color={faction.color} size={20} />
-              {p.name}
-              {p.isAI && " 🤖"}
-              {p.isEliminated && " ✗"}
-            </span>
-          );
-        })}
-        </div>
       </div>
       <MapView
         state={g.state}
