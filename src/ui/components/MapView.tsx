@@ -113,9 +113,16 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
 
   // --- Pan & zoom ----------------------------------------------------------
   const svgRef = useRef<SVGSVGElement>(null);
-  const [view, setView] = useState({ x: 0, y: 0, k: 1 });
-  const viewRef = useRef(view);
-  viewRef.current = view;
+  // Pan/zoom state lives in a ref so gesture handlers can mutate it without
+  // triggering React re-renders on every pointermove (~120 fps on mobile).
+  // The pan <g> element is updated directly via setAttribute; React reads the
+  // ref value on its own (infrequent) re-renders to keep the DOM consistent.
+  const viewRef = useRef({ x: 0, y: 0, k: 1 });
+  const panGroupRef = useRef<SVGGElement>(null);
+  const applyTransform = useCallback((v: { x: number; y: number; k: number }) => {
+    viewRef.current = v;
+    panGroupRef.current?.setAttribute("transform", `translate(${v.x} ${v.y}) scale(${v.k})`);
+  }, []);
   // Active touch/mouse pointers and the gesture in progress (pan or pinch).
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef<
@@ -143,12 +150,12 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
       const el = boardRef.current;
       const bw = el?.clientWidth ?? vbW;
       const bh = el?.clientHeight ?? vbH;
-      if (!bw || !bh) { setIsPortrait(false); setView({ x: 0, y: 0, k: 1 }); return; }
+      if (!bw || !bh) { setIsPortrait(false); applyTransform({ x: 0, y: 0, k: 1 }); return; }
 
       const portrait = bw < bh;
       setIsPortrait(portrait);
 
-      if (!area) { setView({ x: 0, y: 0, k: 1 }); return; }
+      if (!area) { applyTransform({ x: 0, y: 0, k: 1 }); return; }
 
       if (portrait) {
         // `slice` scales so the board HEIGHT is filled; the content overflows
@@ -165,7 +172,7 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
         const x   = clamp(overlayX + screenVbW / 2 - mcx * k,
                           overlayX + screenVbW - vbW * k, overlayX);
         const y   = clamp(vbH / 2 - mcy * k, vbH * (1 - k), 0);
-        setView({ x, y, k });
+        applyTransform({ x, y, k });
       } else {
         portraitRef.current = { overlayX: 0, screenVbW: vbW };
         // `meet` fits the whole viewBox; zoom so mapArea fills ~88% of height.
@@ -177,7 +184,7 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
         const mcy = area.y + area.height / 2;
         const x = clamp(vbW / 2 - mcx * k, vbW * (1 - k), 0);
         const y = clamp(vbH / 2 - mcy * k, vbH * (1 - k), 0);
-        setView({ x, y, k });
+        applyTransform({ x, y, k });
       }
     });
     return () => cancelAnimationFrame(raf);
@@ -216,13 +223,12 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
 
   const zoomAround = useCallback(
     (px: number, py: number, factor: number) => {
-      setView((v) => {
-        const k = clamp(v.k * factor, 1, MAX_ZOOM);
-        const [x, y] = clampPan(px - ((px - v.x) / v.k) * k, py - ((py - v.y) / v.k) * k, k);
-        return { x, y, k };
-      });
+      const v = viewRef.current;
+      const k = clamp(v.k * factor, 1, MAX_ZOOM);
+      const [x, y] = clampPan(px - ((px - v.x) / v.k) * k, py - ((py - v.y) / v.k) * k, k);
+      applyTransform({ x, y, k });
     },
-    [clampPan],
+    [clampPan, applyTransform],
   );
 
   // Wheel zoom (native, non-passive so we can preventDefault the page scroll).
@@ -274,7 +280,7 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
         const cmx = (g.startMidX - g.startView.x) / g.startView.k;
         const cmy = (g.startMidY - g.startView.y) / g.startView.k;
         const [x, y] = clampPan(midX - cmx * k, midY - cmy * k, k);
-        setView({ x, y, k });
+        applyTransform({ x, y, k });
         draggedRef.current = true;
       } else {
         const dx = p.x - g.startX;
@@ -284,10 +290,9 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
           setDragging(true);
         }
         if (!draggedRef.current) return;
-        setView((v) => {
-          const [x, y] = clampPan(g.viewX + dx, g.viewY + dy, v.k);
-          return { x, y, k: v.k };
-        });
+        const v = viewRef.current;
+        const [x, y] = clampPan(g.viewX + dx, g.viewY + dy, v.k);
+        applyTransform({ x, y, k: v.k });
       }
     };
 
@@ -319,7 +324,7 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [clientToSvg, clampPan]);
+  }, [clientToSvg, clampPan, applyTransform]);
 
   const onPointerDown = (e: ReactPointerEvent) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -419,14 +424,19 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
         <rect className="ocean" x={area.x} y={area.y} width={area.width} height={area.height} />
         {/* The map layers pan/zoom INSIDE the fixed frame (clipped to the window). */}
         <g clipPath="url(#mapWindow)">
-        <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
+        {/* panGroupRef: transform is driven directly via DOM in gesture handlers to
+            avoid React re-renders at 60+ fps. React reads viewRef.current here on
+            its own (infrequent) renders to keep the attribute in sync. */}
+        <g ref={panGroupRef} transform={`translate(${viewRef.current.x} ${viewRef.current.y}) scale(${viewRef.current.k})`}>
         {/* Backdrop: all world landmasses in a dull colour so non-playable land
-            shows instead of bare ocean when panning near the map edges. */}
+            shows instead of bare ocean when panning near the map edges.
+            shapeRendering="optimizeSpeed" skips sub-pixel antialiasing on this
+            large decorative path, significantly reducing rasterisation cost. */}
         {state.map.backdrop && (
-          <path d={state.map.backdrop} fill="#9e9272" stroke="#7a7058" strokeWidth={0.5} />
+          <path d={state.map.backdrop} fill="#9e9272" stroke="none" shapeRendering="optimizeSpeed" />
         )}
         {state.map.decorations?.map((d, i) => (
-          <g key={`decor-${i}`} className="decoration">
+          <g key={`decor-${i}`} className="decoration" shapeRendering="optimizeSpeed">
             <path d={d.path} fill={d.fill} />
             <text className="decor-label" x={d.position.x} y={d.position.y}>
               {d.name}
@@ -491,13 +501,13 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
             const { overlayX, screenVbW } = portraitRef.current;
             const mcx = area.x + area.width / 2;
             const mcy = area.y + area.height / 2;
-            setView({
+            applyTransform({
               x: clamp(overlayX + screenVbW / 2 - mcx, overlayX + screenVbW - vbW, overlayX),
-              y: clamp(vbH / 2 - mcy, vbH * (1 - 1), 0),
+              y: clamp(vbH / 2 - mcy, 0, 0),
               k: 1,
             });
           } else {
-            setView({ x: 0, y: 0, k: 1 });
+            applyTransform({ x: 0, y: 0, k: 1 });
           }
         }}>⤢</button>
       </div>
