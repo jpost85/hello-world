@@ -27,10 +27,18 @@ npm run typecheck  # tsc --noEmit
 ## How to play
 
 - **Move:** point/tap where you want to swim.
-- **Eat:** touch smaller prey to bite it; defeating it grants EVO points.
+- **Dash:** **Space** (or the on-screen DASH button) for a short burst — to catch
+  fast prey or escape a predator. Has a cooldown.
+- **Eat:** touch smaller prey to bite it; defeating it grants EVO points *and*
+  refills your FOOD meter.
+- **Survive:** your FOOD meter drains over time; if it empties you starve and lose
+  health. Keep eating.
 - **Evolve:** press **E** (or the on-screen button) to open the mutation menu and
-  spend points. Bank enough points to advance to the next era.
-- Bigger creatures will damage you — out-grow them before you pick a fight.
+  spend points across six body slots (body, mouth, fins, armor, sense, limbs).
+- **Boss gate:** bank enough EVO and the era's **boss** appears — beat it to evolve
+  onward to the next era.
+- Bigger creatures will damage you — out-grow them before you pick a fight. Die and
+  you respawn in the same era at a small EVO cost (a setback, not a wipe).
 
 ## Architecture
 

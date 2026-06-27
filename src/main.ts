@@ -1,8 +1,10 @@
 import Phaser from "phaser";
 import { GAME_CONFIG } from "./config";
 import { BootScene } from "./scenes/BootScene";
+import { TitleScene } from "./scenes/TitleScene";
 import { GameScene } from "./scenes/GameScene";
 import { EvolutionScene } from "./scenes/EvolutionScene";
+import { GameOverScene } from "./scenes/GameOverScene";
 
 /**
  * Entry point. Phaser is only ever wired up here and in `src/scenes`; the
@@ -22,5 +24,5 @@ new Phaser.Game({
     default: "arcade",
     arcade: { debug: false },
   },
-  scene: [BootScene, GameScene, EvolutionScene],
+  scene: [BootScene, TitleScene, GameScene, EvolutionScene, GameOverScene],
 });

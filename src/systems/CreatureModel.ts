@@ -37,9 +37,15 @@ export function createStarterCreature(eraId: string): CreatureState {
     parts: { body: "body.cell", mouth: "mouth.none" },
     evoPoints: 0,
     currentHealth: 0,
+    hunger: 0,
     eraId,
+    bossDefeated: false,
   };
-  creature.currentHealth = computeStats(creature).maxHealth;
+  const stats = computeStats(creature);
+  creature.currentHealth = stats.maxHealth;
+  // Start sated. Keep this in sync with SurvivalSystem.maxHunger (kept inline to
+  // avoid a CreatureModel <-> SurvivalSystem import cycle).
+  creature.hunger = 60 + stats.size * 20;
   return creature;
 }
 

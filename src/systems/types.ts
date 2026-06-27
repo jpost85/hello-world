@@ -47,7 +47,11 @@ export interface CreatureState {
   parts: Partial<Record<PartSlot, string>>;
   evoPoints: number;
   currentHealth: number;
+  /** Satiation, 0..maxHunger. Drains over time; refilled by eating. At 0 you starve. */
+  hunger: number;
   eraId: string;
+  /** Whether this era's boss has been defeated (gate to advancing). */
+  bossDefeated: boolean;
 }
 
 /** An enemy/prey definition. */
@@ -60,6 +64,8 @@ export interface Enemy {
   reward: number;
   behavior: "drift" | "flee" | "hunt";
   visual: { color: string; shape: "circle" | "triangle" | "rect"; radius: number };
+  /** Bosses are era-gate enemies: tougher, single-spawn, and advance the era when eaten. */
+  isBoss?: boolean;
 }
 
 /** A macro stage of the game (Age of Fish, Amphibian, ...). */
@@ -68,8 +74,10 @@ export interface Era {
   name: string;
   description: string;
   enemyIds: string[];
-  /** Total EVO points the player must bank in this era to advance. */
+  /** EVO points the player must bank before this era's boss appears. */
   advanceAtPoints: number;
+  /** The boss that gates advancement out of this era (enemy id). */
+  bossId: string;
   /** Background tint for the renderer. */
   background: string;
 }

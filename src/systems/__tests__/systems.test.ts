@@ -3,8 +3,15 @@ import { createStarterCreature, computeStats } from "../CreatureModel";
 import { availableEvolutions, evolve } from "../EvolutionSystem";
 import { awardForEating } from "../EconomySystem";
 import { resolveBite, canEat } from "../CombatSystem";
-import { canAdvanceEra, advanceEra } from "../ProgressionSystem";
+import {
+  isBossReady,
+  bossForEra,
+  defeatBoss,
+  canAdvanceEra,
+  advanceEra,
+} from "../ProgressionSystem";
 import { pickSpawn, enemiesForEra } from "../EcosystemSystem";
+import { tickSurvival, feed, maxHunger } from "../SurvivalSystem";
 import { ENEMY_BY_ID } from "../../data/enemies";
 
 describe("CreatureModel", () => {
@@ -65,14 +72,44 @@ describe("CombatSystem", () => {
   });
 });
 
-describe("ProgressionSystem", () => {
-  it("advances era only after banking enough points", () => {
+describe("ProgressionSystem (boss-gated)", () => {
+  it("summons a boss at threshold and only advances after it's beaten", () => {
     let c = createStarterCreature("era.primordial");
+    expect(isBossReady(c)).toBe(false);
     expect(canAdvanceEra(c)).toBe(false);
-    c = { ...c, evoPoints: 100 };
+
+    c = { ...c, evoPoints: 120 }; // era.primordial advanceAtPoints
+    expect(isBossReady(c)).toBe(true);
+    expect(canAdvanceEra(c)).toBe(false); // boss not yet beaten
+    expect(bossForEra(c.eraId)?.id).toBe("boss.amoeba");
+
+    c = defeatBoss(c);
+    expect(isBossReady(c)).toBe(false); // boss is down
     expect(canAdvanceEra(c)).toBe(true);
+
     c = advanceEra(c);
     expect(c.eraId).toBe("era.fish");
+    expect(c.bossDefeated).toBe(false); // gate resets for the new era
+  });
+});
+
+describe("SurvivalSystem", () => {
+  it("drains hunger over time and refills on eating", () => {
+    const c = createStarterCreature("era.primordial");
+    expect(c.hunger).toBe(maxHunger(c));
+
+    const hungry = tickSurvival(c, 2);
+    expect(hungry.hunger).toBeLessThan(c.hunger);
+
+    const fed = feed(hungry, ENEMY_BY_ID["predatorcell"]);
+    expect(fed.hunger).toBeGreaterThan(hungry.hunger);
+    expect(fed.hunger).toBeLessThanOrEqual(maxHunger(fed));
+  });
+
+  it("starves health once hunger hits zero", () => {
+    const c = { ...createStarterCreature("era.primordial"), hunger: 0 };
+    const after = tickSurvival(c, 1);
+    expect(after.currentHealth).toBeLessThan(c.currentHealth);
   });
 });
 

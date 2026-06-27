@@ -1,13 +1,9 @@
 import Phaser from "phaser";
-import type { CreatureState } from "../systems/types";
-import { createStarterCreature } from "../systems/CreatureModel";
-import { load } from "../persistence/SaveManager";
-import { ERA_ORDER } from "../data/eras";
 
 /**
- * Loads the save (or makes a starter creature) and hands a creature to the
- * GameScene via the registry, then starts gameplay. No assets to preload yet —
- * everything is drawn with Phaser graphics — so this is fast.
+ * One-time setup: generate the few textures we draw from code (no art assets
+ * yet), then go to the title screen. Particle emitters need a real texture key,
+ * so we bake a soft white dot here and tint it per effect.
  */
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -15,9 +11,19 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    const saved = load();
-    const creature: CreatureState = saved?.creature ?? createStarterCreature(ERA_ORDER[0]);
-    this.registry.set("creature", creature);
-    this.scene.start("Game");
+    this.makeSparkTexture();
+    this.scene.start("Title");
+  }
+
+  /** A small radial-ish white dot used for all particle effects. */
+  private makeSparkTexture(): void {
+    if (this.textures.exists("spark")) return;
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(8, 8, 8);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillCircle(8, 8, 4);
+    g.generateTexture("spark", 16, 16);
+    g.destroy();
   }
 }

@@ -34,6 +34,24 @@ export const ENEMIES: Enemy[] = [
     visual: { color: "#e0683c", shape: "triangle", radius: 12 },
   },
   {
+    id: "algae",
+    name: "Algae Bloom",
+    eraId: "era.primordial",
+    stats: { attack: 0, defense: 2, maxHealth: 8, speed: 12, size: 1 },
+    reward: 7,
+    behavior: "drift",
+    visual: { color: "#7cc47c", shape: "rect", radius: 8 },
+  },
+  {
+    id: "stinger",
+    name: "Stinger",
+    eraId: "era.primordial",
+    stats: { attack: 6, defense: 2, maxHealth: 14, speed: 85, size: 1 },
+    reward: 18,
+    behavior: "hunt",
+    visual: { color: "#d36fc0", shape: "triangle", radius: 10 },
+  },
+  {
     id: "trilobite",
     name: "Trilobite",
     eraId: "era.fish",
@@ -41,6 +59,37 @@ export const ENEMIES: Enemy[] = [
     reward: 35,
     behavior: "flee",
     visual: { color: "#9c6b3f", shape: "rect", radius: 14 },
+  },
+  {
+    id: "eel",
+    name: "Snapping Eel",
+    eraId: "era.fish",
+    stats: { attack: 14, defense: 5, maxHealth: 40, speed: 95, size: 3 },
+    reward: 50,
+    behavior: "hunt",
+    visual: { color: "#5a7d4a", shape: "triangle", radius: 16 },
+  },
+
+  // --- bosses (era gates) ---
+  {
+    id: "boss.amoeba",
+    name: "Elder Amoeba",
+    eraId: "era.primordial",
+    stats: { attack: 10, defense: 6, maxHealth: 120, speed: 45, size: 3 },
+    reward: 60,
+    behavior: "hunt",
+    visual: { color: "#caa0ff", shape: "circle", radius: 30 },
+    isBoss: true,
+  },
+  {
+    id: "boss.leviathan",
+    name: "Juvenile Leviathan",
+    eraId: "era.fish",
+    stats: { attack: 22, defense: 12, maxHealth: 260, speed: 70, size: 5 },
+    reward: 140,
+    behavior: "hunt",
+    visual: { color: "#4f74d0", shape: "triangle", radius: 38 },
+    isBoss: true,
   },
 ];
 

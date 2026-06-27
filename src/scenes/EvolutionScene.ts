@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import type { CreatureState } from "../systems/types";
 import { GAME_CONFIG } from "../config";
 import { availableEvolutions, evolve } from "../systems/EvolutionSystem";
+import { sound } from "../audio/SoundManager";
 
 /**
  * The evolution menu, launched as a paused overlay on top of GameScene. It
@@ -90,6 +91,7 @@ export class EvolutionScene extends Phaser.Scene {
   private choose(partId: string): void {
     const res = evolve(this.creature, partId);
     if (!res.ok) return;
+    sound.play("evolve");
     this.creature = res.creature;
     this.registry.set("creature", this.creature);
     // Refresh the menu in place so the player can spend more points.

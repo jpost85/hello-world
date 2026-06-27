@@ -76,11 +76,17 @@ native iOS/Android store builds (push, IAP) from the same codebase.
 
 ## 8. Roadmap
 
-**Now (scaffold):** playable core loop, 2 eras, shape-art, local save, unit tests.
+**Scaffold (done):** playable core loop, 2 eras, shape-art, local save, unit tests.
 
-**MVP:** real touch-native controls, art/audio, hunger/survival pressure, a boss
-or environmental gate per era, juice (particles, screen feedback), 1 full era of
-content.
+**MVP (done):** touch + dash controls; hunger/survival pressure
+(`SurvivalSystem`); a **boss gate** per era (`ProgressionSystem` + boss data);
+procedural creature assembly from parts, particles, screen shake, floating text;
+procedural Web Audio sfx (`SoundManager`); title and game-over scenes; expanded
+Primordial Soup roster (six body slots, more prey, a boss).
+
+**Next (toward a richer MVP):** real sprite art + animation, more eras of content,
+hand-tuned economy via playtest analytics, environmental hazards, and a tutorial
+beat for the first 60 seconds.
 
 **v1:** multiple eras with **branching evolution** (carnivore / herbivore /
 amphibious), rare "mutation jelly" alternate forms, cloud saves + leaderboards,

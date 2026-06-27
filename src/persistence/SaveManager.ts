@@ -8,7 +8,7 @@ import type { CreatureState, SaveState } from "../systems/types";
  */
 
 const SAVE_KEY = "evo.save.v1";
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 
 export function buildSave(creature: CreatureState, unlockedParts: string[]): SaveState {
   return {

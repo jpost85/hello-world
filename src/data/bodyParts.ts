@@ -115,6 +115,50 @@ export const BODY_PARTS: BodyPart[] = [
     evolvesTo: [],
     visual: { color: "#969696", shape: "rect" },
   },
+
+  // --- sense (perception; small speed/attack edge from reacting faster) ---
+  {
+    id: "sense.spot",
+    slot: "sense",
+    name: "Eye Spot",
+    tier: 1,
+    statMods: { speed: 8, attack: 2 },
+    cost: 25,
+    evolvesTo: ["sense.eyes"],
+    visual: { color: "#f7f7f7", shape: "circle" },
+  },
+  {
+    id: "sense.eyes",
+    slot: "sense",
+    name: "True Eyes",
+    tier: 2,
+    statMods: { speed: 18, attack: 5 },
+    cost: 80,
+    evolvesTo: [],
+    visual: { color: "#ffffff", shape: "circle" },
+  },
+
+  // --- limbs (extra size/health; the step toward leaving the water later) ---
+  {
+    id: "limbs.cilia",
+    slot: "limbs",
+    name: "Cilia",
+    tier: 1,
+    statMods: { size: 1, speed: 10 },
+    cost: 45,
+    evolvesTo: ["limbs.stubs"],
+    visual: { color: "#c9b6e4", shape: "rect" },
+  },
+  {
+    id: "limbs.stubs",
+    slot: "limbs",
+    name: "Proto-Limbs",
+    tier: 2,
+    statMods: { size: 1, maxHealth: 20, attack: 3 },
+    cost: 130,
+    evolvesTo: [],
+    visual: { color: "#a78bca", shape: "rect" },
+  },
 ];
 
 /** Fast id lookup used across systems. */
