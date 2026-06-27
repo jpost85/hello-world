@@ -1026,8 +1026,10 @@ html, body {
     // preserveAspectRatio, so the viewport shows only ocean or land.
     map.appendChild(svgEl("rect", { x: -vbW, y: -vbH, width: vbW * 3, height: vbH * 3, fill: "url(#ocean)" }));
 
-    // Whole landmass shadow (drawn under everything via a group offset).
-    const landGroup = svgEl("g", { filter: "url(#landshadow)" });
+    // Whole landmass shadow. The SVG drop-shadow filter is re-rasterized on
+    // every viewBox change, so it's skipped on touch devices (where the map
+    // pans/zooms) and kept on desktop, which doesn't repaint during play.
+    const landGroup = svgEl("g", IS_TOUCH ? {} : { filter: "url(#landshadow)" });
     for (const d of MAPDATA.terrain) {
       landGroup.appendChild(svgEl("path", { d, class: "terrain" }));
     }
@@ -1423,6 +1425,14 @@ html, body {
     const el = $("#map"); if (!el || !mapView) return;
     el.setAttribute("viewBox", `${mapView.x.toFixed(1)} ${mapView.y.toFixed(1)} ${mapView.w.toFixed(1)} ${mapView.h.toFixed(1)}`);
   }
+  // Coalesce rapid pan/pinch updates to at most one viewBox change per frame.
+  let applyScheduled = false;
+  function scheduleMapView() {
+    if (applyScheduled) return;
+    applyScheduled = true;
+    const raf = (typeof requestAnimationFrame === "function") ? requestAnimationFrame : (fn) => setTimeout(fn, 16);
+    raf(() => { applyScheduled = false; applyMapView(); });
+  }
   function screenToMap(cx, cy, v) {
     const r = $("#map").getBoundingClientRect();
     return { x: v.x + (cx - r.left) / r.width * v.w, y: v.y + (cy - r.top) / r.height * v.h };
@@ -1488,7 +1498,7 @@ html, body {
         const r = el.getBoundingClientRect();
         mapView.x = panStart.x - dx / r.width * mapView.w;
         mapView.y = panStart.y - dy / r.height * mapView.h;
-        clampView(mapView); applyMapView(); e.preventDefault();
+        clampView(mapView); scheduleMapView(); e.preventDefault();
       } else if (mode === "pinch" && e.touches.length >= 2) {
         const a = P(e.touches[0]), b = P(e.touches[1]), d = D(a, b);
         if (d <= 0) return;
@@ -1498,7 +1508,7 @@ html, body {
         const r = el.getBoundingClientRect();
         mapView.x = anchor.x - (m.x - r.left) / r.width * mapView.w;
         mapView.y = anchor.y - (m.y - r.top) / r.height * mapView.h;
-        clampView(mapView); applyMapView(); e.preventDefault();
+        clampView(mapView); scheduleMapView(); e.preventDefault();
       }
     }, { passive: false });
 
