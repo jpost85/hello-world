@@ -509,11 +509,12 @@ select {
   display: none;
 }
 
-/* --- Tablet / landscape phone (760px and below): panel becomes a bottom sheet --- */
+/* --- Tablet / landscape phone (760px and below): panel stacks below the map --- */
 @media (max-width: 760px) {
   .app {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    /* Panel is a third row: board gets 1fr, panel takes only what it needs */
+    grid-template-rows: auto 1fr auto;
   }
   .topbar {
     flex-wrap: wrap;
@@ -534,22 +535,23 @@ select {
     flex: 0 0 auto;
   }
   .panel {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    max-height: 60dvh;
+    /* Stacked below the board — not a fixed overlay. Board height is now
+       accurate so the SVG can center the map correctly. */
+    position: static;
+    max-height: 54dvh;
+    overflow-y: auto;
     border-left: none;
     border-top: 1px solid var(--border);
     border-radius: 12px 12px 0 0;
-    overflow-y: auto;
-    z-index: 30;
-    box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.5);
-    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.4);
     padding-bottom: env(safe-area-inset-bottom);
+    transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s ease;
   }
   .app.panel-collapsed .panel {
-    transform: translateY(110%);
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
   }
   .panel-handle {
     display: block;
@@ -568,34 +570,32 @@ select {
 /* --- Portrait phone (520px and below): single-row compact topbar --- */
 @media (max-width: 520px) {
   .topbar {
-    flex-wrap: nowrap;           /* single row — no wrapping */
+    flex-wrap: nowrap;
     padding: 5px 8px;
     gap: 5px;
     overflow: hidden;
   }
   .topbar h1 {
-    display: none;               /* title gone — map is the branding */
+    display: none;
   }
   .topbar .ai-badge {
-    display: none;               /* AI indicator lives in the panel on small screens */
+    display: none;
   }
   .btn-label {
-    display: none;               /* icon-only buttons: ☰  ?  🔊  ▴▾ */
+    display: none;
   }
   .topbar button {
     padding: 6px 9px;
     flex: 0 0 auto;
   }
-  /* Phase chip replaces verbose player/turn info in the topbar */
   .phase-chip {
     display: inline-flex;
-    flex: 1;                     /* takes remaining space after buttons */
+    flex: 1;
     min-width: 0;
     overflow: hidden;
   }
-  /* Players: flags only, no names, inline in topbar */
   .players {
-    order: 0;                    /* back in normal flow, not second row */
+    order: 0;
     flex-basis: auto;
     gap: 3px;
   }
@@ -604,11 +604,10 @@ select {
     gap: 0;
   }
   .player-label {
-    display: none;               /* hide names — flags identify the player */
+    display: none;
   }
-  /* Panel: shallower on phones so map stays visible behind it */
   .panel {
-    max-height: 52dvh;
+    max-height: 48dvh;
   }
   .panel section {
     padding: 8px 12px;
@@ -616,7 +615,6 @@ select {
   .panel h2 {
     margin-bottom: 5px;
   }
-  /* Cards fit better on narrow screens */
   .conquest-card {
     width: 62px;
     padding: 5px 3px;

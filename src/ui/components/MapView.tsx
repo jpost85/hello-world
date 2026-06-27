@@ -126,9 +126,41 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
   const draggedRef = useRef(false);
   const [dragging, setDragging] = useState(false);
 
-  // Reset the view whenever the map changes (e.g. switching boards).
+  // Board container ref — used to read actual pixel dimensions for initial zoom.
+  const boardRef = useRef<HTMLDivElement>(null);
+
+  // Set the initial view when the map changes: zoom to fit the mapArea in the
+  // visible board, centered. Uses RAF so layout is complete before measuring.
   useEffect(() => {
-    setView({ x: 0, y: 0, k: 1 });
+    const area = state.map.mapArea;
+    if (!area) {
+      setView({ x: 0, y: 0, k: 1 });
+      return;
+    }
+    const raf = requestAnimationFrame(() => {
+      const el = boardRef.current;
+      const bw = el?.clientWidth ?? vbW;
+      const bh = el?.clientHeight ?? vbH;
+      if (!bw || !bh) { setView({ x: 0, y: 0, k: 1 }); return; }
+
+      // SVG meet-scale: how the viewBox fits the board at k=1.
+      const meetScale = Math.min(bw / vbW, bh / vbH);
+
+      // Target: fill ~88% of the board height, but don't require more than
+      // 2× horizontal panning (keeps the map navigable without feeling lost).
+      const kFillH  = (bh * 0.88) / (area.height * meetScale);
+      const kMaxPan = (bw * 2.0)  / (area.width  * meetScale);
+      const k = Math.max(1, Math.min(4, Math.min(kFillH, kMaxPan)));
+
+      // Center on the mapArea centroid.
+      const mcx = area.x + area.width  / 2;
+      const mcy = area.y + area.height / 2;
+      const x = clamp(vbW / 2 - mcx * k, vbW * (1 - k), 0);
+      const y = clamp(vbH / 2 - mcy * k, vbH * (1 - k), 0);
+      setView({ x, y, k });
+    });
+    return () => cancelAnimationFrame(raf);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.map.id]);
 
   // Convert client (screen) coordinates into the SVG's user space.
@@ -298,7 +330,7 @@ export function MapView({ state, from, to, selectable, onClick }: Props) {
   const area = state.map.mapArea ?? { x: 0, y: 0, width: vbW, height: vbH };
 
   return (
-    <div className="board">
+    <div className="board" ref={boardRef}>
       <svg
         ref={svgRef}
         className={dragging ? "grabbing" : "grab"}

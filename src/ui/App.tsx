@@ -42,7 +42,10 @@ function phaseShort(phase: string): string {
 
 export function App() {
   const g = useGame();
-  const [panelOpen, setPanelOpen] = useState(true);
+  // Default open on desktop, closed on mobile so the map fills the screen first.
+  const [panelOpen, setPanelOpen] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth > 760 : true,
+  );
   const [showRules, setShowRules] = useState(false);
   const [muted, setMutedState] = useState(isMuted());
 
