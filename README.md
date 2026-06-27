@@ -29,9 +29,12 @@ played in portrait.
 - Munch every dot to clear the level.
 - Glowing **power pellets** turn the ghosts blue — chase them down for big,
   escalating points (200 → 400 → 800 → 1600).
-- Each ghost hunts with its own personality (distinct chaser / ambusher /
+- Each enemy hunts with its own personality (distinct chaser / ambusher /
   flanker / wanderer targeting behaviours), alternating between scatter and
   chase.
+- **Every level brings a different enemy creature** — jellyfish, then
+  cyclops blobs, then spiders, then bats, cycling as you climb. The level's
+  creature is announced on the "Ready!" screen.
 - Grab the bonus **fruit** that appears mid-level for extra points.
 - You get 3 lives, plus a bonus life at 10,000 points. Clear the board to
   advance — every level the ghosts get a little faster and a little hungrier.

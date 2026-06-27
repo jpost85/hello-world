@@ -160,6 +160,7 @@
   let frightTimer = 0, ghostChain = 0;
   let modePhase = 0, modeTimer = 0, globalMode = "scatter";
   let animTick = 0, readyTimer = 0, dyingTimer = 0;
+  let enemyKind = 0; // index into ENEMY_FN / ENEMY_NAMES — varies per level
   let popups = [];
   let particles = [];   // {x,y,vx,vy,life,decay,color,size}
   let pops = [];        // {x,y,r,maxR,life,color}  expanding rings
@@ -176,6 +177,7 @@
 
   const HOME = { col: 13, row: 14 };
   const PAC_START = { col: 13.5, row: 23 };
+  const ENEMY_NAMES = ["Jellies", "Cyclopes", "Spiders", "Bats"];
   const eaten = () => DOT_TOTAL - dotsLeft;
 
   // ---- Tile helpers ---------------------------------------------------------
@@ -256,6 +258,7 @@
   function startLevel() {
     resetGrid();
     fruit = null; fruitCount = 0;
+    enemyKind = (level - 1) % ENEMY_FN.length; // a different creature each level
     modePhase = 0; modeTimer = 0; globalMode = MODE_SCHEDULE[0].mode;
   }
 
@@ -612,7 +615,14 @@
     for (const g of ghosts) drawGhost(g);
     drawParticles();
     drawPopups();
-    if (state === "ready") drawCenterText(readyTimer > 0 ? "READY!" : "GO!", "#ffcc00");
+    if (state === "ready") {
+      drawCenterText(readyTimer > 0 ? "READY!" : "GO!", "#ffcc00");
+      if (readyTimer > 0) {
+        ctx.fillStyle = "#cdd6ff"; ctx.textAlign = "center";
+        ctx.font = "bold 11px Trebuchet MS, sans-serif";
+        ctx.fillText(`Level ${level} · ${ENEMY_NAMES[enemyKind]}`, W / 2, px(17) + 22);
+      }
+    }
     if (state === "levelclear") drawCenterText("LEVEL CLEAR!", "#7bff7b");
     ctx.restore();
     if (flash > 0.01) { ctx.fillStyle = `rgba(255,255,255,${flash})`; ctx.fillRect(0, 0, W, H); }
@@ -697,44 +707,130 @@
     }
   }
 
-  function drawGhost(g) {
-    const x = g.x, y = g.y, rad = TILE * 0.46;
-    const flashing = g.mode === "frightened" && frightTimer < 2000 && Math.floor(animTick / 6) % 2 === 0;
-    let body = g.color;
-    if (g.mode === "frightened") body = flashing ? "#ffffff" : "#2121de";
-    if (g.mode === "eyes") body = null;
+  // ---- Enemies --------------------------------------------------------------
+  // Each level features a different creature type (all four enemies share the
+  // type but keep their own colour). Designs support three states: normal
+  // (coloured + direction-tracking eyes), frightened (blue + scared face), and
+  // eyes (eaten, floating home).
+  function enemyEyes(x, y, R, fr, dir, spread) {
+    const sp = spread != null ? spread : R * 0.42;
+    for (const s of [-1, 1]) {
+      const ex = x + s * sp, ey = y;
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ex, ey, R * 0.3, 0, 7); ctx.fill();
+      if (fr) { ctx.fillStyle = "#cdd6ff"; ctx.beginPath(); ctx.arc(ex, ey, R * 0.15, 0, 7); ctx.fill(); }
+      else { ctx.fillStyle = "#15324a"; ctx.beginPath(); ctx.arc(ex + dir.x * 1.4, ey + dir.y * 1.4, R * 0.16, 0, 7); ctx.fill(); }
+    }
+  }
+  function scaredMouth(x, y, R) {
+    ctx.strokeStyle = "#cdd6ff"; ctx.lineWidth = 1.2; ctx.lineJoin = "round";
+    ctx.beginPath(); const w = R * 0.7; let sx = x - w; ctx.moveTo(sx, y);
+    for (let i = 0; i < 4; i++) { sx += w / 2; ctx.lineTo(sx, y + (i % 2 ? 2 : -2)); }
+    ctx.stroke();
+  }
+  function drawEyesOnly(x, y, dir) {
+    for (const s of [-1, 1]) {
+      const ex = x + s * 3.4;
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(ex, y - 1, 3.2, 0, 7); ctx.fill();
+      ctx.fillStyle = "#1414c8"; ctx.beginPath(); ctx.arc(ex + dir.x * 1.6, y - 1 + dir.y * 1.6, 1.6, 0, 7); ctx.fill();
+    }
+  }
 
-    if (body) {
-      ctx.save();
-      ctx.shadowColor = g.mode === "frightened" ? "#3a6bff" : body;
-      ctx.shadowBlur = 7;
-      ctx.fillStyle = body;
-      ctx.beginPath();
-      ctx.arc(x, y - 1, rad, Math.PI, 0);
-      ctx.lineTo(x + rad, y + rad - 2);
-      const feet = 3, step = (rad * 2) / feet;
-      for (let i = 0; i < feet; i++) {
-        const fx = x + rad - i * step;
-        ctx.lineTo(fx - step / 2, y + rad - 6);
-        ctx.lineTo(fx - step, y + rad - 2);
+  function eJelly(x, y, R, col, fr, dir) {
+    ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 7;
+    const g = ctx.createLinearGradient(x, y - R, x, y + R);
+    g.addColorStop(0, "#ffffff"); g.addColorStop(0.3, col); g.addColorStop(1, col);
+    ctx.globalAlpha = 0.95; ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, R, Math.PI, 0);
+    let bx = x + R; const bumps = 4, step = (2 * R) / bumps;
+    for (let i = 0; i < bumps; i++) { ctx.quadraticCurveTo(bx - step / 2, y + R * 0.25, bx - step, y); bx -= step; }
+    ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; ctx.restore();
+    ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.lineCap = "round";
+    for (let i = -2; i <= 2; i++) {
+      const tx = x + i * R * 0.4, wob = Math.sin(animTick * 0.2 + i) * 2;
+      ctx.beginPath(); ctx.moveTo(tx, y);
+      ctx.quadraticCurveTo(tx + 3 + wob, y + R * 0.7, tx - 2, y + R * 1.0);
+      ctx.quadraticCurveTo(tx - 4 - wob, y + R * 1.3, tx + 1, y + R * 1.5);
+      ctx.stroke();
+    }
+    enemyEyes(x, y - R * 0.2, R * 0.85, fr, dir);
+    if (fr) scaredMouth(x, y + R * 0.2, R * 0.7);
+  }
+
+  function eCyclops(x, y, R, col, fr, dir) {
+    ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 8;
+    const g = ctx.createRadialGradient(x - R * 0.3, y - R * 0.3, 1, x, y, R * 1.1);
+    g.addColorStop(0, "#ffffff"); g.addColorStop(0.4, col); g.addColorStop(1, col);
+    ctx.fillStyle = g; ctx.beginPath(); const n = 10;
+    for (let i = 0; i <= n; i++) { const a = Math.PI * 2 * i / n, rr = R * (1 + (i % 2 ? 0.06 : -0.04)); const px2 = x + Math.cos(a) * rr, py2 = y + Math.sin(a) * rr * 1.04; i ? ctx.lineTo(px2, py2) : ctx.moveTo(px2, py2); }
+    ctx.closePath(); ctx.fill(); ctx.restore();
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y - R * 0.1, R * 0.5, 0, 7); ctx.fill();
+    if (fr) { ctx.strokeStyle = "#15324a"; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, y - R * 0.1, R * 0.22, 0, 7); ctx.stroke(); scaredMouth(x, y + R * 0.55, R * 0.6); }
+    else {
+      ctx.fillStyle = "#15324a"; ctx.beginPath(); ctx.arc(x + dir.x * 1.6, y - R * 0.1 + dir.y * 1.6, R * 0.24, 0, 7); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x + dir.x * 1.6 - 1, y - R * 0.1 + dir.y * 1.6 - 1, R * 0.08, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#0a3a30"; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, y + R * 0.4, R * 0.28, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    }
+  }
+
+  function eSpider(x, y, R, col, fr, dir) {
+    ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 4;
+    ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+    const wob = Math.sin(animTick * 0.4) * 1.5;
+    for (const s of [-1, 1]) for (let i = 0; i < 4; i++) {
+      const ay = y - R * 0.5 + i * R * 0.4, k = R * (1.1 + (i === 0 || i === 3 ? 0.1 : 0.3));
+      ctx.beginPath(); ctx.moveTo(x + s * R * 0.6, ay);
+      ctx.lineTo(x + s * (R * 0.6 + k * 0.6), ay - 4 + i * 2 + (i % 2 ? wob : -wob));
+      ctx.lineTo(x + s * (R * 0.6 + k), ay + 5 + i * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    const g = ctx.createRadialGradient(x - R * 0.3, y - R * 0.2, 1, x, y, R * 1.1);
+    g.addColorStop(0, "#ffffff"); g.addColorStop(0.4, col); g.addColorStop(1, col);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(x, y + R * 0.15, R * 0.85, R * 0.95, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y - R * 0.55, R * 0.5, 0, 7); ctx.fill();
+    if (fr) enemyEyes(x, y - R * 0.5, R * 0.55, true, dir);
+    else {
+      for (const s of [-1, 1]) {
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x + s * R * 0.2, y - R * 0.6, R * 0.16, 0, 7); ctx.fill();
+        ctx.fillStyle = "#15324a"; ctx.beginPath(); ctx.arc(x + s * R * 0.2 + dir.x, y - R * 0.6 + dir.y, R * 0.08, 0, 7); ctx.fill();
       }
+      for (const s of [-1, 1]) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x + s * R * 0.42, y - R * 0.48, R * 0.09, 0, 7); ctx.fill(); }
+    }
+  }
+
+  function eBat(x, y, R, col, fr, dir) {
+    ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 6; ctx.fillStyle = col;
+    const flap = Math.sin(animTick * 0.3) * R * 0.12;
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(x + s * R * 0.5, y);
+      ctx.quadraticCurveTo(x + s * R * 1.6, y - R * 0.9 + flap, x + s * R * 1.85, y - R * 0.1);
+      ctx.lineTo(x + s * R * 1.4, y + R * 0.05);
+      ctx.lineTo(x + s * R * 1.5, y + R * 0.5);
+      ctx.lineTo(x + s * R * 1.0, y + R * 0.2);
+      ctx.lineTo(x + s * R * 1.05, y + R * 0.65);
+      ctx.quadraticCurveTo(x + s * R * 0.7, y + R * 0.45, x + s * R * 0.5, y + R * 0.3);
       ctx.closePath(); ctx.fill();
-      ctx.restore();
     }
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * R * 0.45, y - R * 0.5); ctx.lineTo(x + s * R * 0.2, y - R * 0.6); ctx.lineTo(x + s * R * 0.18, y - R * 0.95); ctx.closePath(); ctx.fill(); }
+    const g = ctx.createRadialGradient(x - R * 0.3, y - R * 0.3, 1, x, y, R);
+    g.addColorStop(0, "#ffffff"); g.addColorStop(0.45, col); g.addColorStop(1, col);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R * 0.8, 0, 7); ctx.fill(); ctx.restore();
+    enemyEyes(x, y - R * 0.1, R * 0.7, fr, dir);
+    if (!fr) { ctx.fillStyle = "#fff"; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * R * 0.12, y + R * 0.25); ctx.lineTo(x + s * R * 0.24, y + R * 0.25); ctx.lineTo(x + s * R * 0.18, y + R * 0.5); ctx.closePath(); ctx.fill(); } }
+    else scaredMouth(x, y + R * 0.35, R * 0.6);
+  }
 
-    if (g.mode === "frightened" && !flashing) {
-      ctx.fillStyle = "#ffd2e8";
-      ctx.fillRect(x - 4, y - 3, 2, 3); ctx.fillRect(x + 2, y - 3, 2, 3);
-      ctx.strokeStyle = "#ffd2e8"; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(x - 5, y + 4); ctx.lineTo(x - 2, y + 2);
-      ctx.lineTo(x + 1, y + 4); ctx.lineTo(x + 4, y + 2); ctx.stroke();
-    } else if (g.mode !== "frightened") {
-      const dx = DIRS[g.dir].x, dy = DIRS[g.dir].y;
-      for (const off of [-4, 4]) {
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x + off, y - 1, 3.2, 0, 7); ctx.fill();
-        ctx.fillStyle = "#1414c8"; ctx.beginPath(); ctx.arc(x + off + dx * 1.6, y - 1 + dy * 1.6, 1.6, 0, 7); ctx.fill();
-      }
-    }
+  const ENEMY_FN = [eJelly, eCyclops, eSpider, eBat];
+
+  function drawGhost(g) {
+    const x = g.x, y = g.y, R = TILE * 0.47;
+    const dir = DIRS[g.dir] || DIRS.left;
+    if (g.mode === "eyes") { drawEyesOnly(x, y, dir); return; }
+    const flashing = g.mode === "frightened" && frightTimer < 2000 && Math.floor(animTick / 6) % 2 === 0;
+    const fr = g.mode === "frightened";
+    const col = fr ? (flashing ? "#ffffff" : "#2b3bff") : g.color;
+    ENEMY_FN[enemyKind](x, y, R, col, fr, dir);
   }
 
   function drawFruit() {
