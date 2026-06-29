@@ -796,6 +796,16 @@
   @keyframes juicebump { 0%{transform:scale(1);} 38%{transform:scale(1.22);} 100%{transform:scale(1);} }
   .unit.pop-in { transform-origin:50% 100%; animation: popin .3s cubic-bezier(.2,1.5,.45,1); }
   @keyframes popin { 0%{transform:scale(.5); opacity:.25;} 62%{transform:scale(1.09);} 100%{transform:scale(1);} }
+  /* Screen-shake for disasters (jitters the tower view, not the sidebar). */
+  #stage.shaking { animation: shake .42s ease-in-out; }
+  @keyframes shake {
+    0%,100% { transform: translate(0,0); }
+    15% { transform: translate(calc(var(--shake,5px) * -1), 1px); }
+    30% { transform: translate(var(--shake,5px), -1px); }
+    45% { transform: translate(calc(var(--shake,5px) * -0.6), 1px); }
+    60% { transform: translate(calc(var(--shake,5px) * 0.55), -1px); }
+    78% { transform: translate(calc(var(--shake,5px) * -0.3), 0); }
+  }
 
   /* Inspect modal (pointer tool): room stats + colour picker. */
   .modal-back { position:absolute; inset:0; z-index:40; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); }
@@ -2238,12 +2248,23 @@ function simTenants() {
         u.occupants++;
         state.pop++;
         updateUnitVisual(u);
+        const c = unitCenter(u);                        // room anchor for juice (null if off-screen)
         if (t.sale) { // condos sell each unit once, for a lump sum
           state.cash += t.salePrice;
           log(`${t.name} on floor ${u.row} sold a unit: +$${t.salePrice.toLocaleString()}`, "good");
           sfx("cash");
+          if (c) { fxFloatAt(c.x, c.y, `+$${t.salePrice.toLocaleString()}`, "#ffe27a");
+                   fxBurst(c.x, c.y, { count: 10, palette: ["#ffd24a", "#ffe27a"], spread: 22, gravity: 6, lift: 6, size: 4, round: true, dur: 0.8 }); }
+        } else if (c) {
+          // a small sparkle as a new tenant settles in (visual only — move-ins are frequent)
+          fxBurst(c.x, c.y, { count: 6, palette: ["#9fe8ff", "#cdebff", "#ffffff"], spread: 14, gravity: 4, lift: 5, size: 3, round: true, dur: 0.6 });
         }
-        if (u.occupants === t.cap) log(`${t.name} on floor ${u.row} fully ${t.sale ? "sold out" : "leased"}!`, "good");
+        if (u.occupants === t.cap) {                    // milestone: a room is full — give it a beat
+          log(`${t.name} on floor ${u.row} fully ${t.sale ? "sold out" : "leased"}!`, "good");
+          sfx("lease");
+          if (c) { fxFloatAt(c.x, c.y - 6, t.sale ? "SOLD OUT!" : "LEASED!", "#7ef0a0");
+                   fxBurst(c.x, c.y, { count: 16, palette: ["#7ef0a0", "#56c271", "#ffd24a", "#ffffff"], spread: 30, gravity: 8, lift: 10, size: 4, round: true, dur: 0.9 }); }
+        }
       }
     }
     // satisfaction drifts toward the sum of its needs (transit, recreation, cleanliness, upkeep)
@@ -2359,7 +2380,7 @@ function maybeEvent() {
         if (n) { damageUnit(n, 30); repair += 4000; spread = " It spread to the next unit!"; }
       }
       state.cash -= repair;
-      toast("🔥 Fire!"); sfx("fire"); floatText(`-$${repair.toLocaleString()}`, "bad");
+      toast("🔥 Fire!"); sfx("fire"); shake(6); floatText(`-$${repair.toLocaleString()}`, "bad");
       log(`🔥 Fire in ${TYPES[u.type].name} on floor ${u.row}!${spread}${sec ? " Security contained it." : ""} Repairs -$${repair.toLocaleString()}.`, "bad");
     }
   } else {                                  // bomb threat — security defuses it
@@ -2375,7 +2396,7 @@ function maybeEvent() {
         const cost = 9000;
         state.cash -= cost;
         state.reputation = Math.max(-0.5, state.reputation - 0.15);
-        toast("💥 Bomb detonated!"); sfx("fire"); floatText(`-$${cost.toLocaleString()}`, "bad");
+        toast("💥 Bomb detonated!"); sfx("fire"); shake(10); floatText(`-$${cost.toLocaleString()}`, "bad");
         log(`💥 A bomb went off in ${TYPES[u.type].name} on floor ${u.row} — no security to stop it! -$${cost.toLocaleString()} and reputation damage. Build a Security office.`, "bad");
       } else {
         log("🚨 A bomb threat came in, but there was nothing to target.", "bad");
@@ -3360,6 +3381,26 @@ function elCenter(id) {
   const r = el.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2, top: r.top, el };
 }
+// Screen-space center of a placed unit (respects zoom + scroll), for room-anchored juice.
+function unitCenter(u) {
+  if (!u || !u.el) return null;
+  const r = u.el.getBoundingClientRect();
+  if (!r.width) return null;            // off-screen / not laid out
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+// A brief screen-shake on the tower view (disasters). Intensity in px.
+let _shakeTimer = null;
+function shake(intensity) {
+  if (_reduceMotion) return;
+  const s = document.getElementById("stage");
+  if (!s) return;
+  s.style.setProperty("--shake", (intensity || 5) + "px");
+  s.classList.remove("shaking");
+  void s.offsetWidth;                   // restart the animation
+  s.classList.add("shaking");
+  clearTimeout(_shakeTimer);
+  _shakeTimer = setTimeout(() => s.classList.remove("shaking"), 460);
+}
 
 function log(msg, cls) {
   const e = document.createElement("div");
@@ -3638,6 +3679,7 @@ function sfx(name) {
     case "error":   beep(150, 0.16, "square",   0.16); break;
     case "cash":    beep(880, 0.07, "triangle", 0.24); beep(1320, 0.12, "triangle", 0.20, 0.07); break;
     case "bonus":   beep(587, 0.10, "sine",     0.26); beep(880, 0.14, "sine", 0.22, 0.09); break;
+    case "lease":   beep(659, 0.10, "sine",     0.20); beep(988, 0.18, "sine", 0.16, 0.08); break;
     case "promote": [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.18, "triangle", 0.24, i * 0.1)); break;
     case "fire":    beep(110, 0.5, "sawtooth",  0.20, 0, 70); break;
   }
