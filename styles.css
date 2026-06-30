@@ -285,6 +285,7 @@ html, body {
 #log li.l-good { color: var(--patriot); }
 #log li.l-bad { color: var(--crown); }
 #log li.l-event { color: var(--gold); font-weight: bold; }
+#log li.l-flavor { color: var(--ink-soft); font-style: italic; }
 
 .btn-end { font-size: 18px; padding: 14px; }
 
