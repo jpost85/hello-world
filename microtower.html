@@ -2252,6 +2252,9 @@ function simTenants() {
           state.cash += t.salePrice;
           log(`${t.name} on floor ${u.row} sold a unit: +$${t.salePrice.toLocaleString()}`, "good");
           sfx("cash");
+          const c = unitCenter(u);   // a coin float marks the lump-sum sale at the room
+          if (c) { fxFloatAt(c.x, c.y, `+$${t.salePrice.toLocaleString()}`, "#ffe27a");
+                   fxBurst(c.x, c.y, { count: 10, palette: ["#ffd24a", "#ffe27a"], spread: 22, gravity: 6, lift: 6, size: 4, round: true, dur: 0.8 }); }
         }
         if (u.occupants === t.cap) { // a room is full — a quiet chime marks the milestone (no confetti)
           log(`${t.name} on floor ${u.row} fully ${t.sale ? "sold out" : "leased"}!`, "good");
@@ -3372,6 +3375,13 @@ function elCenter(id) {
   if (!el) return null;
   const r = el.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2, top: r.top, el };
+}
+// Screen-space center of a placed unit (respects zoom + scroll), for room-anchored juice.
+function unitCenter(u) {
+  if (!u || !u.el) return null;
+  const r = u.el.getBoundingClientRect();
+  if (!r.width) return null;            // off-screen / not laid out
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 // A brief screen-shake on the tower view (disasters). Intensity in px.
 let _shakeTimer = null;
