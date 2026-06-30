@@ -20,7 +20,23 @@ Open it on a phone (or a narrow browser window) for the intended experience.
 ```bash
 npm run build    # static bundle in dist/, deployable to any static host
 npm run preview  # serve the production build
+npm run icons    # regenerate the PWA icon set (scripts/gen-icons.mjs)
 ```
+
+### Install & deploy
+
+The app is a **PWA**: served over HTTPS it can be installed to a phone's home
+screen ("Add to Home Screen") and launches **fullscreen and offline** — the app
+shell is precached by a service worker (via `vite-plugin-pwa`).
+
+Pushing to the default branch deploys to **GitHub Pages** automatically
+(`.github/workflows/deploy.yml`). One-time setup: repo **Settings → Pages →
+Source = "GitHub Actions"**. The `base: "./"` Vite config makes it work from a
+project-site subpath without changes.
+
+> Note: the single-file standalone HTML build runs from `file://` for one-click
+> play, so it intentionally has no service worker. PWA install/offline applies
+> to the hosted (`dist/`) build.
 
 ## How to play
 
@@ -69,5 +85,8 @@ toggle), and the two iconic defensive items — **shields** (absorb blast
 damage, with a bubble visual) and **parachutes** (auto-deploy to cancel fall
 damage). The AI buys defences between rounds too.
 
-Planned next: a PWA manifest + service worker for offline install, smarter
-AI weapon selection, and optional local hotseat play.
+Shipping: installable **PWA** (fullscreen, offline app-shell precache) and an
+automated **GitHub Pages** deploy on push to the default branch.
+
+Planned next: smarter AI weapon selection, optional local hotseat play, and a
+deeper arsenal (rollers, tracers, napalm) with wall behaviours.
