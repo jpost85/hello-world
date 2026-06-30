@@ -23,6 +23,17 @@ npm run preview  # serve the production build
 npm run icons    # regenerate the PWA icon set (scripts/gen-icons.mjs)
 ```
 
+### Single-file build (local play / self-hosting)
+
+```bash
+npm run standalone   # -> dist-standalone/scorched-earth.html
+```
+
+Produces one self-contained HTML file with all JS and CSS inlined. Open it
+directly in any browser (works from `file://`, no server needed) or drop it on
+any static host. Handy for quick local playtesting and for hosting the game at
+your own URL.
+
 ### Install & deploy
 
 The app is a **PWA**: served over HTTPS it can be installed to a phone's home
