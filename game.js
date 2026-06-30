@@ -216,11 +216,18 @@
   //   title:   Leutze, "Washington Crossing the Delaware" (1851)
   //   victory: Trumbull, "Surrender of Lord Cornwallis" (1820)
   //   defeat:  Trumbull, "The Death of General Warren at Bunker's Hill" (1786)
+  //   france:  Couder, "Siege of Yorktown" (1836)
+  //   capital: Trumbull, "The Death of General Mercer at Princeton" (1831)
+  //   winter:  Trego, "The March to Valley Forge" (1883)
   const SCENES = {
     // title:   "assets/scenes/title.jpg",
     // victory: "assets/scenes/victory.jpg",
     // defeat:  "assets/scenes/defeat.jpg",
+    // france:  "assets/scenes/france.jpg",
+    // capital: "assets/scenes/capital.jpg",
+    // winter:  "assets/scenes/winter.jpg",
   };
+  const MOMENT_MS = 2800; // how long an event "moment" card lingers
   function applyScene(elId, key) {
     const el = $("#" + elId); if (!el) return;
     const src = SCENES[key];
@@ -228,6 +235,19 @@
       ? `linear-gradient(rgba(20,14,8,0.50), rgba(20,14,8,0.74)), url("${src}")`
       : "";
     if (src) { el.style.backgroundSize = "cover"; el.style.backgroundPosition = "center"; }
+  }
+  // A full-bleed painting "moment" for a turning point — only if its art exists;
+  // otherwise it's a no-op and the usual banner carries the news. Tap to dismiss.
+  let momentTimer = null;
+  function showMoment(key, caption) {
+    const el = $("#moment"); if (!el || !SCENES[key]) return;
+    el.style.backgroundImage = `linear-gradient(rgba(20,14,8,0.32), rgba(20,14,8,0.66)), url("${SCENES[key]}")`;
+    const cap = $("#moment-caption"); if (cap) cap.textContent = caption || "";
+    el.classList.remove("hidden");
+    const dismiss = () => { el.classList.add("hidden"); el.removeEventListener("click", dismiss); };
+    el.addEventListener("click", dismiss);
+    if (momentTimer) clearTimeout(momentTimer);
+    momentTimer = setTimeout(dismiss, MOMENT_MS);
   }
 
   /* ----------------- Generated geographic map data (see tools-genmap.js) -- */
@@ -1327,6 +1347,7 @@
         adjustMorale(loser, -30);
         log(`The ${sideName(loser)}' capital at ${defName} has fallen! A grievous blow.`, "l-event");
         chronicle(`${defName}, the ${sideName(loser)}' capital, falls — a grievous blow.`, "l-event");
+        showMoment("capital", `${defName} falls — the ${sideName(loser)} capital is taken`);
       }
     } else {
       // Assault repelled; survivors retreat home.
@@ -1480,7 +1501,7 @@
     if (total > 0) {
       const harsh = severity > 0.14 ? "A brutal winter" : "Winter";
       log(`${harsh} sets in — ${menFull(total)} men in the field lost to cold and disease.`, "l-event");
-      if (severity > 0.14) chronicle(`A brutal winter — ${menFull(total)} men lost to cold and disease in the open.`, "l-event");
+      if (severity > 0.14) { chronicle(`A brutal winter — ${menFull(total)} men lost to cold and disease in the open.`, "l-event"); showMoment("winter", "A brutal winter grips the army"); }
       showBanner("❄  " + harsh + " — armies in the open suffer", 3200);
     }
   }
@@ -1628,6 +1649,7 @@
     refreshSeaControl();
     log("FRANCE ENTERS THE WAR! A French battle fleet sails into the mid-Atlantic and southern seas, and regulars land.", "l-event");
     chronicle("France enters the war — a battle fleet and regulars join the American cause.", "l-event");
+    showMoment("france", "France enters the war");
     showBanner("⚜  France joins — a fleet contests the coast!", 3800);
   }
 
@@ -1672,6 +1694,8 @@
   function gameOver(patriotWon, text) {
     S.over = true;
     S.winner = patriotWon ? "patriot" : "crown";
+    if (momentTimer) clearTimeout(momentTimer);
+    const mEl = $("#moment"); if (mEl) mEl.classList.add("hidden"); // never cover the end screen
     chronicle(text, patriotWon ? "l-good" : "l-bad");
     save();
     renderAll();

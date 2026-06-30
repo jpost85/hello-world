@@ -363,6 +363,22 @@ html, body {
   display: flex; align-items: center; gap: 14px; max-width: 92vw;
 }
 .banner.hidden { opacity: 0; pointer-events: none; transform: translate(-50%, -10px); }
+
+/* ---------- Event "moment" card (period painting for turning points) ---------- */
+.moment {
+  position: fixed; inset: 0; z-index: 70; cursor: pointer;
+  background-size: cover; background-position: center;
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 1; transition: opacity 0.5s ease;
+}
+.moment.hidden { opacity: 0; pointer-events: none; }
+.moment-caption {
+  margin-bottom: 12vh; padding: 12px 28px;
+  font-family: Georgia, "Times New Roman", serif; font-size: 28px; font-weight: bold;
+  color: #f7efd9; text-align: center; letter-spacing: 0.5px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.8);
+}
+@media (max-width: 820px) { .moment-caption { font-size: 20px; margin-bottom: 14vh; } }
 .banner-portrait { flex: none; }
 .banner-portrait:empty { display: none; }
 .banner-portrait .portrait-img {
@@ -572,6 +588,11 @@ html, body {
     <div id="banner" class="banner hidden">
       <div id="banner-portrait" class="banner-portrait"></div>
       <div id="banner-text"></div>
+    </div>
+
+    <!-- Event "moment" card: a period painting for the war's great turning points -->
+    <div id="moment" class="moment hidden">
+      <div id="moment-caption" class="moment-caption"></div>
     </div>
 
     <!-- Game over -->
@@ -805,9 +826,13 @@ html, body {
   //   title:   Leutze, "Washington Crossing the Delaware" (1851)
   //   victory: Trumbull, "Surrender of Lord Cornwallis" (1820)
   //   defeat:  Trumbull, "The Death of General Warren at Bunker's Hill" (1786)
+  //   france:  Couder, "Siege of Yorktown" (1836)
+  //   capital: Trumbull, "The Death of General Mercer at Princeton" (1831)
+  //   winter:  Trego, "The March to Valley Forge" (1883)
   const SCENES = {
 
   };
+  const MOMENT_MS = 2800; // how long an event "moment" card lingers
   function applyScene(elId, key) {
     const el = $("#" + elId); if (!el) return;
     const src = SCENES[key];
@@ -815,6 +840,19 @@ html, body {
       ? `linear-gradient(rgba(20,14,8,0.50), rgba(20,14,8,0.74)), url("${src}")`
       : "";
     if (src) { el.style.backgroundSize = "cover"; el.style.backgroundPosition = "center"; }
+  }
+  // A full-bleed painting "moment" for a turning point — only if its art exists;
+  // otherwise it's a no-op and the usual banner carries the news. Tap to dismiss.
+  let momentTimer = null;
+  function showMoment(key, caption) {
+    const el = $("#moment"); if (!el || !SCENES[key]) return;
+    el.style.backgroundImage = `linear-gradient(rgba(20,14,8,0.32), rgba(20,14,8,0.66)), url("${SCENES[key]}")`;
+    const cap = $("#moment-caption"); if (cap) cap.textContent = caption || "";
+    el.classList.remove("hidden");
+    const dismiss = () => { el.classList.add("hidden"); el.removeEventListener("click", dismiss); };
+    el.addEventListener("click", dismiss);
+    if (momentTimer) clearTimeout(momentTimer);
+    momentTimer = setTimeout(dismiss, MOMENT_MS);
   }
 
   /* ----------------- Generated geographic map data (see tools-genmap.js) -- */
@@ -1914,6 +1952,7 @@ html, body {
         adjustMorale(loser, -30);
         log(`The ${sideName(loser)}' capital at ${defName} has fallen! A grievous blow.`, "l-event");
         chronicle(`${defName}, the ${sideName(loser)}' capital, falls — a grievous blow.`, "l-event");
+        showMoment("capital", `${defName} falls — the ${sideName(loser)} capital is taken`);
       }
     } else {
       // Assault repelled; survivors retreat home.
@@ -2067,7 +2106,7 @@ html, body {
     if (total > 0) {
       const harsh = severity > 0.14 ? "A brutal winter" : "Winter";
       log(`${harsh} sets in — ${menFull(total)} men in the field lost to cold and disease.`, "l-event");
-      if (severity > 0.14) chronicle(`A brutal winter — ${menFull(total)} men lost to cold and disease in the open.`, "l-event");
+      if (severity > 0.14) { chronicle(`A brutal winter — ${menFull(total)} men lost to cold and disease in the open.`, "l-event"); showMoment("winter", "A brutal winter grips the army"); }
       showBanner("❄  " + harsh + " — armies in the open suffer", 3200);
     }
   }
@@ -2215,6 +2254,7 @@ html, body {
     refreshSeaControl();
     log("FRANCE ENTERS THE WAR! A French battle fleet sails into the mid-Atlantic and southern seas, and regulars land.", "l-event");
     chronicle("France enters the war — a battle fleet and regulars join the American cause.", "l-event");
+    showMoment("france", "France enters the war");
     showBanner("⚜  France joins — a fleet contests the coast!", 3800);
   }
 
@@ -2259,6 +2299,8 @@ html, body {
   function gameOver(patriotWon, text) {
     S.over = true;
     S.winner = patriotWon ? "patriot" : "crown";
+    if (momentTimer) clearTimeout(momentTimer);
+    const mEl = $("#moment"); if (mEl) mEl.classList.add("hidden"); // never cover the end screen
     chronicle(text, patriotWon ? "l-good" : "l-bad");
     save();
     renderAll();

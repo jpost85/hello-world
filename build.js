@@ -7,7 +7,10 @@ const fs = require("fs");
 const ART_KEYS = ["washington", "greene", "gates", "howe", "cornwallis", "burgoyne"];
 const SHIP_FILES = { crown: "assets/ships/british.png", patriot: "assets/ships/american.png" };
 // Optional transition-screen paintings; embedded only if the file is present.
-const SCENE_FILES = { title: "assets/scenes/title.jpg", victory: "assets/scenes/victory.jpg", defeat: "assets/scenes/defeat.jpg" };
+const SCENE_FILES = {
+  title: "assets/scenes/title.jpg", victory: "assets/scenes/victory.jpg", defeat: "assets/scenes/defeat.jpg",
+  france: "assets/scenes/france.jpg", capital: "assets/scenes/capital.jpg", winter: "assets/scenes/winter.jpg",
+};
 
 function dataUri(key) {
   const b64 = fs.readFileSync(`assets/generals/${key}.png`).toString("base64");
