@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aphelion — Terraforming Prototype</title>
+  </head>
+  <body>
+    <div id="app">
+      <header id="topbar"></header>
+      <main>
+        <section id="map-panel">
+          <canvas id="hexmap" width="720" height="560"></canvas>
+          <p class="hint">
+            Placeholder hex renderer — swap in your existing hex-map
+            infrastructure via the <code>HexMapAdapter</code> seam
+            (see <code>src/hex/hex.ts</code>).
+          </p>
+        </section>
+        <aside id="sidebar"></aside>
+      </main>
+      <footer id="logbar"></footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
