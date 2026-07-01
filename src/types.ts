@@ -125,6 +125,8 @@ export interface TerraformProject {
   requiresParams?: Partial<Record<GlobalParamKey, number>>;
   /** Optional failure chance rolled on completion. */
   risk?: { chance: number; description: string };
+  /** Which ideological leaning completing this project reinforces. */
+  ideologyLean?: IdeologyAxis;
 }
 
 /** A project the player has committed to; counts down each turn. */
@@ -175,6 +177,175 @@ export interface RivalFaction {
 }
 
 // ---------------------------------------------------------------------------
+// Game phases — the defining arc: corporate terraforming slowly becomes a
+// civilization with its own identity and, eventually, its own sovereignty.
+// ---------------------------------------------------------------------------
+
+export type GamePhase = "corporate" | "settlement" | "ideological" | "independence";
+
+export interface PhaseDef {
+  key: GamePhase;
+  name: string;
+  tagline: string;
+  description: string;
+  /** Human-readable systems this phase brings online. */
+  unlocks: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Ideology — not chosen up front, but accreted from years of decisions.
+// ---------------------------------------------------------------------------
+
+export type IdeologyAxis =
+  | "technocratic"
+  | "ecological"
+  | "industrialist"
+  | "militarist"
+  | "humanist";
+
+export interface IdeologyDef {
+  key: IdeologyAxis;
+  name: string;
+  blurb: string;
+  advantages: string[];
+  disadvantages: string[];
+  /** Production multipliers applied while this is the dominant ideology. */
+  modifiers: ProductionModifiers;
+  /** Flat per-turn stability delta while dominant. */
+  stability: number;
+}
+
+/** Accumulated ideology "pressure" across the five leanings. Dominant = argmax. */
+export type IdeologyVector = Record<IdeologyAxis, number>;
+
+// ---------------------------------------------------------------------------
+// Social engineering — tunable policy, not a fixed government.
+// ---------------------------------------------------------------------------
+
+export type PolicyAxisKey =
+  | "economy"
+  | "society"
+  | "science"
+  | "environment"
+  | "security";
+
+export interface PolicyOption {
+  id: string;
+  label: string;
+  description: string;
+  /** Production multipliers this option imposes. */
+  modifiers: ProductionModifiers;
+  /** Flat per-turn stability delta. */
+  stability?: number;
+  /** Ideology pressure this option applies each turn. */
+  leanings?: Partial<IdeologyVector>;
+  /** Per-turn interest-group satisfaction deltas. */
+  groups?: Partial<Record<InterestGroupKey, number>>;
+}
+
+export interface PolicyAxis {
+  key: PolicyAxisKey;
+  label: string;
+  description: string;
+  options: PolicyOption[];
+  /** id of the default option. */
+  defaultOption: string;
+}
+
+/** The player's current selection: one option id per axis. */
+export type PolicySelection = Record<PolicyAxisKey, string>;
+
+// ---------------------------------------------------------------------------
+// Internal politics — interest groups that must be kept (roughly) content.
+// ---------------------------------------------------------------------------
+
+export type InterestGroupKey =
+  | "scientists"
+  | "workers"
+  | "environmentalists"
+  | "security"
+  | "shareholders";
+
+export interface InterestGroupDef {
+  key: InterestGroupKey;
+  name: string;
+  wants: string;
+}
+
+export interface InterestGroup {
+  key: InterestGroupKey;
+  /** 0–100. Low satisfaction breeds unrest and stability loss. */
+  satisfaction: number;
+}
+
+// ---------------------------------------------------------------------------
+// Colonists as characters — memorable individuals who emerge from the colony.
+// ---------------------------------------------------------------------------
+
+export interface CharacterTrait {
+  id: string;
+  label: string;
+  /** Flavor of what the trait does. */
+  effect: string;
+  /** Optional permanent production nudge applied when the character appears. */
+  production?: Partial<Production>;
+  /** Optional ideology pressure the character represents. */
+  leaning?: IdeologyAxis;
+}
+
+export interface Character {
+  id: string;
+  name: string;
+  role: string;
+  age: number;
+  bornTurn: number;
+  traits: CharacterTrait[];
+  bio: string;
+}
+
+// ---------------------------------------------------------------------------
+// Scientific breakthroughs — discoveries that reshape the whole game.
+// ---------------------------------------------------------------------------
+
+export interface Breakthrough {
+  id: string;
+  name: string;
+  description: string;
+  /** Fires once its trigger conditions are met. */
+  requiresTech?: string;
+  requiresPhase?: GamePhase;
+  requiresHabitability?: number;
+  /** Permanent production change when it lands. */
+  productionEffects?: Partial<Production>;
+  /** Chronicle line recorded when it fires. */
+  chronicle: string;
+}
+
+// ---------------------------------------------------------------------------
+// History / chronicle — the game's central record. Distinct from the rolling
+// event log: these are the landmark moments that become the planet's history.
+// ---------------------------------------------------------------------------
+
+export type ChronicleCategory =
+  | "phase"
+  | "milestone"
+  | "person"
+  | "breakthrough"
+  | "crisis"
+  | "politics";
+
+export interface ChronicleEntry {
+  turn: number;
+  phase: GamePhase;
+  category: ChronicleCategory;
+  title: string;
+  detail: string;
+}
+
+/** The endgame question the independence phase poses. */
+export type IndependenceOutcome = "colony" | "autonomy" | "independent";
+
+// ---------------------------------------------------------------------------
 // Log + top-level game state
 // ---------------------------------------------------------------------------
 
@@ -216,4 +387,26 @@ export interface GameState {
   rivals: RivalFaction[];
   log: LogEntry[];
   gameOver?: "won" | "lost";
+
+  // --- Civilization layer (unfolds as the game evolves) ------------------
+  /** Current phase of the corporate-to-civilization arc. */
+  phase: GamePhase;
+  /** Accumulated ideological pressure; the dominant leaning gains effects. */
+  ideology: IdeologyVector;
+  /** Current social-engineering policy selection (one option per axis). */
+  policies: PolicySelection;
+  /** Internal interest groups and their satisfaction. */
+  interestGroups: InterestGroup[];
+  /** Notable colonists who have emerged. */
+  characters: Character[];
+  /** World-changing discoveries that have fired. */
+  breakthroughs: string[];
+  /** The planet's landmark history — the central record. */
+  chronicle: ChronicleEntry[];
+  /** One-time milestone flags (firstOcean, firstBreath, …) to fire history once. */
+  milestones: Record<string, boolean>;
+  /** Sentiment toward Earth, 0–100; drives the independence endgame. */
+  earthRelations: number;
+  /** Resolution of the independence question, once taken. */
+  independenceOutcome?: IndependenceOutcome;
 }

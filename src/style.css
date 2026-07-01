@@ -138,6 +138,86 @@ select {
 .log-project { border-left: 3px solid var(--accent); }
 .log-info { border-left: 3px solid var(--muted); }
 
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.tab {
+  flex: 1; padding: 9px 6px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel); color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 600;
+}
+.tab.active { background: var(--panel-2); color: var(--ink); border-color: var(--accent); }
+.tab.alert { border-color: #e0a63a; color: #e0a63a; }
+.tab .lock { opacity: 0.7; }
+.tab-body { display: flex; flex-direction: column; gap: 14px; }
+.panel-note { font-size: 12px; color: var(--muted); margin: 0 0 10px; line-height: 1.4; }
+
+/* Phase track */
+.phase-card .phase-track { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 8px; }
+.phase-step { font-size: 11px; color: var(--muted); padding: 2px 6px; border-radius: 6px; background: var(--panel-2); }
+.phase-step.reached { color: var(--ink); }
+.phase-step.current { background: var(--accent); color: #06101f; font-weight: 700; }
+.phase-arrow { color: var(--muted); font-size: 11px; }
+.phase-tagline { font-style: italic; margin: 4px 0; }
+.phase-desc { font-size: 12.5px; color: var(--muted); line-height: 1.45; margin: 4px 0 0; }
+
+/* Ideology */
+.dom, .ideo-effect .pro { color: var(--good); }
+.ideo-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.ideo-name { width: 96px; font-size: 12.5px; color: var(--muted); }
+.ideo-row.dominant .ideo-name { color: var(--ink); font-weight: 700; }
+.ideo-track { flex: 1; height: 7px; background: var(--panel-2); border-radius: 5px; overflow: hidden; }
+.ideo-fill { height: 100%; background: var(--muted); }
+.ideo-row.dominant .ideo-fill { background: linear-gradient(90deg, var(--accent), var(--good)); }
+.ideo-effect { font-size: 12.5px; line-height: 1.5; margin: 10px 0 0; }
+.ideo-effect .con { color: var(--bad); }
+.ideo-note { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+
+/* Policies */
+.policy-row { margin-bottom: 10px; }
+.policy-row label { font-size: 12.5px; color: var(--muted); display: block; margin-bottom: 3px; }
+.policy-desc { font-size: 11.5px; color: var(--muted); margin: 3px 0 0; line-height: 1.35; }
+
+/* Interest groups */
+.group-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.group-name { width: 128px; font-size: 12px; }
+.group-track { flex: 1; height: 8px; background: var(--panel-2); border-radius: 5px; overflow: hidden; }
+.group-fill { height: 100%; }
+.group-fill.content { background: var(--good); }
+.group-fill.wary { background: #e0a63a; }
+.group-fill.angry { background: var(--bad); }
+.group-val { width: 22px; text-align: right; font-size: 12px; color: var(--muted); }
+
+/* Characters */
+.char { background: var(--panel-2); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+.char-head { display: flex; justify-content: space-between; align-items: baseline; }
+.char-name { font-weight: 600; font-size: 13.5px; }
+.char-role { font-size: 11.5px; color: var(--muted); }
+.char-traits { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px; }
+.trait { font-size: 10.5px; background: rgba(91,141,214,0.2); color: var(--accent); padding: 1px 6px; border-radius: 5px; }
+
+/* Chronicle */
+.chronicle { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.chron { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; }
+.chron-turn { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 30px; }
+.chron-icon { color: var(--accent); }
+.chron-title { display: block; font-weight: 600; }
+.chron-detail { display: block; color: var(--muted); line-height: 1.4; }
+.chron-phase .chron-icon { color: var(--good); }
+.chron-milestone .chron-icon { color: #e0a63a; }
+.chron-breakthrough .chron-icon { color: #57c4e0; }
+
+.rep { color: var(--accent); font-size: 11px; }
+.tag.active { background: rgba(91,141,214,0.2); color: var(--accent); }
+
+/* Independence decision */
+.panel.decision { border: 1px solid #e0a63a; }
+.panel.decision h3 { color: #e0a63a; }
+.panel.decision button {
+  display: block; width: 100%; margin-top: 8px; padding: 10px;
+  background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 8px; cursor: pointer; font-weight: 600;
+}
+.panel.decision button:hover { border-color: #e0a63a; }
+
 /* Game over */
 .game-over {
   text-align: center; padding: 18px; border-radius: 12px; margin-top: 6px;

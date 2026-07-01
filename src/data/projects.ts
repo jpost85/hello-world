@@ -86,6 +86,7 @@ export const PROJECTS: TerraformProject[] = [
     productionEffects: { research: 3 },
     requiresTech: "planetary-magnetics",
     requiresParams: { pressure: 20 },
+    ideologyLean: "militarist",
   },
 
   // --- Hydrosphere: liquid water --------------------------------------------

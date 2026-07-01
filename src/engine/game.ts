@@ -16,6 +16,19 @@ import {
 } from "./terraforming";
 import { runSurvivalTick, computeMaxPopulation } from "./survival";
 import { maybeTriggerHazard } from "./events";
+import { emptyIdeologyVector } from "../data/ideologies";
+import { defaultPolicySelection, POLICY_AXIS_BY_KEY } from "../data/policies";
+import { initialInterestGroups } from "../data/politics";
+import {
+  applyPolicyIdeologyDrift,
+  nudgeIdeology,
+  projectLean,
+} from "./ideology";
+import { advancePhase } from "./phases";
+import { checkBreakthroughs } from "./breakthroughs";
+import { checkMilestones, recordChronicle } from "./chronicle";
+import { maybeEmergeCharacter } from "./characters";
+import type { PolicyAxisKey, IndependenceOutcome } from "../types";
 
 /** Win when the planet is fully habitable; lose if the colony dies out. */
 const HABITABILITY_WIN = 100;
@@ -55,12 +68,48 @@ export function createGame(factionId: string): GameState {
       progress: 0,
     })),
     log: [],
+
+    // Civilization layer — begins dormant in the corporate phase.
+    phase: "corporate",
+    ideology: emptyIdeologyVector(),
+    policies: defaultPolicySelection(),
+    interestGroups: initialInterestGroups(),
+    characters: [],
+    breakthroughs: [],
+    chronicle: [],
+    milestones: {},
+    earthRelations: 80,
   };
+
+  // A faction's identity gives ideology a small initial lean.
+  seedFactionIdeology(state);
 
   state.habitability = computeHabitability(state);
   state.colony.maxPopulation = computeMaxPopulation(state);
   pushLog(state, "info", `${faction.name} colony established. Survive, and make this world ours.`);
+  recordChronicle(
+    state,
+    "phase",
+    "Landfall",
+    `${faction.name} establishes the first foothold on a dead world.`,
+  );
   return state;
+}
+
+/** Seed emergent ideology from the founding faction's leanings. */
+function seedFactionIdeology(state: GameState): void {
+  const seeds: Record<string, Partial<GameState["ideology"]>> = {
+    "verdant-compact": { ecological: 8, humanist: 3 },
+    "helion-consortium": { industrialist: 8, technocratic: 3 },
+    "iron-vanguard": { militarist: 8, industrialist: 3 },
+    "cognitum": { technocratic: 10 },
+    "terran-union": { humanist: 8, ecological: 2 },
+    "ouroboros-cradle": { humanist: 5, ecological: 4 },
+  };
+  const seed = seeds[state.playerFactionId] ?? {};
+  for (const [k, v] of Object.entries(seed)) {
+    state.ideology[k as keyof GameState["ideology"]] += v as number;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -172,6 +221,8 @@ function completeProject(state: GameState, project: TerraformProject): void {
     state.completedProjects.push(project.id);
   }
   state.terraformRating += 1;
+  // Completing a project reinforces the ideology it embodies.
+  nudgeIdeology(state, projectLean(project), 2);
   const detail = changes.length ? ` (${changes.join(", ")})` : "";
   pushLog(state, "good", `"${project.name}" complete${detail}.`);
 }
@@ -194,6 +245,52 @@ export function setResearch(state: GameState, techId: string): boolean {
   if (!canResearch(state, techId)) return false;
   state.currentResearch = { techId, progress: 0 };
   pushLog(state, "info", `Research focus: ${getTech(techId).name}.`);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Social engineering
+// ---------------------------------------------------------------------------
+
+/** Change one policy axis. Available once social engineering unlocks (settlement+). */
+export function setPolicy(state: GameState, axis: PolicyAxisKey, optionId: string): boolean {
+  if (state.phase === "corporate") return false;
+  const ax = POLICY_AXIS_BY_KEY[axis];
+  const opt = ax?.options.find((o) => o.id === optionId);
+  if (!opt) return false;
+  if (state.policies[axis] === optionId) return false;
+  state.policies[axis] = optionId;
+  pushLog(state, "info", `Policy — ${ax.label}: ${opt.label}.`);
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Independence endgame
+// ---------------------------------------------------------------------------
+
+/** Resolve the independence question. Only in the independence phase, once. */
+export function resolveIndependence(state: GameState, outcome: IndependenceOutcome): boolean {
+  if (state.phase !== "independence" || state.independenceOutcome || state.gameOver) return false;
+  state.independenceOutcome = outcome;
+
+  const endings: Record<IndependenceOutcome, { title: string; detail: string }> = {
+    colony: {
+      title: "Continued Union",
+      detail: "The world remained under Earth's authority — prosperous, and not quite its own.",
+    },
+    autonomy: {
+      title: "Negotiated Autonomy",
+      detail: "A charter of self-governance was signed. Earth and the colony, partners at last.",
+    },
+    independent: {
+      title: "Declaration of Independence",
+      detail: "The world declared itself sovereign. A new civilization, no longer under Earth's control.",
+    },
+  };
+  const e = endings[outcome];
+  recordChronicle(state, "phase", e.title, e.detail);
+  pushLog(state, "good", `${e.title} — ${e.detail}`);
+  state.gameOver = "won";
   return true;
 }
 
@@ -228,20 +325,31 @@ export function endTurn(state: GameState): void {
     }
   }
 
-  // 4. Economy + life support.
+  // 4. Ideological drift from the policies currently in force.
+  applyPolicyIdeologyDrift(state);
+
+  // 5. Economy + life support (incl. policy/ideology/interest-group effects).
   for (const line of runSurvivalTick(state)) pushLog(state, "bad", line);
 
-  // 5. Random hazard.
+  // 6. Random hazard.
   const hazardLine = maybeTriggerHazard(state);
   if (hazardLine) pushLog(state, "event", hazardLine);
 
-  // 6. Rivals inch forward (stub AI).
+  // 7. Civilization layer: milestones, breakthroughs, notable people, and the
+  //    corporate-to-civilization phase arc.
+  for (const line of checkMilestones(state)) pushLog(state, "good", line);
+  for (const line of checkBreakthroughs(state)) pushLog(state, "event", line);
+  const characterLine = maybeEmergeCharacter(state);
+  if (characterLine) pushLog(state, "info", characterLine);
+  for (const line of advancePhase(state)) pushLog(state, "good", line);
+
+  // 8. Rivals inch forward (stub AI).
   advanceRivals(state);
 
-  // 7. Win / loss.
+  // 9. Win / loss.
   checkEndConditions(state);
 
-  // 8. Next turn.
+  // 10. Next turn.
   if (!state.gameOver) state.turn += 1;
 }
 

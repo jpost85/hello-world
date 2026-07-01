@@ -4,6 +4,8 @@ import {
   createGame,
   startProject,
   setResearch,
+  setPolicy,
+  resolveIndependence,
   endTurn,
 } from "./engine/game";
 import { CanvasHexRenderer } from "./ui/hexRenderer";
@@ -47,6 +49,19 @@ const controller: UIController = {
   onSetResearch(techId) {
     if (!state) return;
     setResearch(state, techId);
+    draw();
+  },
+  onSetPolicy(axis, optionId) {
+    if (!state) return;
+    setPolicy(state, axis, optionId);
+    draw();
+  },
+  onResolveIndependence(outcome) {
+    if (!state) return;
+    resolveIndependence(state, outcome);
+    draw();
+  },
+  onRerender() {
     draw();
   },
   onEndTurn() {

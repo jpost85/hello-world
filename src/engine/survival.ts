@@ -1,5 +1,8 @@
 import type { GameState, Production } from "../types";
 import { getFaction } from "../data/factions";
+import { combineModifiers, policyModifiers, policyStability } from "./policies";
+import { ideologyModifiers, ideologyStability } from "./ideology";
+import { updateInterestGroups } from "./politics";
 
 /**
  * Colony survival: the per-turn economic + life-support tick.
@@ -16,8 +19,8 @@ import { getFaction } from "../data/factions";
 // Tuned so a starting colony is roughly break-even-to-positive while idle:
 // survival pressure should come from hazards, population growth, and
 // overreaching on projects — not from an unwinnable baseline.
-const BASE_FOOD_PER_POP = 0.4;
-const BASE_ENERGY_PER_POP = 0.4;
+const BASE_FOOD_PER_POP = 0.3;
+const BASE_ENERGY_PER_POP = 0.35;
 
 /** Faction-adjusted per-capita life-support demand. */
 function perCapitaDemand(state: GameState): { food: number; energy: number } {
@@ -38,7 +41,12 @@ function perCapitaDemand(state: GameState): { food: number; energy: number } {
 export function effectiveProduction(state: GameState): Production {
   const faction = getFaction(state.colony.factionId);
   const base = state.colony.production;
-  const mod = faction.modifiers;
+  // Faction identity × social-engineering policy × dominant ideology.
+  const mod = combineModifiers(
+    faction.modifiers,
+    policyModifiers(state),
+    ideologyModifiers(state),
+  );
   const habFactor = 0.85 + (state.habitability / 100) * 0.5; // 0.85 .. 1.35
 
   const apply = (key: keyof Production, extra = 1): number =>
@@ -56,9 +64,11 @@ export function effectiveProduction(state: GameState): Production {
 /** Recompute the population ceiling from habitability and stability. */
 export function computeMaxPopulation(state: GameState): number {
   // Domes support a starting population with headroom to regrow after
-  // hazards; terraforming unlocks the rest.
-  const base = 24;
-  const fromHabitability = Math.round(state.habitability * 0.9);
+  // hazards; a terraformed world supports cities. The generous scaling lets a
+  // maturing colony become large and hazard-resilient — the demographic base a
+  // civilization needs to reach the ideological and independence phases.
+  const base = 28;
+  const fromHabitability = Math.round(state.habitability * 1.3);
   return base + fromHabitability;
 }
 
@@ -107,9 +117,16 @@ export function runSurvivalTick(state: GameState): string[] {
     logs.push(`Power deficit forces rolling blackouts (-${hit} stability).`);
   }
 
-  // 5. Stability drift toward a habitability-linked equilibrium. The
-  //    equilibrium sits above the growth threshold so a colony recovers to a
-  //    growing state after a hazard instead of stalling permanently.
+  // 5. Political + ideological stability effects (settlement phase onward),
+  //    then drift toward a habitability-linked equilibrium. The equilibrium
+  //    sits above the growth threshold so a colony recovers to a growing state
+  //    after a hazard instead of stalling permanently.
+  colony.stability += policyStability(state) + ideologyStability(state);
+  const politics = updateInterestGroups(state);
+  colony.stability += politics.stability;
+  for (const line of politics.logs) logs.push(line);
+  colony.stability = Math.max(0, Math.min(100, colony.stability));
+
   const equilibrium = 60 + state.habitability * 0.3; // 60 .. 90
   const recovery = faction.id === "terran-union" ? 5 : 3; // Solidarity
   if (colony.stability < equilibrium) {

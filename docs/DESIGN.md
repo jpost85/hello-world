@@ -191,23 +191,125 @@ tiles by planetary progress, so terraforming is *visible* on the map (regolith
 
 ---
 
-## 9. Roadmap / what to build next
+## 9. The civilization layer (corporate → sovereignty)
+
+The defining idea: the game *begins* like Terraforming Mars — a corporation
+making a dead world profitable — and *evolves* into Alpha Centauri — a
+civilization with its own philosophy and, eventually, its own sovereignty. That
+evolution is modeled as a one-way **phase arc** that progressively unlocks
+Alpha-Centauri-style systems.
+
+### Phases (`data/phases.ts`, `engine/phases.ts`)
+
+| Phase | Feels like | Unlocks | Reached when |
+| --- | --- | --- | --- |
+| **Corporate Terraforming** | Terraforming Mars | Projects, research, economy | (start) |
+| **The First Settlers** | colony sim | Social engineering, notable colonists, internal politics | habitability ≥ 12% |
+| **Ideology Emerges** | Alpha Centauri | Dominant-ideology effects | habitability ≥ 28%, pop ≥ 25 |
+| **The Question of Independence** | endgame | Independence decision, Earth as a faction | habitability ≥ 50%, pop ≥ 40 |
+
+Gates use habitability (a broad measure across all five planetary dials) plus
+population, so no single terraforming strategy is required to advance.
+
+### Emergent ideology (`data/ideologies.ts`, `engine/ideology.ts`)
+
+Ideology is **not chosen up front** — it accretes. Five leanings
+(Technocratic, Ecological, Industrialist, Militarist, Humanist) accumulate
+pressure from three sources: the **projects** you complete (each embodies a
+leaning), the **policies** you run, and the **people** who rise. The dominant
+leaning, *once the Ideology phase begins*, applies real production and stability
+effects — the personality of your civilization made mechanical. The founding
+faction only supplies a small initial lean.
+
+### Dynamic social engineering (`data/policies.ts`, `engine/policies.ts`)
+
+Five independent policy axes — Economy, Society, Science, Environment, Security —
+each with 3–4 options. Every option is a trade-off touching production, morale,
+ideological drift, and interest-group satisfaction. There is no strictly-best
+row. Policies unlock in the Settlement phase (before there's a society, there's
+nothing to engineer) and feed directly into the economy tick via
+`combineModifiers`.
+
+### Internal politics (`data/politics.ts`, `engine/politics.ts`)
+
+Five interest groups (Scientists, Workers, Environmentalists, Security,
+Shareholders) react to your policies each turn. Govern against your base and
+discontent bleeds colony stability — the internal cost of external ambition.
+
+### Notable colonists (`data/characters.ts`, `engine/characters.ts`)
+
+From the Settlement phase on, the society occasionally produces a *named*
+individual with traits — a Visionary who boosts research, an Agitator who
+speaks for the unheard. Some carry a permanent effect and an ideological
+leaning, so the people who rise gradually shape the civilization's identity.
+Politics become personal.
+
+### Breakthroughs as world events (`data/breakthroughs.ts`, `engine/breakthroughs.ts`)
+
+Discoveries like Fusion Ignition and Practical AI Governance fire once their
+conditions are met, apply a permanent effect, and enter the historical record —
+reshaping strategy rather than sitting quietly in a tech list.
+
+### History as the central mechanic (`engine/chronicle.ts`)
+
+The rolling event log is ephemeral chatter; the **Chronicle** is the planet's
+permanent record — Landfall, the first ocean, the first forest, each notable
+figure, every breakthrough, each phase transition, and the final resolution of
+independence. It's surfaced in the History tab and is the connective tissue of
+the whole vision. In the full game it would *persist across campaigns* on the
+same Mars (see roadmap).
+
+### The independence endgame (`resolveIndependence` in `engine/game.ts`)
+
+In the final phase the world confronts Earth: remain governed, negotiate
+autonomy, or declare independence. Each writes a different closing entry to the
+history and ends the game as a distinct victory.
+
+### What's scaffolded vs. deep (honest status)
+
+- **Working & verified:** the full phase arc, emergent ideology with effects,
+  all five policy axes feeding the economy, interest-group reactions, character
+  emergence with effects, breakthroughs, the chronicle, and independence. A
+  deterministic engine test drives a colony through every transition; a browser
+  test confirms the UI reaches Settlement and surfaces every panel.
+- **Lighter / hooks:** several faction `special`s and diplomacy remain flavor;
+  rivals are still a stub counter; "living planet" passive ecosystem spread and
+  cross-campaign persistence are described but not implemented.
+- **Balance:** first-pass. Crude AI bots reach Settlement in ~60% of games and
+  the later phases occasionally; a human plays far better. The later gates are
+  reachable but demand sustained, well-managed play. All tuning constants are
+  centralized (see § 3) and meant to be iterated.
+
+## 10. Roadmap / what to build next
 
 Rough order of value:
 
-1. **Map ↔ state coupling.** Site colonies and projects on actual tiles;
-   let terrain/adjacency gate or boost projects (build near ice for water,
-   etc.). This is where your hex infra earns its keep.
-2. **Faction abilities as first-class effects.** Replace the `id ===` special
-   cases with a small effect/hook system so abilities are data, not conditionals.
-3. **Rival AI.** `rivals` is currently a stub counter. Give rivals their own
-   colonies + terraforming so the "race" is real, with a shared planet.
-4. **Economy depth.** Buildings/districts on tiles, trade, tech-driven
-   production upgrades.
-5. **Balance pass.** Tune the survival/terraforming rates so a well-played game
-   reaches full habitability in a satisfying arc, and so every faction is
-   viable. Add difficulty settings.
-6. **Persistence + tests.** Serialize `GameState` (it's plain data) for
-   save/load; add unit tests around `endTurn` (the engine is already headless —
-   see the smoke tests referenced in the commit history).
-7. **Polish.** Project queue, tooltips, tutorial, sound, better art.
+1. **Map ↔ state coupling.** Site colonies, cities, and projects on actual
+   tiles; let terrain/adjacency gate or boost projects (build near ice for
+   water, etc.). This is where your hex infra earns its keep — and where the
+   **living planet** idea lives: warm valleys sprouting forests on their own,
+   new rivers, dust storms diminishing, vegetation spreading tile-by-tile as
+   biomass rises (the placeholder renderer already hints at this).
+2. **Effect/hook system.** Replace the remaining `id ===` special cases (faction
+   specials, faction resilience, Cognitum fragility) with a small data-driven
+   effect system, so abilities and ideology/policy effects compose uniformly.
+3. **Rival AI + evolving diplomacy.** `rivals` is a stub counter. Give rivals
+   their own colonies on the shared planet, and let relationships evolve with
+   the phases — contract competitors → shared-orbital partners → ideological
+   rivals, as the outline describes.
+4. **Native life & mysteries.** Subsurface microbial networks, dormant probes,
+   ice caverns — terraforming as scientific exploration, surfaced through
+   the chronicle and map.
+5. **Deeper internal politics.** Characters who become governors/activists and
+   can challenge your leadership; group demands that trigger events, not just
+   satisfaction drift.
+6. **Persistent history.** Serialize `GameState` (it's plain data) for save/load,
+   then the headline feature: **campaigns that start centuries later on the same
+   Mars**, where an earlier mining outpost is now a capital and a preserve is now
+   sacred ground. The Chronicle is already the substrate for this.
+7. **Balance pass + difficulty settings.** Tune survival/terraforming/phase rates
+   so a well-played game reaches independence in a satisfying arc and every
+   faction and ideology is viable.
+8. **Tests + polish.** Promote the headless smoke tests into a real suite around
+   `endTurn` and the phase arc; add a project queue, tooltips, tutorial, sound,
+   and real art.
