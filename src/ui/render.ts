@@ -1,8 +1,10 @@
 import type {
+  DiplomaticAction,
   GameState,
   GlobalParamKey,
   IndependenceOutcome,
   PolicyAxisKey,
+  Rival,
 } from "../types";
 import { FACTIONS, getFaction } from "../data/factions";
 import { PROJECTS } from "../data/projects";
@@ -10,9 +12,11 @@ import { PHASE_BY_KEY, PHASE_ORDER } from "../data/phases";
 import { IDEOLOGIES, IDEOLOGY_BY_KEY } from "../data/ideologies";
 import { POLICY_AXES } from "../data/policies";
 import { INTEREST_GROUPS } from "../data/politics";
+import { STANCE_LABEL, TRAIT_BY_ID } from "../data/rivals";
 import { paramProgress } from "../engine/terraforming";
 import { effectiveProduction } from "../engine/survival";
 import { dominantIdeology } from "../engine/ideology";
+import { rivalName } from "../engine/diplomacy";
 import { availableTech, projectBlockedReason } from "../engine/game";
 
 /** Callbacks the UI invokes; wired up in main.ts. */
@@ -21,6 +25,8 @@ export interface UIController {
   onSetResearch(techId: string): void;
   onSetPolicy(axis: PolicyAxisKey, optionId: string): void;
   onResolveIndependence(outcome: IndependenceOutcome): void;
+  onDiplomaticAction(rivalId: string, action: DiplomaticAction): void;
+  onDiplomacyResponse(eventId: string, optionId: string): void;
   onEndTurn(): void;
   onSelectFaction(factionId: string): void;
   onRestart(): void;
@@ -28,7 +34,7 @@ export interface UIController {
   onRerender(): void;
 }
 
-type Tab = "colony" | "society" | "history";
+type Tab = "colony" | "society" | "diplomacy" | "history";
 let activeTab: Tab = "colony";
 
 // ---------------------------------------------------------------------------
@@ -116,10 +122,13 @@ function renderSidebar(state: GameState, _ctrl: UIController, el: HTMLElement): 
   const societyLive = state.phase !== "corporate";
   const societyBadge = societyLive ? "" : ` <span class="lock">🔒</span>`;
   const decisionPending = state.phase === "independence" && !state.independenceOutcome;
+  const dipPending = state.pendingDiplomacy.length;
+  const dipBadge = societyLive ? (dipPending ? ` (${dipPending})` : "") : ` <span class="lock">🔒</span>`;
 
-  const tabs: { key: Tab; label: string }[] = [
+  const tabs: { key: Tab; label: string; alert?: boolean }[] = [
     { key: "colony", label: "Colony" },
-    { key: "society", label: `Society${societyBadge}` },
+    { key: "society", label: `Society${societyBadge}`, alert: decisionPending },
+    { key: "diplomacy", label: `Diplomacy${dipBadge}`, alert: dipPending > 0 },
     { key: "history", label: `History (${state.chronicle.length})` },
   ];
 
@@ -128,7 +137,9 @@ function renderSidebar(state: GameState, _ctrl: UIController, el: HTMLElement): 
       ? colonyTab(state)
       : activeTab === "society"
         ? societyTab(state)
-        : historyTab(state);
+        : activeTab === "diplomacy"
+          ? diplomacyTab(state)
+          : historyTab(state);
 
   el.innerHTML = `
     <div class="tabs">
@@ -136,7 +147,7 @@ function renderSidebar(state: GameState, _ctrl: UIController, el: HTMLElement): 
         .map(
           (t) =>
             `<button class="tab ${activeTab === t.key ? "active" : ""} ${
-              t.key === "society" && decisionPending ? "alert" : ""
+              t.alert ? "alert" : ""
             }" data-tab="${t.key}">${t.label}</button>`,
         )
         .join("")}
@@ -373,6 +384,137 @@ function independencePanel(): string {
     </section>`;
 }
 
+// --- Diplomacy tab --------------------------------------------------------
+
+const STANCE_ORDER: Record<string, number> = {
+  nemesis: 0, adversary: 1, rival: 2, competitor: 3, partner: 4, ally: 5,
+};
+
+function diplomacyTab(state: GameState): string {
+  if (state.phase === "corporate") {
+    return `
+      <section class="panel">
+        <h3>Diplomacy</h3>
+        <p class="empty">Relations are purely commercial for now — rival
+          corporations competing for Earth's contracts. Once your world grows
+          into a society, diplomacy becomes personal: rivals will remember what
+          you do to them.</p>
+      </section>`;
+  }
+
+  const events = state.pendingDiplomacy
+    .map((e) => {
+      const rival = state.rivals.find((r) => r.id === e.rivalId);
+      const who = rival ? rivalName(rival) : "A rival";
+      const opts = e.options
+        .map(
+          (o) =>
+            `<button data-dip-respond="${e.id}" data-dip-option="${o.id}">${o.label}</button>`,
+        )
+        .join("");
+      return `
+        <section class="panel overture">
+          <h3>✉ ${who}</h3>
+          <p>${e.text}</p>
+          <div class="overture-opts">${opts}</div>
+        </section>`;
+    })
+    .join("");
+
+  const earth = state.earth.present ? earthPanel(state) : "";
+
+  const living = state.rivals
+    .filter((r) => r.alive)
+    .sort((a, b) => STANCE_ORDER[a.stance] - STANCE_ORDER[b.stance] || a.rank - b.rank);
+  const fallen = state.rivals.filter((r) => !r.alive);
+
+  const rivalCards = living.map((r) => rivalCard(r, state)).join("");
+  const fallenCards = fallen.length
+    ? `<section class="panel"><h3>Fallen</h3>${fallen
+        .map(
+          (r) =>
+            `<p class="fallen-row">☠ ${getFaction(r.factionId).name} — broken${
+              r.grudge > 15 ? ", but their bitterness lingers" : ""
+            }.</p>`,
+        )
+        .join("")}</section>`
+    : "";
+
+  return events + earth + rivalCards + fallenCards;
+}
+
+function earthPanel(state: GameState): string {
+  const s = state.earth.stance;
+  const mood = s > 40 ? "content" : s > -20 ? "wary" : "hostile";
+  return `
+    <section class="panel earth">
+      <h3>🌍 Earth</h3>
+      <p class="panel-note">The old homeworld now watches you as a power in its
+        own right. Its stance toward your autonomy: <strong>${mood}</strong>.</p>
+    </section>`;
+}
+
+function dispClass(disp: number): string {
+  return disp <= -20 ? "angry" : disp < 25 ? "wary" : "content";
+}
+
+function rivalCard(r: Rival, state: GameState): string {
+  const faction = getFaction(r.factionId);
+  const traits = r.traits
+    .map((t) => `<span class="trait" title="${TRAIT_BY_ID[t].description}">${TRAIT_BY_ID[t].label}</span>`)
+    .join("");
+  const dispPct = Math.round((r.disposition + 100) / 2);
+  const lastMem = r.memories[r.memories.length - 1];
+  const memory = lastMem
+    ? `<p class="rival-mem">“…${lastMem.text}.”</p>`
+    : "";
+
+  // Standout relationship with another rival.
+  let relLine = "";
+  const others = state.rivals.filter((o) => o.alive && o.id !== r.id);
+  if (others.length) {
+    const ally = others.reduce((a, b) => ((r.relations[b.id] ?? 0) > (r.relations[a.id] ?? 0) ? b : a));
+    const foe = others.reduce((a, b) => ((r.relations[b.id] ?? 0) < (r.relations[a.id] ?? 0) ? b : a));
+    const bits: string[] = [];
+    if ((r.relations[ally.id] ?? 0) > 40) bits.push(`allied with ${getFaction(ally.factionId).name}`);
+    if ((r.relations[foe.id] ?? 0) < -40) bits.push(`at odds with ${getFaction(foe.factionId).name}`);
+    if (bits.length) relLine = `<p class="rival-rel">${bits.join(" · ")}</p>`;
+  }
+
+  const canAct = state.phase !== "corporate";
+  const actions = canAct
+    ? `<div class="rival-actions">
+        <button data-dip="${r.id}" data-action="pact" title="Broker a pact (40 credits)">Pact</button>
+        <button data-dip="${r.id}" data-action="aid" title="Send aid (30 materials, 20 credits)">Aid</button>
+        <button data-dip="${r.id}" data-action="denounce" title="Denounce publicly (free)">Denounce</button>
+        <button data-dip="${r.id}" data-action="sabotage" title="Sabotage (30 energy, 20 materials)">Sabotage</button>
+      </div>`
+    : "";
+
+  return `
+    <section class="panel rival stance-${r.stance}">
+      <div class="rival-head">
+        <div>
+          <span class="rival-name">${rivalName(r)}</span>
+          <span class="rival-faction">${faction.name}</span>
+        </div>
+        <span class="stance-tag stance-${r.stance}">${STANCE_LABEL[r.stance]}</span>
+      </div>
+      <div class="rival-traits">${traits}</div>
+      <div class="rival-meta">
+        <span title="Standing in the power hierarchy">Rank #${r.rank} · power ${Math.round(r.power)}</span>
+        ${r.grudge > 20 ? `<span class="grudge" title="Unavenged slights">grudge ${Math.round(r.grudge)}</span>` : ""}
+        ${r.debt > 20 ? `<span class="debt" title="Favors owed to you">owes you</span>` : ""}
+      </div>
+      <div class="disp-track" title="Disposition toward you">
+        <div class="disp-fill ${dispClass(r.disposition)}" style="width:${dispPct}%"></div>
+      </div>
+      ${memory}
+      ${relLine}
+      ${actions}
+    </section>`;
+}
+
 // --- History tab ----------------------------------------------------------
 
 const CHRON_ICON: Record<string, string> = {
@@ -490,6 +632,18 @@ function wireControls(
   sb.querySelectorAll<HTMLButtonElement>("[data-independence]").forEach((btn) => {
     btn.addEventListener("click", () =>
       ctrl.onResolveIndependence(btn.dataset.independence as IndependenceOutcome),
+    );
+  });
+
+  sb.querySelectorAll<HTMLButtonElement>("[data-dip]").forEach((btn) => {
+    btn.addEventListener("click", () =>
+      ctrl.onDiplomaticAction(btn.dataset.dip!, btn.dataset.action as DiplomaticAction),
+    );
+  });
+
+  sb.querySelectorAll<HTMLButtonElement>("[data-dip-respond]").forEach((btn) => {
+    btn.addEventListener("click", () =>
+      ctrl.onDiplomacyResponse(btn.dataset.dipRespond!, btn.dataset.dipOption!),
     );
   });
 

@@ -265,15 +265,62 @@ In the final phase the world confronts Earth: remain governed, negotiate
 autonomy, or declare independence. Each writes a different closing entry to the
 history and ends the game as a distinct victory.
 
+### Rival AI & evolving diplomacy — Nemesis-inspired (`data/rivals.ts`, `engine/diplomacy.ts`)
+
+Rivals are the clearest place the two source games disagree: Terraforming Mars
+players only compete externally, while Alpha Centauri's diplomacy grows more
+personal as the world changes. To make that *personal*, the rival system borrows
+the pillars of the Nemesis system:
+
+- **Procedural leaders with personality.** Every non-player faction is a rival
+  *leader* with two traits (Vengeful, Honorable, Opportunist, Paranoid,
+  Expansionist, Cunning, Ruthless, Stoic, Zealous, Pragmatic) that actually
+  drive behavior — how fast grudges form, whether debts are repaid, when they
+  turn on you, how fast they grow.
+- **Memory.** Each rival keeps a memory of what you've done — sabotage, aid, a
+  signed pact, a refused tribute. Memories set disposition, and their overtures
+  *quote them back at you* ("They have not forgotten that you sabotaged us…").
+- **Grudges & debts, and the Nemesis turn.** Wrong a rival and grudge builds;
+  past a threshold they become your **Nemesis** with a vendetta, actively
+  raiding and sabotaging your colony. Honorable rivals forgive over time and
+  repay favors; vengeful ones never let go.
+- **A shifting power hierarchy.** Rivals have `power` and a live `rank`; the
+  hegemon preys on the weakest and open wars bleed both sides, so the pecking
+  order genuinely churns. A rival driven to collapse is **eliminated** — and a
+  fallen faction with a grudge can **resurface** through a procedurally-named
+  successor who *inherits the bitterness* (the "they come back" beat).
+- **Relationships among the rivals.** Rivals hold opinions of *each other*
+  (shared/opposed ideology, resentment of the hegemon), forming alliances and
+  rivalries independent of you — surfaced as "allied with… / at odds with…".
+- **Evolving with the phases.** In the corporate phase relations are purely
+  commercial (capped at competition). From Settlement on, alliances and
+  vendettas become possible; in the Ideological phase, alignment with the
+  direction *your* society is heading strongly drives whether a rival warms or
+  sours; at Independence, **Earth** itself becomes a diplomatic actor reacting
+  to your choice.
+
+Player levers (Diplomacy tab): **Pact**, **Aid**, **Denounce**, **Sabotage** —
+plus responding to rivals' **overtures** (taunts, pact/aid offers, tribute
+demands, threats, and cunning "betrayal" traps). Hostility has teeth: Nemeses
+raid resources and foment unrest, while allies send gifts and partners share
+surplus — so where you sit with each rival matters mechanically, not just
+narratively. Everything landmark (a new hegemon, a nemesis sworn, a pact signed,
+a successor rising) is written into the Chronicle.
+
 ### What's scaffolded vs. deep (honest status)
 
 - **Working & verified:** the full phase arc, emergent ideology with effects,
   all five policy axes feeding the economy, interest-group reactions, character
-  emergence with effects, breakthroughs, the chronicle, and independence. A
-  deterministic engine test drives a colony through every transition; a browser
-  test confirms the UI reaches Settlement and surfaces every panel.
-- **Lighter / hooks:** several faction `special`s and diplomacy remain flavor;
-  rivals are still a stub counter; "living planet" passive ecosystem spread and
+  emergence with effects, breakthroughs, the chronicle, independence, and the
+  full Nemesis-inspired rival/diplomacy system (memory, grudges, the nemesis
+  turn, the power hierarchy, eliminations & resurfacing, inter-rival relations,
+  overtures, and player actions). Deterministic engine tests drive a colony
+  through every phase transition and exercise the diplomacy machinery
+  (sabotage→nemesis, elimination→successor, hierarchy churn, overtures); browser
+  tests confirm the UI reaches Settlement and surfaces every panel including the
+  Diplomacy tab.
+- **Lighter / hooks:** several faction `special`s remain flavor; Earth's role in
+  the endgame is light; "living planet" passive ecosystem spread and
   cross-campaign persistence are described but not implemented.
 - **Balance:** first-pass. Crude AI bots reach Settlement in ~60% of games and
   the later phases occasionally; a human plays far better. The later gates are
@@ -293,10 +340,11 @@ Rough order of value:
 2. **Effect/hook system.** Replace the remaining `id ===` special cases (faction
    specials, faction resilience, Cognitum fragility) with a small data-driven
    effect system, so abilities and ideology/policy effects compose uniformly.
-3. **Rival AI + evolving diplomacy.** `rivals` is a stub counter. Give rivals
-   their own colonies on the shared planet, and let relationships evolve with
-   the phases — contract competitors → shared-orbital partners → ideological
-   rivals, as the outline describes.
+3. **Rivals on the map.** The Nemesis-inspired diplomacy layer is built
+   (`engine/diplomacy.ts`); the natural next step is to give rivals their own
+   colonies on the *shared* planet so their power struggle plays out over real
+   territory, and to let sabotage/wars target specific sites. Deepen Earth's
+   endgame role (loyalist rivals, blockades, a war of independence).
 4. **Native life & mysteries.** Subsurface microbial networks, dormant probes,
    ice caverns — terraforming as scientific exploration, surfaced through
    the chronicle and map.

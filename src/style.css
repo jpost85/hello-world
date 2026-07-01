@@ -208,6 +208,49 @@ select {
 .rep { color: var(--accent); font-size: 11px; }
 .tag.active { background: rgba(91,141,214,0.2); color: var(--accent); }
 
+/* Diplomacy */
+.panel.overture { border: 1px solid var(--accent); }
+.panel.overture h3 { color: var(--accent); }
+.overture-opts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.overture-opts button, .rival-actions button {
+  background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 12.5px; font-weight: 600;
+}
+.overture-opts button:hover, .rival-actions button:hover { border-color: var(--accent); }
+
+.panel.earth { border-left: 3px solid #57c4e0; }
+
+.panel.rival { border-left: 3px solid var(--muted); }
+.panel.rival.stance-nemesis { border-left-color: #b0203a; }
+.panel.rival.stance-adversary { border-left-color: var(--bad); }
+.panel.rival.stance-rival { border-left-color: #e0a63a; }
+.panel.rival.stance-competitor { border-left-color: var(--muted); }
+.panel.rival.stance-partner { border-left-color: #57c4e0; }
+.panel.rival.stance-ally { border-left-color: var(--good); }
+
+.rival-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.rival-name { font-weight: 700; font-size: 14px; display: block; }
+.rival-faction { font-size: 11.5px; color: var(--muted); }
+.stance-tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; white-space: nowrap; background: var(--panel-2); }
+.stance-tag.stance-nemesis { background: rgba(176,32,58,0.25); color: #ff8095; }
+.stance-tag.stance-adversary { background: rgba(240,114,79,0.2); color: var(--bad); }
+.stance-tag.stance-rival { background: rgba(224,166,58,0.2); color: #e0a63a; }
+.stance-tag.stance-partner { background: rgba(87,196,224,0.2); color: #57c4e0; }
+.stance-tag.stance-ally { background: rgba(87,217,138,0.2); color: var(--good); }
+.rival-traits { margin: 8px 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.rival-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); margin-bottom: 6px; }
+.rival-meta .grudge { color: var(--bad); }
+.rival-meta .debt { color: var(--good); }
+.disp-track { height: 7px; background: var(--panel-2); border-radius: 5px; overflow: hidden; margin-bottom: 6px; }
+.disp-fill { height: 100%; }
+.disp-fill.content { background: var(--good); }
+.disp-fill.wary { background: #e0a63a; }
+.disp-fill.angry { background: var(--bad); }
+.rival-mem { font-size: 12px; font-style: italic; color: var(--muted); margin: 4px 0; }
+.rival-rel { font-size: 11.5px; color: var(--muted); margin: 2px 0 6px; }
+.rival-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.fallen-row { font-size: 12.5px; color: var(--muted); margin: 4px 0; }
+
 /* Independence decision */
 .panel.decision { border: 1px solid #e0a63a; }
 .panel.decision h3 { color: #e0a63a; }

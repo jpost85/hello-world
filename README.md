@@ -44,6 +44,7 @@ infrastructure elsewhere, so this focuses on the pieces around it.
 | **Internal politics** | `src/data/politics.ts`, `src/engine/politics.ts` | 5 interest groups that react to policy; discontent costs stability. |
 | **Notable colonists** | `src/data/characters.ts`, `src/engine/characters.ts` | Named individuals with traits emerge and shape the society. |
 | **Breakthroughs** | `src/data/breakthroughs.ts`, `src/engine/breakthroughs.ts` | World-changing discoveries that fire once and reshape strategy. |
+| **Rival AI & diplomacy** | `src/data/rivals.ts`, `src/engine/diplomacy.ts` | **Nemesis-inspired**: rival leaders with traits who *remember* your deeds, hold grudges & debts, rise and fall in a shifting power hierarchy, feud with each other, and can become your Nemesis — or a fallen leader's successor who inherits the grudge. |
 | **The Chronicle** | `src/engine/chronicle.ts` | History as a first-class mechanic — the planet's permanent record. |
 
 **Glue & presentation:**
@@ -52,7 +53,7 @@ infrastructure elsewhere, so this focuses on the pieces around it.
 | --- | --- | --- |
 | **Turn engine** | `src/engine/game.ts` | Ties it together: `createGame` → `startProject`/`setResearch`/`setPolicy` → `endTurn`. Pure-ish, DOM-free, testable. |
 | **Hex seam** | `src/hex/hex.ts` | `HexMapAdapter` — the documented boundary where **your** hex map plugs in. |
-| **UI** | `src/ui/*`, `src/main.ts` | Framework-free faction-select + tabbed HUD (Colony / Society / History), plus a throwaway canvas hex renderer. |
+| **UI** | `src/ui/*`, `src/main.ts` | Framework-free faction-select + tabbed HUD (Colony / Society / Diplomacy / History), plus a throwaway canvas hex renderer. |
 
 See **[docs/DESIGN.md](docs/DESIGN.md)** for the full design outline — the phase
 arc, how every system interlocks, an honest scaffolded-vs-deep status, and a
@@ -69,13 +70,17 @@ npm run build      # type-check + production build to dist/
 npm run typecheck  # types only
 ```
 
-Open the dev server URL, pick a faction, and play. The sidebar has three tabs:
+Open the dev server URL, pick a faction, and play. The sidebar has four tabs:
 
 - **Colony** — research tech, start terraforming projects, watch the planetary
   meters climb. Hit **End Turn** to advance.
 - **Society** — unlocks once the world is livable enough for settlers (~12%
   habitability): tune social-engineering policies, watch your ideology emerge,
   manage interest groups, and meet the colonists who rise.
+- **Diplomacy** — the rival leaders: their stance toward you, their traits and
+  grudges, their place in the power hierarchy, and their feuds with each other.
+  Sign pacts, send aid, denounce, or sabotage — and answer their overtures.
+  Wrong one badly enough and it becomes your Nemesis.
 - **History** — the Chronicle: the landmark moments as they're written.
 
 Survive the hazards, terraform the planet, and carry a corporate outpost all the

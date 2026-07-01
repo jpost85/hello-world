@@ -167,13 +167,120 @@ export interface Hazard {
 }
 
 // ---------------------------------------------------------------------------
-// AI rivals (stub)
+// Rival AI + evolving diplomacy — a Nemesis-inspired system.
+//
+// Rivals are not stat blocks: each is a leader with a personality who REMEMBERS
+// what you have done, holds grudges and debts, rises and falls in a shifting
+// power hierarchy, and has relationships with the OTHER rivals. Wrong one and it
+// becomes your Nemesis with a vendetta; a fallen leader can resurface through a
+// successor who inherits the faction's memory.
 // ---------------------------------------------------------------------------
 
-export interface RivalFaction {
+/** Personality traits that drive how a rival reacts and evolves. */
+export type RivalTrait =
+  | "vengeful"
+  | "honorable"
+  | "opportunist"
+  | "paranoid"
+  | "expansionist"
+  | "cunning"
+  | "ruthless"
+  | "stoic"
+  | "zealous"
+  | "pragmatic";
+
+export interface RivalTraitDef {
+  id: RivalTrait;
+  label: string;
+  description: string;
+}
+
+/** Where a rival stands with you, from vendetta to alliance. Evolves over time. */
+export type DiplomaticStance =
+  | "nemesis"
+  | "adversary"
+  | "rival"
+  | "competitor"
+  | "partner"
+  | "ally";
+
+/** A remembered interaction. Positive weight = boon, negative = slight. */
+export type MemoryKind = "slight" | "boon" | "clash" | "pact" | "milestone" | "betrayal";
+
+export interface RivalMemory {
+  turn: number;
+  kind: MemoryKind;
+  text: string;
+  /** Signed magnitude of the memory's emotional weight. */
+  weight: number;
+}
+
+export interface Rival {
+  id: string;
   factionId: string;
-  /** Rough measure of how far along this rival's own colony is. */
-  progress: number;
+  leaderName: string;
+  /** Evolves with rank and stance — a Nemesis earns an epithet. */
+  title: string;
+  traits: RivalTrait[];
+  /** Their own dominant ideological leaning. */
+  ideologyLean: IdeologyAxis;
+
+  // Power hierarchy
+  /** Standing in the interstellar pecking order (their colony's strength). */
+  power: number;
+  /** 1 = strongest. Recomputed each turn. */
+  rank: number;
+
+  // Relationship with the player
+  /** -100 (vendetta) … +100 (devoted ally). */
+  disposition: number;
+  stance: DiplomaticStance;
+  /** Unavenged slights; high grudge tips a rival into becoming your Nemesis. */
+  grudge: number;
+  /** Unrepaid favors; honorable rivals pay these back. */
+  debt: number;
+  memories: RivalMemory[];
+
+  // Relationships with the OTHER rivals: rivalId -> score (-100 … +100).
+  relations: Record<string, number>;
+
+  alive: boolean;
+  eliminatedTurn?: number;
+  /** True once a fallen faction has produced a successor leader. */
+  resurfaced?: boolean;
+}
+
+/** A choice the player can make in response to a diplomatic overture. */
+export interface DiplomaticOption {
+  id: string;
+  label: string;
+}
+
+export type DiplomaticEventKind =
+  | "taunt"
+  | "offer_pact"
+  | "offer_aid"
+  | "demand_tribute"
+  | "threat"
+  | "betrayal";
+
+/** An overture from a rival awaiting the player's response. */
+export interface DiplomaticEvent {
+  id: string;
+  rivalId: string;
+  kind: DiplomaticEventKind;
+  text: string;
+  options: DiplomaticOption[];
+}
+
+/** A diplomatic action the player can initiate toward a rival. */
+export type DiplomaticAction = "pact" | "aid" | "denounce" | "sabotage";
+
+/** Earth, which becomes a diplomatic actor in the independence endgame. */
+export interface EarthState {
+  /** Sentiment toward the colony's autonomy, -100 … 100. */
+  stance: number;
+  present: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -384,7 +491,11 @@ export interface GameState {
   habitability: number;
   /** Gamey score: terraforming milestones reached. */
   terraformRating: number;
-  rivals: RivalFaction[];
+  rivals: Rival[];
+  /** Diplomatic overtures from rivals awaiting the player's response. */
+  pendingDiplomacy: DiplomaticEvent[];
+  /** Earth as a diplomatic actor (activates in the independence phase). */
+  earth: EarthState;
   log: LogEntry[];
   gameOver?: "won" | "lost";
 
@@ -405,8 +516,6 @@ export interface GameState {
   chronicle: ChronicleEntry[];
   /** One-time milestone flags (firstOcean, firstBreath, …) to fire history once. */
   milestones: Record<string, boolean>;
-  /** Sentiment toward Earth, 0–100; drives the independence endgame. */
-  earthRelations: number;
   /** Resolution of the independence question, once taken. */
   independenceOutcome?: IndependenceOutcome;
 }

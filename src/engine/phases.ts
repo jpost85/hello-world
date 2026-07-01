@@ -54,8 +54,10 @@ export function advancePhase(state: GameState): string[] {
     if (line) logs.push(line);
   }
   if (next === "independence") {
-    // Earth starts paying real attention.
-    state.earthRelations = Math.min(state.earthRelations, 55);
+    // Earth stops being a distant landlord and becomes a diplomatic actor.
+    state.earth.present = true;
+    recordChronicle(state, "politics", "Earth Takes Notice",
+      "Earth, once a distant authority, now watches the colony as a power in its own right.");
   }
   return logs;
 }

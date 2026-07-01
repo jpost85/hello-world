@@ -6,7 +6,7 @@ import type {
   LogKind,
   TerraformProject,
 } from "../types";
-import { getFaction, FACTIONS } from "../data/factions";
+import { getFaction } from "../data/factions";
 import { PROJECTS, getProject } from "../data/projects";
 import { TECHNOLOGIES, getTech } from "../data/technologies";
 import {
@@ -28,7 +28,13 @@ import { advancePhase } from "./phases";
 import { checkBreakthroughs } from "./breakthroughs";
 import { checkMilestones, recordChronicle } from "./chronicle";
 import { maybeEmergeCharacter } from "./characters";
-import type { PolicyAxisKey, IndependenceOutcome } from "../types";
+import {
+  createRivals,
+  rivalTick,
+  applyDiplomaticAction,
+  respondToDiplomacy,
+} from "./diplomacy";
+import type { PolicyAxisKey, IndependenceOutcome, DiplomaticAction } from "../types";
 
 /** Win when the planet is fully habitable; lose if the colony dies out. */
 const HABITABILITY_WIN = 100;
@@ -62,11 +68,10 @@ export function createGame(factionId: string): GameState {
     currentResearch: undefined,
     habitability: 0,
     terraformRating: 0,
-    // Everyone else is a rival racing to terraform their own patch.
-    rivals: FACTIONS.filter((f) => f.id !== factionId).map((f) => ({
-      factionId: f.id,
-      progress: 0,
-    })),
+    // Every other faction is a rival leader with a personality and a memory.
+    rivals: createRivals(factionId),
+    pendingDiplomacy: [],
+    earth: { stance: 0, present: false },
     log: [],
 
     // Civilization layer — begins dormant in the corporate phase.
@@ -78,7 +83,6 @@ export function createGame(factionId: string): GameState {
     breakthroughs: [],
     chronicle: [],
     milestones: {},
-    earthRelations: 80,
   };
 
   // A faction's identity gives ideology a small initial lean.
@@ -288,6 +292,8 @@ export function resolveIndependence(state: GameState, outcome: IndependenceOutco
     },
   };
   const e = endings[outcome];
+  // Earth's sentiment reflects the choice.
+  state.earth.stance = outcome === "independent" ? -80 : outcome === "autonomy" ? 25 : 65;
   recordChronicle(state, "phase", e.title, e.detail);
   pushLog(state, "good", `${e.title} — ${e.detail}`);
   state.gameOver = "won";
@@ -343,8 +349,8 @@ export function endTurn(state: GameState): void {
   if (characterLine) pushLog(state, "info", characterLine);
   for (const line of advancePhase(state)) pushLog(state, "good", line);
 
-  // 8. Rivals inch forward (stub AI).
-  advanceRivals(state);
+  // 8. Rival AI + evolving diplomacy (Nemesis-inspired).
+  for (const line of rivalTick(state)) pushLog(state, "event", line);
 
   // 9. Win / loss.
   checkEndConditions(state);
@@ -358,10 +364,26 @@ function effectiveResearch(state: GameState): number {
   return Math.max(0, state.colony.production.research * (faction.modifiers.research ?? 1));
 }
 
-function advanceRivals(state: GameState): void {
-  for (const rival of state.rivals) {
-    rival.progress += 0.4 + Math.random() * 0.6;
-  }
+// ---------------------------------------------------------------------------
+// Diplomacy (player-facing entry points; logic lives in engine/diplomacy.ts)
+// ---------------------------------------------------------------------------
+
+/** Player initiates a diplomatic action toward a rival. */
+export function diplomaticAction(
+  state: GameState,
+  rivalId: string,
+  action: DiplomaticAction,
+): boolean {
+  const msg = applyDiplomaticAction(state, rivalId, action);
+  if (msg) pushLog(state, "info", msg);
+  return !!msg;
+}
+
+/** Player responds to a queued diplomatic overture. */
+export function answerDiplomacy(state: GameState, eventId: string, optionId: string): boolean {
+  const msg = respondToDiplomacy(state, eventId, optionId);
+  if (msg) pushLog(state, "event", msg);
+  return !!msg;
 }
 
 function checkEndConditions(state: GameState): void {

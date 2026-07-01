@@ -6,6 +6,8 @@ import {
   setResearch,
   setPolicy,
   resolveIndependence,
+  diplomaticAction,
+  answerDiplomacy,
   endTurn,
 } from "./engine/game";
 import { CanvasHexRenderer } from "./ui/hexRenderer";
@@ -59,6 +61,16 @@ const controller: UIController = {
   onResolveIndependence(outcome) {
     if (!state) return;
     resolveIndependence(state, outcome);
+    draw();
+  },
+  onDiplomaticAction(rivalId, action) {
+    if (!state) return;
+    diplomaticAction(state, rivalId, action);
+    draw();
+  },
+  onDiplomacyResponse(eventId, optionId) {
+    if (!state) return;
+    answerDiplomacy(state, eventId, optionId);
     draw();
   },
   onRerender() {
