@@ -41,9 +41,124 @@ militarization is a *choice the society makes* (and is seen making).
 | Unit | Role | Key actions |
 | --- | --- | --- |
 | **Terraformer** ("Former") | The core unit. Executes terraforming projects *on-site* and builds hex improvements (extractors, condensers, sensor arrays). | `terraform`, `build`, `repair` |
-| **Prospector** | Exploration and discovery. Reveals map, finds salvage caches, ice deposits, and — later — native-life mysteries. Spots rival activity. | `survey`, `scout` |
+| **Prospector** | Exploration and discovery. Surveys seeded sites — salvage caches, ice deposits, and native-life mysteries. Early warning on incoming raiders. | `survey`, `scout` |
 | **Convoy** | Logistics. Moves stockpiles between settlements and maintains supply routes (production links). The thing raiders want to hit. | `haul`, `establish route` |
 | **Settler pod** *(Settlement phase)* | Expansion. Converts population into a new settlement. | `found settlement` |
+
+### Civilian roster — full spec
+
+The detailed design for each civilian class: what it does turn-to-turn, what it
+changes about systems already built, and the guardrails. Recommended build
+order is Former → Prospector → Convoy → Settler (rationale at the end).
+
+#### Terraformer ("Former") — the flagship
+
+**The big idea: projects stop being abstract timers and become work happening
+at a place, done by a crew you can lose.**
+
+Today `startProject` deducts stocks and counts down invisibly, with the
+finished works appearing when the timer ends. With Formers:
+
+- Starting a project requires an **idle Former**. It travels to a site hex,
+  enters status `working`, and the countdown runs only while it is alive
+  on-site. The finished works rise on that hex.
+- **Former count becomes the natural throttle on parallel terraforming**,
+  replacing "start anything you can afford." Terraforming faster means
+  building more Formers — which means more upkeep and more soft targets in
+  the open.
+- **Interruption, not loss:** if raiders kill or drive off the crew, the
+  project *pauses* at its current progress until a Former resumes it. This is
+  what makes escort gameplay a real ongoing decision — a Ranger standing on
+  the work site (field slot + works slot sharing the hex, exactly what the
+  slot system exists for) rather than a one-off.
+- **The Stillness gets its best target.** In the current slice, raiders can
+  only attack *finished* works. Formers let them strike the terraforming
+  *before it lands* — thematically ideal for a movement whose purpose is
+  stopping the project. Nemesis rivals hitting crews also makes the existing
+  "their raiders struck our supply lines" memory flavor literal.
+- **Site choice** is where real terrain earns its keep: aquifer taps sited
+  near ice, boreholes on rock, cyanobacteria adjacent to water. On the
+  placeholder disc, auto-siting with a stub biome bonus keeps friction low
+  until the real hex map is wired in.
+- Secondary kit: **repair** — Formers restore Integrity to damaged
+  structures, giving the crews a wartime job.
+
+**UX guardrail:** Formers must add *stakes, not chores*. Auto-siting and
+auto-walking by default; manual placement optional. The player decision is
+"how many crews, and do I guard them" — never babysitting pathing.
+
+#### Prospector — discovery and the mystery hook
+
+No fog of war (and none planned yet). Instead the map is seeded with **survey
+sites** — salvage caches, ice deposits, geothermal vents, and ruins. A
+Prospector travels to one, surveys for a turn or two, and yields one of:
+
+- a **one-time windfall** (the Derelict Salvage hazard becomes something you
+  *earn*),
+- a permanent **site modifier** — a hex where future projects are cheaper or
+  works produce more, feeding directly into Former site choice, or
+- a **mystery** — the doorway to the native-life roadmap item: subsurface
+  microbial networks, dormant probes, bioluminescent caverns. Each discovery
+  is a Chronicle entry plus a three-way choice that feeds existing systems:
+  *study* (research; the Stillness calms — you are finally listening),
+  *exploit* (production; environmentalists sour), or *protect* (ecological
+  ideology nudge; possibly a permanent preserve tile).
+
+Cheap, fragile, unarmed — the second reason escorts matter. Secondary role:
+a Prospector working the rim provides **early warning**, revealing incoming
+raiders' targets a turn before they would otherwise be seen.
+
+#### Convoy — logistics that works with one settlement
+
+"Moves stockpiles between settlements" needs multiple settlements to mean
+anything, so the Convoy's first role is slice-sized: **supply lines to remote
+works**. Assign a Convoy to a structure and it runs a route from the
+settlement; the works produce a bonus (~+50% of their production effects), or
+a project on that hex works faster. The catch: the route is a moving target
+on the map — raiders that intercept the Convoy steal cargo and cut the line.
+
+This creates the classic logistics decision: the best sites are far from
+home, and distance is risk. It is also the smallest unit to build (mostly a
+modifier plus an interceptable dot).
+
+#### Settler pod — expansion without a rewrite
+
+The engine has a singular `state.colony`; keep it. A new settlement is a
+**special structure, not a second colony**. Founding costs heavy stocks
+*plus population* (colonists leave the domes), and the settlement structure
+grants:
+
+- +max population,
+- a production aura for nearby works,
+- a second staging/heal hex,
+- a wider ring where structures can be placed.
+
+Stocks and population stay unified colony-wide, so the survival engine is
+untouched. Strategically it buys risk-spreading (works are no longer one
+raidable cluster), a faster route to the Ideological phase's population gate,
+and — most important to the vision — every founding is a **named Chronicle
+event**: the seed of "a mining outpost founded in one era grows into a
+capital" for persistent-history campaigns.
+
+#### Cost profiles and the decisions they create
+
+| Unit | Cost profile | Creates the decision… | Build size |
+| --- | --- | --- | --- |
+| **Former** | expensive, energy upkeep | how many crews vs. how guarded | medium — touches the project loop |
+| **Prospector** | cheap, fragile | explore now vs. safe later | small-medium — needs a sites system |
+| **Convoy** | mid | rich remote sites vs. exposed routes | small |
+| **Settler** | very expensive + population | concentrate vs. spread | medium — settlement-as-structure |
+
+Cross-cutting: civilians occupy the **works slot**; civilian-heavy economies
+nudge **ecological/technocratic** while armies nudge militarist — the
+workers-vs-warriors budget literally becomes the society's identity. Interest
+groups align the same way: workers like Convoys, scientists like Prospectors,
+environmentalists like biosphere Formers.
+
+**Build order: Former first.** It transforms the core loop rather than adding
+to it, and it retroactively improves everything already built — escorts
+matter more, the Stillness gets smarter targets, structures get repairers.
+Then Prospector (discovery + mysteries), Convoy, Settler.
 
 ### Security / military (unlock at Settlement phase; cheaper under militarist ideology / martial policies)
 
