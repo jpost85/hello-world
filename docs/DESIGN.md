@@ -307,6 +307,36 @@ surplus — so where you sit with each rival matters mechanically, not just
 narratively. Everything landmark (a new hegemon, a nemesis sworn, a pact signed,
 a successor rising) is written into the Chronicle.
 
+### The Stillness — the counter-terraforming antagonist (`data/antagonist.ts`, `engine/antagonist.ts`)
+
+Hazards are random pressure and rivals are social pressure; the Stillness is
+**directional** pressure, aimed at the win condition itself. It is not a rival
+corporation — it cannot be out-bid or allied with, only fought, appeased, or
+outrun.
+
+- **Identity:** zealot-preservationists born of the first failed landings who
+  came to worship the dead world's silence. *"The world was perfect before you
+  woke it."*
+- **Awakening:** hidden until habitability reaches ~15% — success breeds
+  opposition. Awakening is a Chronicle event.
+- **Threat:** grows each turn with your habitability (the better you do, the
+  harder they push), damped by appeasement, the Preservation policy, and an
+  ecological dominant ideology; amplified by Industrial Expansion.
+- **Actions:** with threat comes action — **quietings** (regress your
+  most-advanced global parameter; the event-level form of the razing rule from
+  docs/UNITS.md), depot raids, unrest preaching, and project sabotage.
+- **Their win condition:** if the planet, having reached real habitability
+  (peak ≥ 30%), is dragged back down to near-silence (≤ 12%), the Stillness
+  wins — a distinct loss with its own Chronicle ending ("The World Falls
+  Silent").
+- **Counterplay is ideological:** *Strike cells* (energy + materials; stronger
+  under martial policy or militarist ideology; nudges militarist) or *Fund
+  preservation enclaves* (credits; buys turns of reduced aggression; nudges
+  ecological). How you answer the Stillness shapes who your society becomes.
+- **Unit-layer future:** when units land (docs/UNITS.md), the Stillness stops
+  acting through abstract events and spawns physical raider parties whose
+  razing uses the same parameter-regression rule.
+
 ### What's scaffolded vs. deep (honest status)
 
 - **Working & verified:** the full phase arc, emergent ideology with effects,
@@ -314,7 +344,9 @@ a successor rising) is written into the Chronicle.
   emergence with effects, breakthroughs, the chronicle, independence, and the
   full Nemesis-inspired rival/diplomacy system (memory, grudges, the nemesis
   turn, the power hierarchy, eliminations & resurfacing, inter-rival relations,
-  overtures, and player actions). Deterministic engine tests drive a colony
+  overtures, and player actions), and the Stillness antagonist (awakening,
+  threat, quietings, counteractions, and its silence-victory loss condition).
+  Deterministic engine tests drive a colony
   through every phase transition and exercise the diplomacy machinery
   (sabotage→nemesis, elimination→successor, hierarchy churn, overtures); browser
   tests confirm the UI reaches Settlement and surfaces every panel including the

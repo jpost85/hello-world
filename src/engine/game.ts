@@ -34,6 +34,12 @@ import {
   applyDiplomaticAction,
   respondToDiplomacy,
 } from "./diplomacy";
+import {
+  initialAntagonist,
+  antagonistTick,
+  strikeStillness,
+  fundStillnessEnclaves,
+} from "./antagonist";
 import type { PolicyAxisKey, IndependenceOutcome, DiplomaticAction } from "../types";
 
 /** Win when the planet is fully habitable; lose if the colony dies out. */
@@ -72,6 +78,7 @@ export function createGame(factionId: string): GameState {
     rivals: createRivals(factionId),
     pendingDiplomacy: [],
     earth: { stance: 0, present: false },
+    antagonist: initialAntagonist(),
     log: [],
 
     // Civilization layer — begins dormant in the corporate phase.
@@ -352,10 +359,15 @@ export function endTurn(state: GameState): void {
   // 8. Rival AI + evolving diplomacy (Nemesis-inspired).
   for (const line of rivalTick(state)) pushLog(state, "event", line);
 
-  // 9. Win / loss.
+  // 9. The Stillness — the counter-terraforming antagonist. Runs last among
+  //    actors so it reacts to this turn's true habitability, and may itself
+  //    end the game (a woken world dragged back to silence).
+  for (const line of antagonistTick(state)) pushLog(state, "bad", line);
+
+  // 10. Win / loss.
   checkEndConditions(state);
 
-  // 10. Next turn.
+  // 11. Next turn.
   if (!state.gameOver) state.turn += 1;
 }
 
@@ -386,7 +398,15 @@ export function answerDiplomacy(state: GameState, eventId: string, optionId: str
   return !!msg;
 }
 
+/** Player acts against (or accommodates) the Stillness. */
+export function antagonistAction(state: GameState, action: "strike" | "fund"): boolean {
+  const msg = action === "strike" ? strikeStillness(state) : fundStillnessEnclaves(state);
+  if (msg) pushLog(state, "info", msg);
+  return !!msg;
+}
+
 function checkEndConditions(state: GameState): void {
+  if (state.gameOver) return;
   if (state.colony.population <= 0) {
     state.gameOver = "lost";
     pushLog(state, "bad", "The last colonist is gone. The colony is dead.");

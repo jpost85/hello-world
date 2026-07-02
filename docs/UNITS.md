@@ -264,9 +264,12 @@ Recommendations marked; all are cheap to change before implementation:
 2. **Combat determinism** — deterministic ± small variance *(recommended)* vs.
    dice-heavy. Small unit counts argue for legibility.
 3. **Unit death** — retreat-at-threshold *(recommended)* vs. fight-to-death.
-4. **Razing regresses global params** — yes, small *(recommended)*. It makes
-   infrastructure warfare planetary, but it also lets a hostile rival slow the
-   terraforming clock, which cuts both ways.
+4. **Razing regresses global params** — ✅ **decided: yes.** Infrastructure
+   warfare is planetary. The rule already has its first consumer: the
+   Stillness antagonist's "quietings" (`engine/antagonist.ts`) are the
+   event-level form of razing, regressing the parameter the destroyed works
+   served. When units land, razing (by anyone, including Stillness raider
+   units) uses the same rule.
 5. **Scope of the first implementation** — full shared-map with rival
    structures, or a smaller first step where only *your* territory is real and
    Nemesis raids arrive as spawned raider units at your border. The smaller

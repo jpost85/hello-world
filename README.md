@@ -45,6 +45,7 @@ infrastructure elsewhere, so this focuses on the pieces around it.
 | **Notable colonists** | `src/data/characters.ts`, `src/engine/characters.ts` | Named individuals with traits emerge and shape the society. |
 | **Breakthroughs** | `src/data/breakthroughs.ts`, `src/engine/breakthroughs.ts` | World-changing discoveries that fire once and reshape strategy. |
 | **Rival AI & diplomacy** | `src/data/rivals.ts`, `src/engine/diplomacy.ts` | **Nemesis-inspired**: rival leaders with traits who *remember* your deeds, hold grudges & debts, rise and fall in a shifting power hierarchy, feud with each other, and can become your Nemesis — or a fallen leader's successor who inherits the grudge. |
+| **The Stillness** | `src/data/antagonist.ts`, `src/engine/antagonist.ts` | The counter-terraforming antagonist: preservationist zealots who awaken as the world stirs and work to *unmake* it — regressing your global parameters, raiding your economy, and winning (you lose) if a woken planet falls back to silence. |
 | **The Chronicle** | `src/engine/chronicle.ts` | History as a first-class mechanic — the planet's permanent record. |
 
 **Glue & presentation:**
@@ -82,7 +83,10 @@ Open the dev server URL, pick a faction, and play. The sidebar has four tabs:
 - **Diplomacy** — the rival leaders: their stance toward you, their traits and
   grudges, their place in the power hierarchy, and their feuds with each other.
   Sign pacts, send aid, denounce, or sabotage — and answer their overtures.
-  Wrong one badly enough and it becomes your Nemesis.
+  Wrong one badly enough and it becomes your Nemesis. Once the world visibly
+  stirs, **the Stillness** appears here too — the movement that wants your
+  terraforming *undone*. Strike its cells or fund its enclaves; ignore it and
+  the sky starts slipping backward.
 - **History** — the Chronicle: the landmark moments as they're written.
 
 Survive the hazards, terraform the planet, and carry a corporate outpost all the

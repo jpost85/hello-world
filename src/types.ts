@@ -284,6 +284,29 @@ export interface EarthState {
 }
 
 // ---------------------------------------------------------------------------
+// The Stillness — the counter-terraforming antagonist.
+//
+// Not a rival corporation: a zealot movement that holds the dead world sacred
+// and works to unmake everything the factions build. Its win condition is the
+// inverse of yours — drag a wakening planet back down toward silence.
+// ---------------------------------------------------------------------------
+
+export interface AntagonistState {
+  /** The Stillness stays hidden until terraforming visibly succeeds. */
+  awakened: boolean;
+  awakenedTurn?: number;
+  /** 0–100. Drives how often and how hard they strike. Grows with your
+   *  terraforming success; reduced by strikes and appeasement. */
+  threat: number;
+  /** Turns of reduced aggression bought by funding their enclaves. */
+  appeasedTurns: number;
+  /** Highest habitability the planet has reached — their victory measures the fall. */
+  peakHabitability: number;
+  /** Count of successful counter-terraforming strikes ("quietings"). */
+  quietings: number;
+}
+
+// ---------------------------------------------------------------------------
 // Game phases — the defining arc: corporate terraforming slowly becomes a
 // civilization with its own identity and, eventually, its own sovereignty.
 // ---------------------------------------------------------------------------
@@ -496,6 +519,8 @@ export interface GameState {
   pendingDiplomacy: DiplomaticEvent[];
   /** Earth as a diplomatic actor (activates in the independence phase). */
   earth: EarthState;
+  /** The Stillness — the counter-terraforming antagonist. */
+  antagonist: AntagonistState;
   log: LogEntry[];
   gameOver?: "won" | "lost";
 

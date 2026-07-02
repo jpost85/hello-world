@@ -13,10 +13,12 @@ import { IDEOLOGIES, IDEOLOGY_BY_KEY } from "../data/ideologies";
 import { POLICY_AXES } from "../data/policies";
 import { INTEREST_GROUPS } from "../data/politics";
 import { STANCE_LABEL, TRAIT_BY_ID } from "../data/rivals";
+import { ANTAGONIST } from "../data/antagonist";
 import { paramProgress } from "../engine/terraforming";
 import { effectiveProduction } from "../engine/survival";
 import { dominantIdeology } from "../engine/ideology";
 import { rivalName } from "../engine/diplomacy";
+import { stillnessMood } from "../engine/antagonist";
 import { availableTech, projectBlockedReason } from "../engine/game";
 
 /** Callbacks the UI invokes; wired up in main.ts. */
@@ -27,6 +29,7 @@ export interface UIController {
   onResolveIndependence(outcome: IndependenceOutcome): void;
   onDiplomaticAction(rivalId: string, action: DiplomaticAction): void;
   onDiplomacyResponse(eventId: string, optionId: string): void;
+  onAntagonistAction(action: "strike" | "fund"): void;
   onEndTurn(): void;
   onSelectFaction(factionId: string): void;
   onRestart(): void;
@@ -421,6 +424,7 @@ function diplomacyTab(state: GameState): string {
     })
     .join("");
 
+  const stillness = state.antagonist.awakened ? stillnessPanel(state) : "";
   const earth = state.earth.present ? earthPanel(state) : "";
 
   const living = state.rivals
@@ -440,7 +444,40 @@ function diplomacyTab(state: GameState): string {
         .join("")}</section>`
     : "";
 
-  return events + earth + rivalCards + fallenCards;
+  return events + stillness + earth + rivalCards + fallenCards;
+}
+
+function stillnessPanel(state: GameState): string {
+  const a = state.antagonist;
+  const mood = stillnessMood(a.threat);
+  const appeased = a.appeasedTurns > 0
+    ? `<span class="appeased" title="Aggression reduced while funded enclaves hold">appeased (${a.appeasedTurns}t)</span>`
+    : "";
+  return `
+    <section class="panel stillness">
+      <div class="rival-head">
+        <div>
+          <span class="rival-name">☾ ${ANTAGONIST.name}</span>
+          <span class="rival-faction">${ANTAGONIST.leader}</span>
+        </div>
+        <span class="stance-tag stillness-tag">${mood}</span>
+      </div>
+      <p class="creed">"${ANTAGONIST.creed}"</p>
+      <p class="panel-note">${ANTAGONIST.blurb} They win if the world you woke
+        falls back to silence.</p>
+      <div class="rival-meta">
+        <span title="How hard they currently push against the terraforming">threat ${Math.round(a.threat)}</span>
+        ${a.quietings ? `<span class="grudge" title="Terraforming regressions they have inflicted">quietings ${a.quietings}</span>` : ""}
+        ${appeased}
+      </div>
+      <div class="disp-track" title="Threat"><div class="disp-fill ${
+        a.threat >= 60 ? "angry" : a.threat >= 30 ? "wary" : "content"
+      }" style="width:${Math.round(a.threat)}%"></div></div>
+      <div class="rival-actions">
+        <button data-antag="strike" title="Sweep their cells (40 energy, 30 materials) — stronger under martial policy or militarist ideology">Strike cells</button>
+        <button data-antag="fund" title="Fund preservation enclaves (50 credits) — buys ${6} turns of reduced aggression">Fund enclaves</button>
+      </div>
+    </section>`;
 }
 
 function earthPanel(state: GameState): string {
@@ -644,6 +681,12 @@ function wireControls(
   sb.querySelectorAll<HTMLButtonElement>("[data-dip-respond]").forEach((btn) => {
     btn.addEventListener("click", () =>
       ctrl.onDiplomacyResponse(btn.dataset.dipRespond!, btn.dataset.dipOption!),
+    );
+  });
+
+  sb.querySelectorAll<HTMLButtonElement>("[data-antag]").forEach((btn) => {
+    btn.addEventListener("click", () =>
+      ctrl.onAntagonistAction(btn.dataset.antag as "strike" | "fund"),
     );
   });
 
