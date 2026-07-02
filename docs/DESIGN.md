@@ -340,11 +340,13 @@ Rough order of value:
 2. **Effect/hook system.** Replace the remaining `id ===` special cases (faction
    specials, faction resilience, Cognitum fragility) with a small data-driven
    effect system, so abilities and ideology/policy effects compose uniformly.
-3. **Rivals on the map.** The Nemesis-inspired diplomacy layer is built
-   (`engine/diplomacy.ts`); the natural next step is to give rivals their own
-   colonies on the *shared* planet so their power struggle plays out over real
-   territory, and to let sabotage/wars target specific sites. Deepen Earth's
-   endgame role (loyalist rivals, blockades, a war of independence).
+3. **Units & infrastructure warfare.** The unit layer is designed but not yet
+   built — see **[UNITS.md](UNITS.md)** for the full outline: a small roster of
+   mostly-civilian units, slot-based stacking, and combat centered on
+   *buildings* (raid / assault / sabotage) rather than field battles. This is
+   also what puts rivals on the *shared* map, makes the Nemesis system's
+   sabotage physical, and deepens Earth's endgame role (loyalist forces,
+   blockades, a war of independence).
 4. **Native life & mysteries.** Subsurface microbial networks, dormant probes,
    ice caverns — terraforming as scientific exploration, surfaced through
    the chronicle and map.

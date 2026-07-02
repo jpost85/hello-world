@@ -57,8 +57,10 @@ infrastructure elsewhere, so this focuses on the pieces around it.
 
 See **[docs/DESIGN.md](docs/DESIGN.md)** for the full design outline — the phase
 arc, how every system interlocks, an honest scaffolded-vs-deep status, and a
-roadmap toward the rest of the vision (living planet, native life, evolving
-diplomacy, and a Mars whose history persists across campaigns).
+roadmap toward the rest of the vision (living planet, native life, and a Mars
+whose history persists across campaigns). The unit & combat layer is designed
+in **[docs/UNITS.md](docs/UNITS.md)** (not yet implemented): mostly-civilian
+units, slot-based stacking, and building-centric warfare.
 
 ## Running it
 
