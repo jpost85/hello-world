@@ -344,8 +344,10 @@ outrun.
   emergence with effects, breakthroughs, the chronicle, independence, and the
   full Nemesis-inspired rival/diplomacy system (memory, grudges, the nemesis
   turn, the power hierarchy, eliminations & resurfacing, inter-rival relations,
-  overtures, and player actions), and the Stillness antagonist (awakening,
-  threat, quietings, counteractions, and its silence-victory loss condition).
+  overtures, and player actions), the Stillness antagonist (awakening,
+  threat, quietings, counteractions, and its silence-victory loss condition),
+  and the unit layer's small slice (structures from projects, Warden/Ranger
+  forces, raider spawns, interception, assault, and razing-with-regression).
   Deterministic engine tests drive a colony
   through every phase transition and exercise the diplomacy machinery
   (sabotage→nemesis, elimination→successor, hierarchy churn, overtures); browser
@@ -372,13 +374,14 @@ Rough order of value:
 2. **Effect/hook system.** Replace the remaining `id ===` special cases (faction
    specials, faction resilience, Cognitum fragility) with a small data-driven
    effect system, so abilities and ideology/policy effects compose uniformly.
-3. **Units & infrastructure warfare.** The unit layer is designed but not yet
-   built — see **[UNITS.md](UNITS.md)** for the full outline: a small roster of
-   mostly-civilian units, slot-based stacking, and combat centered on
-   *buildings* (raid / assault / sabotage) rather than field battles. This is
-   also what puts rivals on the *shared* map, makes the Nemesis system's
-   sabotage physical, and deepens Earth's endgame role (loyalist forces,
-   blockades, a war of independence).
+3. **Grow the unit layer.** The small slice is live (`engine/units.ts`, see
+   **[UNITS.md](UNITS.md)**): structures from projects, Warden/Ranger defense,
+   raiders from the Stillness and Nemesis rivals, and razing that regresses
+   global parameters. Next: the civilian roster (Terraformers executing
+   projects on-site, Prospectors, Convoys), manual movement orders, the raid
+   and sabotage verbs for the *player*, rival structures on a shared map, and
+   Earth's endgame forces (loyalist landings, blockades, a war of
+   independence).
 4. **Native life & mysteries.** Subsurface microbial networks, dormant probes,
    ice caverns — terraforming as scientific exploration, surfaced through
    the chronicle and map.

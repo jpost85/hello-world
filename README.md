@@ -46,6 +46,7 @@ infrastructure elsewhere, so this focuses on the pieces around it.
 | **Breakthroughs** | `src/data/breakthroughs.ts`, `src/engine/breakthroughs.ts` | World-changing discoveries that fire once and reshape strategy. |
 | **Rival AI & diplomacy** | `src/data/rivals.ts`, `src/engine/diplomacy.ts` | **Nemesis-inspired**: rival leaders with traits who *remember* your deeds, hold grudges & debts, rise and fall in a shifting power hierarchy, feud with each other, and can become your Nemesis — or a fallen leader's successor who inherits the grudge. |
 | **The Stillness** | `src/data/antagonist.ts`, `src/engine/antagonist.ts` | The counter-terraforming antagonist: preservationist zealots who awaken as the world stirs and work to *unmake* it — regressing your global parameters, raiding your economy, and winning (you lose) if a woken planet falls back to silence. |
+| **Units & warfare** | `src/data/units.ts`, `src/engine/units.ts` | The small slice of [docs/UNITS.md](docs/UNITS.md): completed projects become physical structures on the map; Stillness cells and Nemesis strike parties raid them; Wardens garrison, Rangers patrol; razed works regress the parameter they served. |
 | **The Chronicle** | `src/engine/chronicle.ts` | History as a first-class mechanic — the planet's permanent record. |
 
 **Glue & presentation:**
@@ -76,7 +77,10 @@ npm run typecheck  # types only
 Open the dev server URL, pick a faction, and play. The sidebar has four tabs:
 
 - **Colony** — research tech, start terraforming projects, watch the planetary
-  meters climb. Hit **End Turn** to advance.
+  meters climb. Completed projects become **works on the map** — and from the
+  Settlement era, hostile raiders come for them: recruit Wardens to garrison
+  and Rangers to patrol in the **Forces & Works** panel. Hit **End Turn** to
+  advance.
 - **Society** — unlocks once the world is livable enough for settlers (~12%
   habitability): tune social-engineering policies, watch your ideology emerge,
   manage interest groups, and meet the colonists who rise.

@@ -12,12 +12,44 @@
  * own coordinate system is wired in.
  */
 
-import type { GameState } from "../types";
+import type { GameState, HexCoord } from "../types";
 
-/** Axial hex coordinate (q, r). Swap for your library's coordinate type. */
-export interface HexCoord {
-  q: number;
-  r: number;
+/** Axial hex coordinate (q, r) — canonical definition lives in types.ts so the
+ *  engine's unit layer can use it without importing the map seam. */
+export type { HexCoord } from "../types";
+
+/** Radius of the playable disc in the placeholder map. */
+export const MAP_RADIUS = 4;
+
+/** The six axial directions. */
+export const HEX_DIRS: ReadonlyArray<HexCoord> = [
+  { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+  { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 },
+];
+
+/** Axial hex distance. */
+export function hexDistance(a: HexCoord, b: HexCoord): number {
+  const dq = a.q - b.q;
+  const dr = a.r - b.r;
+  return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
+}
+
+/** The six neighbors of a coordinate (pure; no map needed). */
+export function axialNeighbors(coord: HexCoord): HexCoord[] {
+  return HEX_DIRS.map((d) => ({ q: coord.q + d.q, r: coord.r + d.r }));
+}
+
+/** All coordinates at exactly `radius` from the origin (the map rim). */
+export function ringCoords(radius: number): HexCoord[] {
+  const out: HexCoord[] = [];
+  let c: HexCoord = { q: -radius, r: radius };
+  for (let side = 0; side < 6; side++) {
+    for (let i = 0; i < radius; i++) {
+      out.push({ ...c });
+      c = { q: c.q + HEX_DIRS[side].q, r: c.r + HEX_DIRS[side].r };
+    }
+  }
+  return out;
 }
 
 /** Terrain/feature a tile can hold. Extend to match your world model. */
