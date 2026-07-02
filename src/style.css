@@ -251,6 +251,27 @@ select {
 .rival-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .fallen-row { font-size: 12.5px; color: var(--muted); margin: 4px 0; }
 
+/* Forces & works */
+.hostiles { color: var(--bad); font-size: 12px; text-transform: none; letter-spacing: 0; }
+.recruit-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.recruit-row button {
+  flex: 1; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 8px; padding: 7px 8px; cursor: pointer; font-size: 12.5px; font-weight: 600;
+}
+.recruit-row button:hover:not(:disabled) { border-color: var(--accent); }
+.recruit-row button:disabled { color: var(--muted); cursor: not-allowed; }
+.unit-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.unit-name { font-weight: 600; min-width: 64px; }
+.unit-hp { color: var(--muted); font-variant-numeric: tabular-nums; }
+.unit-post { color: var(--muted); font-size: 12px; font-style: italic; }
+.unit-row select { flex: 1; width: auto; padding: 4px 6px; font-size: 12px; }
+.works-list { margin-top: 10px; }
+.structure-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; font-size: 12.5px; }
+.structure-name { flex: 1; }
+.structure-int { color: var(--muted); font-variant-numeric: tabular-nums; }
+.structure-int.hurt { color: var(--bad); }
+.structure-gar { color: var(--good); font-size: 11.5px; }
+
 /* The Stillness */
 .panel.stillness {
   border: 1px solid #7a6a9e;

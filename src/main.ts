@@ -9,6 +9,8 @@ import {
   diplomaticAction,
   answerDiplomacy,
   antagonistAction,
+  recruit,
+  setGarrison,
   endTurn,
 } from "./engine/game";
 import { CanvasHexRenderer } from "./ui/hexRenderer";
@@ -77,6 +79,16 @@ const controller: UIController = {
   onAntagonistAction(action) {
     if (!state) return;
     antagonistAction(state, action);
+    draw();
+  },
+  onRecruit(cls) {
+    if (!state) return;
+    recruit(state, cls);
+    draw();
+  },
+  onSetGarrison(unitId, structureId) {
+    if (!state) return;
+    setGarrison(state, unitId, structureId);
     draw();
   },
   onRerender() {

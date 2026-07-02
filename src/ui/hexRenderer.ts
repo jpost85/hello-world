@@ -1,7 +1,8 @@
-import type { GameState } from "../types";
+import type { GameState, MapUnit, Structure } from "../types";
 import type { HexCoord, HexMapAdapter, Tile, TileTerrain } from "../hex/hex";
 import { makeSampleTiles } from "../hex/hex";
 import { paramProgress } from "../engine/terraforming";
+import { FACTIONS_BY_ID } from "../data/factions";
 
 /**
  * A minimal placeholder implementation of HexMapAdapter using a 2D canvas.
@@ -71,6 +72,8 @@ export class CanvasHexRenderer implements HexMapAdapter {
       const { x, y } = this.hexToPixel(tile.coord);
       this.drawHex(x, y, this.terrainColor(tile, state));
     }
+    for (const structure of state.structures) this.drawStructure(structure);
+    for (const unit of state.units) this.drawUnit(unit, state);
   }
 
   // --- internals ----------------------------------------------------------
@@ -109,6 +112,62 @@ export class CanvasHexRenderer implements HexMapAdapter {
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 1;
     ctx.stroke();
+  }
+
+  /** Structures render as plated squares with an initial and an integrity pip bar. */
+  private drawStructure(structure: Structure): void {
+    const { ctx } = this;
+    const { x, y } = this.hexToPixel(structure.coord);
+    const s = 16;
+    ctx.fillStyle = "#1b2740";
+    ctx.strokeStyle = "#e8d44d";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(x - s / 2, y - s / 2, s, s, 3);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#e7eefc";
+    ctx.font = "bold 10px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(structure.name[0], x, y + 0.5);
+    // Integrity bar when damaged.
+    if (structure.integrity < structure.maxIntegrity) {
+      const w = 20;
+      const frac = Math.max(0, structure.integrity / structure.maxIntegrity);
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.fillRect(x - w / 2, y + s / 2 + 3, w, 4);
+      ctx.fillStyle = frac > 0.5 ? "#57d98a" : frac > 0.25 ? "#e0a63a" : "#f0724f";
+      ctx.fillRect(x - w / 2, y + s / 2 + 3, w * frac, 4);
+    }
+  }
+
+  /** Units render as dots: player forces low-left, hostiles high-right. */
+  private drawUnit(unit: MapUnit, state: GameState): void {
+    const { ctx } = this;
+    const { x, y } = this.hexToPixel(unit.coord);
+    const friendly = unit.ownerId === "player";
+    const ox = friendly ? -10 : 10;
+    const oy = friendly ? 10 : -10;
+    ctx.beginPath();
+    ctx.arc(x + ox, y + oy, 6.5, 0, Math.PI * 2);
+    ctx.fillStyle = this.ownerColor(unit, state);
+    ctx.fill();
+    ctx.strokeStyle = "#0c1420";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = "#0c1420";
+    ctx.font = "bold 8px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(unit.defId === "warden" ? "W" : unit.defId === "ranger" ? "R" : "!", x + ox, y + oy + 0.5);
+  }
+
+  private ownerColor(unit: MapUnit, state: GameState): string {
+    if (unit.ownerId === "player") return "#e7eefc";
+    if (unit.ownerId === "stillness") return "#9b7fd4";
+    const rival = state.rivals.find((r) => r.id === unit.ownerId);
+    return rival ? (FACTIONS_BY_ID[rival.factionId]?.color ?? "#f0724f") : "#f0724f";
   }
 
   private pickTile(px: number, py: number): Tile | undefined {

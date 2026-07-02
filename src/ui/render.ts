@@ -19,7 +19,9 @@ import { effectiveProduction } from "../engine/survival";
 import { dominantIdeology } from "../engine/ideology";
 import { rivalName } from "../engine/diplomacy";
 import { stillnessMood } from "../engine/antagonist";
-import { availableTech, projectBlockedReason } from "../engine/game";
+import { UNIT_DEFS } from "../data/units";
+import { playerUnits, enemyUnits } from "../engine/units";
+import { availableTech, projectBlockedReason, recruitBlockedReason } from "../engine/game";
 
 /** Callbacks the UI invokes; wired up in main.ts. */
 export interface UIController {
@@ -30,6 +32,8 @@ export interface UIController {
   onDiplomaticAction(rivalId: string, action: DiplomaticAction): void;
   onDiplomacyResponse(eventId: string, optionId: string): void;
   onAntagonistAction(action: "strike" | "fund"): void;
+  onRecruit(cls: "warden" | "ranger"): void;
+  onSetGarrison(unitId: string, structureId: string | null): void;
   onEndTurn(): void;
   onSelectFaction(factionId: string): void;
   onRestart(): void;
@@ -232,9 +236,74 @@ function colonyTab(state: GameState): string {
       <h3>Research</h3>
       ${research}
     </section>
+    ${forcesPanel(state)}
     <section class="panel">
       <h3>Terraforming Projects</h3>
       <div class="project-list">${projects}</div>
+    </section>`;
+}
+
+function forcesPanel(state: GameState): string {
+  const mine = playerUnits(state);
+  const hostiles = enemyUnits(state).length;
+
+  const recruitBtn = (cls: "warden" | "ranger") => {
+    const def = UNIT_DEFS[cls];
+    const blocked = recruitBlockedReason(state, cls);
+    const cost = Object.entries(def.cost)
+      .map(([k, v]) => `${costIcon(k)}${v}`)
+      .join(" ");
+    return `<button data-recruit="${cls}" ${blocked ? "disabled" : ""}
+      title="${def.blurb}${blocked ? ` — ${blocked}` : ""}">${def.name} (${cost})</button>`;
+  };
+
+  const unitRows = mine.length
+    ? mine
+        .map((u) => {
+          const def = UNIT_DEFS[u.defId];
+          const post =
+            u.defId === "warden"
+              ? `<select data-garrison="${u.id}">
+                  <option value="">— settlement reserve —</option>
+                  ${state.structures
+                    .map((st) => {
+                      const taken = state.units.some((x) => x.id !== u.id && x.garrisonOf === st.id);
+                      return `<option value="${st.id}" ${u.garrisonOf === st.id ? "selected" : ""} ${
+                        taken ? "disabled" : ""
+                      }>${st.name}${taken ? " (garrisoned)" : ""}</option>`;
+                    })
+                    .join("")}
+                 </select>`
+              : `<span class="unit-post">patrolling</span>`;
+          return `<div class="unit-row">
+            <span class="unit-name">${def.name}</span>
+            <span class="unit-hp">${u.hp}/${def.hp}</span>
+            ${post}
+          </div>`;
+        })
+        .join("")
+    : `<p class="empty">No forces mustered.</p>`;
+
+  const structureRows = state.structures.length
+    ? state.structures
+        .map((st) => {
+          const garrison = state.units.find((u) => u.garrisonOf === st.id);
+          const frac = Math.round((st.integrity / st.maxIntegrity) * 100);
+          return `<div class="structure-row" title="${st.servesParam ? `Serves ${st.servesParam}; razing regresses it.` : "Infrastructure."}">
+            <span class="structure-name">${st.name}</span>
+            <span class="structure-int ${frac < 50 ? "hurt" : ""}">${st.integrity}/${st.maxIntegrity}</span>
+            <span class="structure-gar">${garrison ? "🛡 garrisoned" : ""}</span>
+          </div>`;
+        })
+        .join("")
+    : `<p class="empty">No works on the map yet — completed projects appear here.</p>`;
+
+  return `
+    <section class="panel">
+      <h3>Forces & Works ${hostiles ? `<span class="hostiles">⚠ ${hostiles} hostile</span>` : ""}</h3>
+      <div class="recruit-row">${recruitBtn("warden")} ${recruitBtn("ranger")}</div>
+      ${unitRows}
+      <div class="works-list">${structureRows}</div>
     </section>`;
 }
 
@@ -687,6 +756,18 @@ function wireControls(
   sb.querySelectorAll<HTMLButtonElement>("[data-antag]").forEach((btn) => {
     btn.addEventListener("click", () =>
       ctrl.onAntagonistAction(btn.dataset.antag as "strike" | "fund"),
+    );
+  });
+
+  sb.querySelectorAll<HTMLButtonElement>("[data-recruit]").forEach((btn) => {
+    btn.addEventListener("click", () =>
+      ctrl.onRecruit(btn.dataset.recruit as "warden" | "ranger"),
+    );
+  });
+
+  sb.querySelectorAll<HTMLSelectElement>("[data-garrison]").forEach((sel) => {
+    sel.addEventListener("change", () =>
+      ctrl.onSetGarrison(sel.dataset.garrison!, sel.value || null),
     );
   });
 

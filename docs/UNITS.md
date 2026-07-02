@@ -1,9 +1,15 @@
 # Aphelion — Unit & Combat Design
 
-A working design for the unit layer. Nothing here is implemented yet; this is
-the outline to build against. It is written to slot into the existing systems
+A working design for the unit layer, written to slot into the existing systems
 (phases, ideology, diplomacy/Nemesis, interest groups, chronicle) and into the
-hex-map seam (`HexMapAdapter`), which is where units will actually live.
+hex-map seam (`HexMapAdapter`).
+
+**Implementation status:** the decided *very small slice* (§8) is live in
+`src/engine/units.ts` + `src/data/units.ts`: structures placed by completed
+projects, slot-based garrisons, Warden/Ranger player forces, enemy raiders
+spawned by the Stillness and Nemesis rivals, interception, assault, and razing
+with parameter regression. The rest of this document (full roster, manual
+orders, shared map) is the outline to build next.
 
 ---
 
@@ -258,19 +264,23 @@ follow-on step that makes the diplomacy power struggle territorial.
 
 ## 8. Open decision points
 
-Recommendations marked; all are cheap to change before implementation:
+Recommendations marked; decisions recorded as they're made:
 
-1. **Stacking** — slot-based *(recommended)* vs. strict 1UPT vs. capped stacks.
-2. **Combat determinism** — deterministic ± small variance *(recommended)* vs.
-   dice-heavy. Small unit counts argue for legibility.
-3. **Unit death** — retreat-at-threshold *(recommended)* vs. fight-to-death.
+1. **Stacking** — ✅ **decided: slot-based.** Implemented in slice form: one
+   field unit per hex (except the settlement staging hex), one garrison per
+   structure.
+2. **Combat determinism** — deterministic ± small variance *(recommended;
+   implemented as ±15%)*.
+3. **Unit death** — retreat-at-threshold *(recommended; implemented: Rangers
+   fall back to the settlement below 30% HP)*.
 4. **Razing regresses global params** — ✅ **decided: yes.** Infrastructure
    warfare is planetary. The rule already has its first consumer: the
    Stillness antagonist's "quietings" (`engine/antagonist.ts`) are the
    event-level form of razing, regressing the parameter the destroyed works
    served. When units land, razing (by anyone, including Stillness raider
    units) uses the same rule.
-5. **Scope of the first implementation** — full shared-map with rival
-   structures, or a smaller first step where only *your* territory is real and
-   Nemesis raids arrive as spawned raider units at your border. The smaller
-   step ships sooner and still proves the combat loop.
+5. **Scope of the first implementation** — ✅ **decided: the very small
+   slice.** Only your territory is real; Stillness cells and Nemesis strike
+   parties spawn at the map rim and path toward your works. Implemented in
+   `engine/units.ts`. The full shared map with rival structures is the
+   follow-on step.

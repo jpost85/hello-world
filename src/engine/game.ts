@@ -40,6 +40,14 @@ import {
   strikeStillness,
   fundStillnessEnclaves,
 } from "./antagonist";
+import {
+  placeStructureForProject,
+  recruitUnit,
+  recruitBlockedReason,
+  assignGarrison,
+  unitTick,
+} from "./units";
+import type { UnitClass } from "../types";
 import type { PolicyAxisKey, IndependenceOutcome, DiplomaticAction } from "../types";
 
 /** Win when the planet is fully habitable; lose if the colony dies out. */
@@ -79,6 +87,8 @@ export function createGame(factionId: string): GameState {
     pendingDiplomacy: [],
     earth: { stance: 0, present: false },
     antagonist: initialAntagonist(),
+    units: [],
+    structures: [],
     log: [],
 
     // Civilization layer — begins dormant in the corporate phase.
@@ -236,6 +246,9 @@ function completeProject(state: GameState, project: TerraformProject): void {
   nudgeIdeology(state, projectLean(project), 2);
   const detail = changes.length ? ` (${changes.join(", ")})` : "";
   pushLog(state, "good", `"${project.name}" complete${detail}.`);
+  // The works become a physical structure on the map — something to defend.
+  const placed = placeStructureForProject(state, project);
+  if (placed) pushLog(state, "info", placed);
 }
 
 // ---------------------------------------------------------------------------
@@ -364,10 +377,14 @@ export function endTurn(state: GameState): void {
   //    end the game (a woken world dragged back to silence).
   for (const line of antagonistTick(state)) pushLog(state, "bad", line);
 
-  // 10. Win / loss.
+  // 10. The military layer: raider spawns, movement, interception, assaults,
+  //     and razing (docs/UNITS.md small slice).
+  for (const line of unitTick(state)) pushLog(state, "event", line);
+
+  // 11. Win / loss.
   checkEndConditions(state);
 
-  // 11. Next turn.
+  // 12. Next turn.
   if (!state.gameOver) state.turn += 1;
 }
 
@@ -403,6 +420,24 @@ export function antagonistAction(state: GameState, action: "strike" | "fund"): b
   const msg = action === "strike" ? strikeStillness(state) : fundStillnessEnclaves(state);
   if (msg) pushLog(state, "info", msg);
   return !!msg;
+}
+
+// ---------------------------------------------------------------------------
+// Forces (player-facing entry points; logic lives in engine/units.ts)
+// ---------------------------------------------------------------------------
+
+export { recruitBlockedReason };
+
+/** Recruit a Warden or Ranger at the settlement. */
+export function recruit(state: GameState, cls: UnitClass): boolean {
+  const msg = recruitUnit(state, cls);
+  if (msg) pushLog(state, "info", msg);
+  return !!msg;
+}
+
+/** Post a Warden to a structure's garrison slot (or recall with null). */
+export function setGarrison(state: GameState, unitId: string, structureId: string | null): boolean {
+  return assignGarrison(state, unitId, structureId);
 }
 
 function checkEndConditions(state: GameState): void {

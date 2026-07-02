@@ -307,6 +307,58 @@ export interface AntagonistState {
 }
 
 // ---------------------------------------------------------------------------
+// Hex coordinates — shared by the engine's unit layer and the map seam.
+// (Re-exported from hex/hex.ts; swap for your library's coordinate type.)
+// ---------------------------------------------------------------------------
+
+/** Axial hex coordinate (q, r). */
+export interface HexCoord {
+  q: number;
+  r: number;
+}
+
+// ---------------------------------------------------------------------------
+// Units & structures — the "very small slice" of docs/UNITS.md: only the
+// player's territory is real; enemy raiders spawn at the map edge and path
+// toward your structures. Slot rule (simplified for the slice): one field
+// unit per hex (except the settlement staging hex), one garrison per
+// structure.
+// ---------------------------------------------------------------------------
+
+export type UnitClass = "warden" | "ranger" | "raider";
+
+export interface MapUnit {
+  id: string;
+  defId: UnitClass;
+  /** "player", "stillness", or a rival id. */
+  ownerId: string;
+  coord: HexCoord;
+  hp: number;
+  /** Structure id this unit garrisons (Wardens only). */
+  garrisonOf?: string;
+  /** Structure id an enemy raider is heading for. */
+  targetId?: string;
+}
+
+/** A physical building on the map, created when projects complete. */
+export interface Structure {
+  id: string;
+  projectId: string;
+  name: string;
+  coord: HexCoord;
+  integrity: number;
+  maxIntegrity: number;
+  /** Flat damage reduction; also shields the garrison. */
+  hardness: number;
+  /** Which global parameter this serves; razing regresses it. */
+  servesParam?: GlobalParamKey;
+  /** How much of that parameter the works granted (regression is a fraction). */
+  servesAmount?: number;
+  /** Production the works grant; removed if razed. */
+  productionEffects?: Partial<Production>;
+}
+
+// ---------------------------------------------------------------------------
 // Game phases — the defining arc: corporate terraforming slowly becomes a
 // civilization with its own identity and, eventually, its own sovereignty.
 // ---------------------------------------------------------------------------
@@ -521,6 +573,10 @@ export interface GameState {
   earth: EarthState;
   /** The Stillness — the counter-terraforming antagonist. */
   antagonist: AntagonistState;
+  /** Units on the map (player forces and enemy raiders). */
+  units: MapUnit[];
+  /** Physical structures created by completed projects. */
+  structures: Structure[];
   log: LogEntry[];
   gameOver?: "won" | "lost";
 
