@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Eurobasqet",
+    "slug": "eurobasqet",
+    "scheme": "eurobasqet",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0B0E1A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.eurobasqet.app"
+    },
+    "android": {
+      "package": "com.eurobasqet.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0E1A"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
