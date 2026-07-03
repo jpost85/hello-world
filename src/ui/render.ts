@@ -1,11 +1,18 @@
 import type {
   DiplomaticAction,
+  FounderProfile,
   GameState,
   GlobalParamKey,
   IndependenceOutcome,
   PolicyAxisKey,
   Rival,
 } from "../types";
+import {
+  FOUNDER_OPTION_SETS,
+  FOUNDER_NAMES,
+  COLONY_NAMES,
+  buildFounderFaction,
+} from "../data/founder";
 import { FACTIONS, getFaction } from "../data/factions";
 import { PROJECTS } from "../data/projects";
 import { PHASE_BY_KEY, PHASE_ORDER } from "../data/phases";
@@ -36,6 +43,7 @@ export interface UIController {
   onSetGarrison(unitId: string, structureId: string | null): void;
   onEndTurn(): void;
   onSelectFaction(factionId: string): void;
+  onFoundColony(profile: FounderProfile): void;
   onRestart(): void;
   /** Re-render without advancing the game (e.g. after switching tabs). */
   onRerender(): void;
@@ -45,35 +53,132 @@ type Tab = "colony" | "society" | "diplomacy" | "history";
 let activeTab: Tab = "colony";
 
 // ---------------------------------------------------------------------------
-// Faction select screen
+// Opening screen: design your founder
 // ---------------------------------------------------------------------------
+
+function randomOf<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/** Draft selection persists across re-renders of the founder screen. */
+let draft: FounderProfile | null = null;
+
+function newDraft(): FounderProfile {
+  return {
+    name: randomOf(FOUNDER_NAMES),
+    colonyName: randomOf(COLONY_NAMES),
+    backgroundId: FOUNDER_OPTION_SETS[0].options[0].id,
+    leadershipId: FOUNDER_OPTION_SETS[1].options[0].id,
+    doctrineId: FOUNDER_OPTION_SETS[2].options[0].id,
+  };
+}
 
 export function renderFactionSelect(root: HTMLElement, ctrl: UIController): void {
   activeTab = "colony";
+  if (!draft) draft = newDraft();
+  const d = draft;
+
+  const groups = FOUNDER_OPTION_SETS.map((set) => {
+    const cards = set.options
+      .map((o) => {
+        const selected = d[set.key] === o.id;
+        return `
+          <button class="opt-card ${selected ? "selected" : ""}"
+                  data-founder-set="${set.key}" data-founder-opt="${o.id}"
+                  ${o.color ? `style="--accent:${o.color}"` : ""}>
+            <span class="opt-name">${o.name}</span>
+            <span class="opt-blurb">${o.blurb}</span>
+            <span class="opt-effects">${o.effects.join(" · ")}</span>
+          </button>`;
+      })
+      .join("");
+    return `
+      <div class="founder-group">
+        <h3>${set.title} <span class="founder-q">${set.question}</span></h3>
+        <div class="opt-grid">${cards}</div>
+      </div>`;
+  }).join("");
+
+  const charter = buildFounderFaction(d);
+  const posture = Object.entries(charter.startingPolicies ?? {})
+    .map(([axis, opt]) => `${axis}: ${String(opt).replace(/-/g, " ")}`)
+    .join(" · ");
+
   root.innerHTML = `
     <div class="screen">
       <h1>APHELION</h1>
       <p class="tagline">
-        Terraform a dead world, then watch a civilization emerge from it.
-        Choose the faction that takes the first foothold.
+        Before the first dome rises, decide who you are.
+        Design the founder whose choices your civilization will grow from — or against.
       </p>
-      <div class="faction-grid">
-        ${FACTIONS.map(
-          (f) => `
-          <button class="faction-card" data-faction="${f.id}" style="--accent:${f.color}">
-            <h2>${f.name}</h2>
-            <p class="leader">${f.leader}</p>
-            <p class="agenda">"${f.agenda}"</p>
-            <p class="blurb">${f.blurb}</p>
-            <ul class="bonuses">${f.bonuses.map((b) => `<li>${b}</li>`).join("")}</ul>
-            <p class="special"><strong>Special:</strong> ${f.special}</p>
-          </button>`,
-        ).join("")}
+
+      <div class="founder-names">
+        <label>Founder
+          <span class="name-wrap"><input id="founder-name" type="text" value="${d.name}" maxlength="40" />
+          <button id="reroll-names" title="Randomize names">🎲</button></span>
+        </label>
+        <label>Colony
+          <input id="colony-name" type="text" value="${d.colonyName}" maxlength="40" />
+        </label>
       </div>
+
+      ${groups}
+
+      <div class="charter-summary" style="--accent:${charter.color}">
+        <h3>The Charter of ${d.colonyName}</h3>
+        <p class="agenda">"${charter.agenda}"</p>
+        <ul class="bonuses">${charter.bonuses.map((b) => `<li>${b}</li>`).join("")}</ul>
+        ${posture ? `<p class="posture">Arrives governed by — ${posture}</p>` : ""}
+        <button id="begin-landfall">Begin Landfall ▶</button>
+      </div>
+
+      <details class="classic-start">
+        <summary>Or skip founding and play a classic charter</summary>
+        <div class="classic-row">
+          ${FACTIONS.map(
+            (f) =>
+              `<button class="classic-btn" data-faction="${f.id}" style="--accent:${f.color}"
+                 title="${f.agenda}">${f.name}</button>`,
+          ).join("")}
+        </div>
+      </details>
     </div>`;
 
+  // --- wiring ---
+  const nameInput = root.querySelector<HTMLInputElement>("#founder-name")!;
+  const colonyInput = root.querySelector<HTMLInputElement>("#colony-name")!;
+  nameInput.addEventListener("input", () => (d.name = nameInput.value));
+  colonyInput.addEventListener("input", () => (d.colonyName = colonyInput.value));
+
+  root.querySelector("#reroll-names")?.addEventListener("click", () => {
+    d.name = randomOf(FOUNDER_NAMES);
+    d.colonyName = randomOf(COLONY_NAMES);
+    renderFactionSelect(root, ctrl);
+  });
+
+  root.querySelectorAll<HTMLButtonElement>("[data-founder-set]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      d[btn.dataset.founderSet as "backgroundId" | "leadershipId" | "doctrineId"] =
+        btn.dataset.founderOpt!;
+      renderFactionSelect(root, ctrl);
+    });
+  });
+
+  root.querySelector("#begin-landfall")?.addEventListener("click", () => {
+    const profile: FounderProfile = {
+      ...d,
+      name: d.name.trim() || randomOf(FOUNDER_NAMES),
+      colonyName: d.colonyName.trim() || randomOf(COLONY_NAMES),
+    };
+    draft = null;
+    ctrl.onFoundColony(profile);
+  });
+
   root.querySelectorAll<HTMLButtonElement>("[data-faction]").forEach((btn) => {
-    btn.addEventListener("click", () => ctrl.onSelectFaction(btn.dataset.faction!));
+    btn.addEventListener("click", () => {
+      draft = null;
+      ctrl.onSelectFaction(btn.dataset.faction!);
+    });
   });
 }
 
@@ -336,7 +441,9 @@ function societyTab(state: GameState): string {
           engineering only. Society, ideology, and politics emerge once the
           world becomes livable and settlers arrive (habitability ≥ 12%).
         </p>
-      </section>`
+      </section>` +
+      // Leadership is established at founding — show it from turn one.
+      (state.characters.length ? charactersPanel(state) : "")
     );
   }
 

@@ -81,6 +81,7 @@ export const FACTIONS: Faction[] = [
     special:
       "Hardened: hazard casualties and stability hits are halved.",
     terraformAffinity: { temperature: 1.3, pressure: 1.2, biomass: 0.7 },
+    resilience: 0.5,
   },
   {
     id: "cognitum",
@@ -147,6 +148,7 @@ export const FACTIONS: Faction[] = [
     special:
       "Rationing: per-capita life-support demand is reduced by ~25%.",
     terraformAffinity: { hydrosphere: 1.1, biomass: 1.1 },
+    resilience: 0.6,
   },
 ];
 
@@ -158,4 +160,11 @@ export function getFaction(id: string): Faction {
   const f = FACTIONS_BY_ID[id];
   if (!f) throw new Error(`Unknown faction: ${id}`);
   return f;
+}
+
+/** Register a runtime-built faction (the player's founder charter) so every
+ *  system that resolves factions by id can see it. FACTIONS itself is left
+ *  untouched — the canned factions all become rivals of a custom charter. */
+export function registerFaction(faction: Faction): void {
+  FACTIONS_BY_ID[faction.id] = faction;
 }

@@ -6,7 +6,10 @@ import type {
   LogKind,
   TerraformProject,
 } from "../types";
-import { getFaction } from "../data/factions";
+import { getFaction, registerFaction } from "../data/factions";
+import { buildFounderFaction, BACKGROUNDS, DOCTRINES } from "../data/founder";
+import { TRAITS } from "../data/characters";
+import type { Faction, FounderProfile } from "../types";
 import { PROJECTS, getProject } from "../data/projects";
 import { TECHNOLOGIES, getTech } from "../data/technologies";
 import {
@@ -57,23 +60,35 @@ const HABITABILITY_WIN = 100;
 // Setup
 // ---------------------------------------------------------------------------
 
+/** Start a game as one of the canned factions (the classic quick-start). */
 export function createGame(factionId: string): GameState {
-  const faction = getFaction(factionId);
+  return createGameCore(getFaction(factionId));
+}
 
+/** Start a game from a designed founder: the choices compose a custom
+ *  faction, all six canned factions become rivals, and the founder enters
+ *  history as the colony's first notable figure. */
+export function createFoundedGame(profile: FounderProfile): GameState {
+  const faction = buildFounderFaction(profile);
+  registerFaction(faction);
+  return createGameCore(faction, profile);
+}
+
+function createGameCore(faction: Faction, founder?: FounderProfile): GameState {
   const colony: Colony = {
     id: "colony-1",
-    name: `${faction.name} Prime`,
-    factionId,
+    name: founder ? founder.colonyName : `${faction.name} Prime`,
+    factionId: faction.id,
     population: 12,
     maxPopulation: 24,
-    stability: 65,
+    stability: 65 + (faction.startingStabilityDelta ?? 0),
     stocks: { ...faction.startingStocks },
     production: { ...faction.startingProduction },
   };
 
   const state: GameState = {
     turn: 1,
-    playerFactionId: factionId,
+    playerFactionId: faction.id,
     colony,
     globalParams: createGlobalParams(),
     activeProjects: [],
@@ -82,8 +97,9 @@ export function createGame(factionId: string): GameState {
     currentResearch: undefined,
     habitability: 0,
     terraformRating: 0,
-    // Every other faction is a rival leader with a personality and a memory.
-    rivals: createRivals(factionId),
+    // Every other faction is a rival leader with a personality and a memory
+    // (a founder charter faces all six canned factions).
+    rivals: createRivals(faction.id),
     pendingDiplomacy: [],
     earth: { stance: 0, present: false },
     antagonist: initialAntagonist(),
@@ -94,7 +110,7 @@ export function createGame(factionId: string): GameState {
     // Civilization layer — begins dormant in the corporate phase.
     phase: "corporate",
     ideology: emptyIdeologyVector(),
-    policies: defaultPolicySelection(),
+    policies: { ...defaultPolicySelection(), ...(faction.startingPolicies ?? {}) },
     interestGroups: initialInterestGroups(),
     characters: [],
     breakthroughs: [],
@@ -102,23 +118,52 @@ export function createGame(factionId: string): GameState {
     milestones: {},
   };
 
-  // A faction's identity gives ideology a small initial lean.
-  seedFactionIdeology(state);
+  // The founding identity gives ideology its initial seed.
+  seedFactionIdeology(state, faction);
 
   state.habitability = computeHabitability(state);
   state.colony.maxPopulation = computeMaxPopulation(state);
-  pushLog(state, "info", `${faction.name} colony established. Survive, and make this world ours.`);
-  recordChronicle(
-    state,
-    "phase",
-    "Landfall",
-    `${faction.name} establishes the first foothold on a dead world.`,
-  );
+
+  if (founder) {
+    enterFounder(state, faction, founder);
+  } else {
+    pushLog(state, "info", `${faction.name} colony established. Survive, and make this world ours.`);
+    recordChronicle(state, "phase", "Landfall",
+      `${faction.name} establishes the first foothold on a dead world.`);
+  }
   return state;
 }
 
-/** Seed emergent ideology from the founding faction's leanings. */
-function seedFactionIdeology(state: GameState): void {
+/** The founder enters history: Landfall in their name, and the colony's
+ *  first notable colonist. */
+function enterFounder(state: GameState, faction: Faction, founder: FounderProfile): void {
+  const doctrine = DOCTRINES.find((d) => d.id === founder.doctrineId);
+  const background = BACKGROUNDS.find((b) => b.id === founder.backgroundId);
+
+  const traitIds = [background?.traitId, doctrine?.traitId].filter(Boolean) as string[];
+  const traits = TRAITS.filter((t) => traitIds.includes(t.id));
+  state.characters.push({
+    id: "founder",
+    name: founder.name,
+    role: background?.name ?? "Founder",
+    age: 41,
+    bornTurn: 1,
+    traits,
+    bio: `Founder of ${founder.colonyName}. ${doctrine?.blurb ?? ""}`,
+  });
+
+  pushLog(state, "info",
+    `${founder.name} plants the charter of ${founder.colonyName}. ${faction.agenda}`);
+  recordChronicle(state, "phase", "Landfall",
+    `${founder.name} led the ${founder.colonyName} expedition to first landfall, ` +
+    `sworn to ${doctrine?.name ?? "survival"}.`);
+  recordChronicle(state, "person", founder.name,
+    `${background?.name ?? "Founder"} and author of the founding charter.`);
+}
+
+/** Seed emergent ideology: custom charters carry their own seed; canned
+ *  factions use the table below. */
+function seedFactionIdeology(state: GameState, faction: Faction): void {
   const seeds: Record<string, Partial<GameState["ideology"]>> = {
     "verdant-compact": { ecological: 8, humanist: 3 },
     "helion-consortium": { industrialist: 8, technocratic: 3 },
@@ -127,7 +172,7 @@ function seedFactionIdeology(state: GameState): void {
     "terran-union": { humanist: 8, ecological: 2 },
     "ouroboros-cradle": { humanist: 5, ecological: 4 },
   };
-  const seed = seeds[state.playerFactionId] ?? {};
+  const seed = faction.ideologySeed ?? seeds[faction.id] ?? {};
   for (const [k, v] of Object.entries(seed)) {
     state.ideology[k as keyof GameState["ideology"]] += v as number;
   }

@@ -38,6 +38,7 @@ infrastructure elsewhere, so this focuses on the pieces around it.
 
 | System | Where | What it does |
 | --- | --- | --- |
+| **Founder design** | `src/data/founder.ts` | The opening move: compose your founder (Background × Leadership × Doctrine) into a custom charter — arrival policies, ideology seed, terraform affinity — with all six canned factions as rivals. The founder enters the Chronicle and leads your colonist roster. |
 | **Phase arc** | `src/data/phases.ts`, `src/engine/phases.ts` | Corporate → Settlement → Ideological → Independence; each phase unlocks new systems. |
 | **Emergent ideology** | `src/data/ideologies.ts`, `src/engine/ideology.ts` | Ideology is *accrued from choices*, not chosen; the dominant leaning grants effects. |
 | **Social engineering** | `src/data/policies.ts`, `src/engine/policies.ts` | 5 tunable policy axes, each a trade-off feeding the economy, morale, and ideology. |
@@ -74,7 +75,11 @@ npm run build      # type-check + production build to dist/
 npm run typecheck  # types only
 ```
 
-Open the dev server URL, pick a faction, and play. The sidebar has four tabs:
+Open the dev server URL and **design your founder**: who leads the expedition
+(Background), how it's governed (Leadership), and why it colonizes (Doctrine) —
+then name them, name the colony, and begin Landfall. (A classic pre-made
+charter quick-start is tucked below for the impatient.) The sidebar has four
+tabs:
 
 - **Colony** — research tech, start terraforming projects, watch the planetary
   meters climb. Completed projects become **works on the map** — and from the

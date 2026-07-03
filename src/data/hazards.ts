@@ -11,12 +11,11 @@ import { getFaction } from "./factions";
  * the same way.
  */
 
-/** Population loss helper that respects faction damage-reduction traits. */
+/** Population loss helper that respects faction damage-reduction traits
+ *  (faction.resilience — canned hardened factions and founder charters alike). */
 function killPopulation(state: GameState, base: number): number {
   const faction = getFaction(state.colony.factionId);
-  let mult = 1;
-  if (faction.id === "iron-vanguard") mult = 0.5;
-  if (faction.id === "ouroboros-cradle") mult = 0.6;
+  const mult = faction.resilience ?? 1;
   // Cap casualties as a fraction of the colony so a single event can't wipe a
   // small starting colony — survival pressure, not a coin-flip death.
   const cap = Math.ceil(state.colony.population * 0.25);

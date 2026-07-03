@@ -87,6 +87,32 @@ export interface Faction {
   /** Multiplier on the effect this faction gets when a project moves a given
    *  global parameter (e.g. ecologists terraform biomass faster). */
   terraformAffinity: Partial<Record<GlobalParamKey, number>>;
+  /** Hazard-casualty multiplier (<1 = hardened). Defaults to 1. */
+  resilience?: number;
+  /** Initial ideology pressure (custom founders; canned factions use the
+   *  seed table in engine/game.ts). */
+  ideologySeed?: Partial<Record<IdeologyAxis, number>>;
+  /** Social-engineering posture the expedition arrives with (applied over
+   *  the defaults; takes mechanical effect when policies unlock). */
+  startingPolicies?: Partial<PolicySelection>;
+  /** Delta applied to the starting stability of 65. */
+  startingStabilityDelta?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Founder design — the opening move: compose who leads the expedition, how it
+// is governed, and why it colonizes. The choices build a custom Faction; the
+// six canned factions all become rivals.
+// ---------------------------------------------------------------------------
+
+export interface FounderProfile {
+  /** The founder's name (appears in the Chronicle and as the first notable colonist). */
+  name: string;
+  /** The colony/charter name. */
+  colonyName: string;
+  backgroundId: string;
+  leadershipId: string;
+  doctrineId: string;
 }
 
 // ---------------------------------------------------------------------------

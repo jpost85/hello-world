@@ -2,6 +2,7 @@ import "./style.css";
 import type { GameState } from "./types";
 import {
   createGame,
+  createFoundedGame,
   startProject,
   setResearch,
   setPolicy,
@@ -43,6 +44,11 @@ let els: {
 const controller: UIController = {
   onSelectFaction(factionId) {
     state = createGame(factionId);
+    mountGameShell();
+    draw();
+  },
+  onFoundColony(profile) {
+    state = createFoundedGame(profile);
     mountGameShell();
     draw();
   },

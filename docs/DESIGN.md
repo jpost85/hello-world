@@ -199,6 +199,35 @@ civilization with its own philosophy and, eventually, its own sovereignty. That
 evolution is modeled as a one-way **phase arc** that progressively unlocks
 Alpha-Centauri-style systems.
 
+### Founding: design your founder (`data/founder.ts`)
+
+The game's first move is not picking a faction — it's **designing the founder**
+who plants the charter. Three composable choices establish leadership and the
+initial ideology of colonization:
+
+| Choice | Question | What it sets |
+| --- | --- | --- |
+| **Background** (Executive / Scientist / Governor / Organizer) | Who leads the expedition? | Economic identity, a small ideology lean, one founder trait |
+| **Leadership** (Charter Corporation / Expedition Command / Founding Council / Research Directorate) | How is it governed? | The social-engineering posture you *arrive* with (initial policy selection), stability, a medium lean |
+| **Doctrine** (Ecopoiesis / Dominion / Sanctuary / Ascension / Vigil) | Why colonize at all? | The big ideology seed, terraform affinity — your relationship to the world itself |
+
+Plus a founder name and colony name (with a reroll). The choices compose into
+a custom Faction (`buildFounderFaction`): modifiers multiply, seeds sum,
+leadership writes the arrival policies, and hardened choices set hazard
+`resilience`. **All six canned factions become rivals** of a founded charter —
+they remain playable via a quick-start row for anyone who wants a pre-made
+identity.
+
+Two details tie founding into the rest of the game:
+
+- **The founder enters history.** Landfall is chronicled in their name, they
+  are recorded as a person in the planet's history, and they appear as the
+  colony's first Notable Colonist (visible from turn one) carrying traits from
+  their background and doctrine.
+- **Ideology still emerges.** The founder only plants the seed — the society
+  the game grows can follow the charter or drift against it, which is the
+  point of the emergent-ideology system.
+
 ### Phases (`data/phases.ts`, `engine/phases.ts`)
 
 | Phase | Feels like | Unlocks | Reached when |
@@ -339,7 +368,9 @@ outrun.
 
 ### What's scaffolded vs. deep (honest status)
 
-- **Working & verified:** the full phase arc, emergent ideology with effects,
+- **Working & verified:** founder design (composed charters, arrival policies,
+  ideology seeding, founder-as-first-colonist), the full phase arc, emergent
+  ideology with effects,
   all five policy axes feeding the economy, interest-group reactions, character
   emergence with effects, breakthroughs, the chronicle, independence, and the
   full Nemesis-inspired rival/diplomacy system (memory, grudges, the nemesis
