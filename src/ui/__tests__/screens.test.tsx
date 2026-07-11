@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { chinaMap, createGame, type GameState } from "../../engine/index.ts";
 import { OfficerScreen } from "../OfficerScreen.tsx";
 import { DiplomacyScreen } from "../DiplomacyScreen.tsx";
+import { MapView } from "../MapView.tsx";
 import type { UseGame } from "../useGame.ts";
 
 // A no-op stand-in for the action hook — rendering never invokes the verbs.
@@ -42,6 +43,21 @@ describe("OfficerScreen", () => {
     expect(html).toContain("Lü Bu");
     expect(html).toContain("Valiant"); // a trait badge
     expect(html).toContain("Red Hare"); // an item badge
+  });
+});
+
+describe("MapView", () => {
+  const html = renderToStaticMarkup(
+    <MapView state={scenario()} humanId="dong-zhuo" selectedId={null} targetIds={[]} onSelect={() => undefined} />,
+  );
+
+  it("renders provinces inside a transformable group and offers zoom controls", () => {
+    expect(html).toContain("map-stage");
+    expect(html).toContain("zoom-controls");
+    expect(html).toContain("Zoom in");
+    expect(html).toContain("Reset view");
+    expect(html).toContain("<path"); // at least one province path
+    expect(html).toContain("scale(1)"); // the pan/zoom group transform
   });
 });
 
