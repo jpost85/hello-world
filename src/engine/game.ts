@@ -212,7 +212,7 @@ function beginTurn(s: GameState): GameState {
     p.gold += Math.round((p.commerce / 10) * (p.order / 100) * e.goldPerCommerce);
     // Grain: a trickle each season, a bounty at the autumn harvest.
     const harvest = next.season === "autumn" ? e.harvestMultiplier : 1;
-    p.food += Math.round((p.agriculture / 10) * (p.order / 100) * e.foodPerAgriculture * harvest);
+    p.food += Math.round(p.agriculture * (p.order / 100) * e.foodPerAgriculture * harvest);
     // Army upkeep draws grain; a shortfall starves the garrison.
     p.food -= Math.round((p.troops / 1000) * e.foodPerThousandTroops);
     if (p.food < 0) {

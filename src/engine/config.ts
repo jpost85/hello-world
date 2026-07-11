@@ -33,8 +33,8 @@ export const CONFIG = {
   economy: {
     /** Gold income ≈ commerce/10 * order/100 * goldPerCommerce. */
     goldPerCommerce: 8,
-    /** Off-season grain ≈ agriculture/10 * order/100 * foodPerAgriculture. */
-    foodPerAgriculture: 4,
+    /** Seasonal grain ≈ agriculture * order/100 * foodPerAgriculture (×harvest in autumn). */
+    foodPerAgriculture: 30,
     /** Autumn harvest multiplier on the agriculture grain figure. */
     harvestMultiplier: 6,
     /** Grain eaten per 1000 troops each season. */
