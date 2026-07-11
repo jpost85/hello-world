@@ -14,6 +14,7 @@
  * never needs network access. Regenerate when the territory grouping changes.
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import polygonClipping from "polygon-clipping";
 
 const WIDTH = 1000;
 const BASE_URL =
@@ -132,6 +133,41 @@ function ringCentroid(points) {
   return { cx: cx / (6 * area), cy: cy / (6 * area), area: Math.abs(area) };
 }
 
+/** Planar (shoelace) area of a ring, ignoring winding. */
+function ringArea(r) {
+  let a = 0;
+  for (let i = 0; i < r.length - 1; i++) a += r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1];
+  return Math.abs(a / 2);
+}
+
+const closeRing = (r) =>
+  r.length && (r[0][0] !== r[r.length - 1][0] || r[0][1] !== r[r.length - 1][1]) ? [...r, r[0]] : r;
+
+/**
+ * Dissolve a zhou's member polygons into a clean outline: union removes the
+ * internal provincial seams, so each territory renders as one solid shape rather
+ * than a patchwork. Genuinely detached landmasses (a real offshore island) stay
+ * separate, but tiny islets below `islandKeep` of the mainland are dropped as
+ * clutter. Returns the surviving outer rings (lng/lat). Falls back to the raw
+ * rings if the union fails for any reason.
+ */
+function dissolveRings(rings, islandKeep = 0.03) {
+  if (rings.length <= 1) return rings;
+  const polys = rings.map((r) => [closeRing(r)]);
+  let merged;
+  try {
+    merged = polygonClipping.union(polys[0], ...polys.slice(1));
+  } catch (e) {
+    console.warn(`  union failed (${e.message}); keeping raw rings`);
+    return rings;
+  }
+  let outers = merged.map((poly) => poly[0]); // outer ring of each dissolved polygon
+  const areas = outers.map(ringArea);
+  const maxA = Math.max(...areas);
+  outers = outers.filter((_, i) => areas[i] >= maxA * islandKeep);
+  return outers;
+}
+
 /** Build an SVG path from projected rings: simplify, integer-round, M/L/Z. */
 function buildPath(projectedRings, eps) {
   let best = null;
@@ -242,7 +278,10 @@ function generateMap(cfg, provIndex) {
       console.warn(`!! [${cfg.id}] no geometry for ${spec.id}`);
       continue;
     }
-    const { d: path, centroid: best } = buildPath(rings.map((r) => r.map(project)), simplifyT);
+    // Dissolve internal provincial seams so the zhou is one clean territory,
+    // then project & simplify. Adjacency still uses the raw member rings below.
+    const outline = dissolveRings(rings);
+    const { d: path, centroid: best } = buildPath(outline.map((r) => r.map(project)), simplifyT);
     territories.push({
       id: spec.id,
       name: spec.name,
