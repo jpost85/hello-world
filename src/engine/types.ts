@@ -234,6 +234,8 @@ export interface GameState {
   /** Deterministic RNG state, advanced on every random draw. */
   rngState: number;
   events: GameEvent[];
+  /** The most recent battle, for the report UI; null before any battle. */
+  lastBattle: BattleReport | null;
   winnerId: string | null;
 }
 
@@ -266,4 +268,31 @@ export interface BattleResult {
   captured: boolean;
   /** Officer captured in the fall of the province, if any. */
   capturedOfficerId: string | null;
+}
+
+/**
+ * A player-facing record of the most recent battle, with display names resolved
+ * so the UI can render a report without re-deriving them. Stored on `GameState`
+ * (`lastBattle`) and replaced on every battle.
+ */
+export interface BattleReport {
+  turn: number;
+  provinceId: string;
+  provinceName: string;
+  attackerId: string;
+  attackerName: string;
+  defenderId: string | null;
+  defenderName: string;
+  attackerType: UnitType;
+  defenderType: UnitType;
+  attackerOfficer: string | null;
+  defenderOfficer: string | null;
+  attackerStart: number;
+  attackerEnd: number;
+  defenderStart: number;
+  defenderEnd: number;
+  events: BattleEvent[];
+  captured: boolean;
+  capturedOfficer: string | null;
+  waterCrossing: boolean;
 }

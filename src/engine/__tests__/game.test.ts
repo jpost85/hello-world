@@ -142,6 +142,19 @@ describe("marching", () => {
     expect(out.provinces["yuzhou"].ownerId).toBe("dong-zhuo");
   });
 
+  it("records a battle report on the state after an attack", () => {
+    let s = newGame();
+    s = { ...s, provinces: { ...s.provinces, sili: { ...s.provinces["sili"], troops: 60000 } } };
+    const out = march(s, "sili", "yuzhou", 55000);
+    const r = out.lastBattle!;
+    expect(r).not.toBeNull();
+    expect(r.attackerId).toBe("dong-zhuo");
+    expect(r.defenderId).toBe("cao-cao");
+    expect(r.provinceName).toMatch(/Yu/);
+    expect(r.captured).toBe(true);
+    expect(r.attackerStart).toBe(55000);
+  });
+
   it("rejects marching to a non-adjacent province", () => {
     const s = newGame();
     expect(() => march(s, "sili", "jiaozhou", 1000)).toThrow(/border/);

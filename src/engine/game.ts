@@ -96,6 +96,7 @@ export function createGame(opts: NewGameOptions): GameState {
     commandPointsRemaining: 0,
     rngState: seedRng(seed),
     events: [],
+    lastBattle: null,
     winnerId: null,
   };
 
@@ -423,12 +424,13 @@ export function march(s: GameState, fromId: string, toId: string, troops: number
   const supply = foodNeed > 0 ? clamp(from.food / foodNeed, 0, 1) : 1;
   const supplyMorale = Math.round(from.morale * (CONFIG.march.minSupplyMorale + (1 - CONFIG.march.minSupplyMorale) * supply));
 
+  const water = isWaterCrossing(s, fromId, toId);
   const attackerOfficer = leadOfficer(s, fromId, me);
   const defenderOfficer = to.ownerId ? leadOfficer(s, toId, to.ownerId) : undefined;
   const attacker: BattleSide = { playerId: me, troops, officer: attackerOfficer, unitType: from.garrisonType, morale: supplyMorale, training: from.training };
   const defender: BattleSide = { playerId: to.ownerId, troops: to.troops, officer: defenderOfficer, unitType: to.garrisonType, morale: to.morale, training: to.training };
   const { result, rngState } = resolveBattle(
-    { provinceId: toId, attacker, defender, defenderWallLevel: to.wallLevel, defenderOrder: to.order, waterCrossing: isWaterCrossing(s, fromId, toId) },
+    { provinceId: toId, attacker, defender, defenderWallLevel: to.wallLevel, defenderOrder: to.order, waterCrossing: water },
     s.rngState,
   );
 
@@ -477,6 +479,28 @@ export function march(s: GameState, fromId: string, toId: string, troops: number
     if (to.ownerId) adjustRelation(next, me, to.ownerId, -8);
     next = log(next, me, `The assault on ${province(next, toId)} is repulsed.`);
   }
+
+  next.lastBattle = {
+    turn: s.turn,
+    provinceId: toId,
+    provinceName: province(s, toId),
+    attackerId: me,
+    attackerName: playerName(s, me),
+    defenderId: to.ownerId,
+    defenderName: to.ownerId ? playerName(s, to.ownerId) : "Local garrison",
+    attackerType: from.garrisonType,
+    defenderType: to.garrisonType,
+    attackerOfficer: attackerOfficer?.name ?? null,
+    defenderOfficer: defenderOfficer?.name ?? null,
+    attackerStart: troops,
+    attackerEnd: Math.max(0, result.attackerTroopsEnd),
+    defenderStart: to.troops,
+    defenderEnd: result.captured ? 0 : Math.max(0, result.defenderTroopsEnd),
+    events: result.events,
+    captured: result.captured,
+    capturedOfficer: result.capturedOfficerId ? s.officers.find((o) => o.id === result.capturedOfficerId)?.name ?? null : null,
+    waterCrossing: water,
+  };
 
   next.commandPointsRemaining--;
   return checkVictory(next);

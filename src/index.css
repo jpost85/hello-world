@@ -198,6 +198,40 @@ button.danger { border-color: #8a2a22; color: #ffd9d4; }
 .log { list-style: none; margin: 0; padding: 0; }
 .log li { padding: 7px 4px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 
+/* ---- Battle report ---- */
+.modal.battle-report { padding: 18px; text-align: left; max-width: 460px; width: 92%; }
+.br-outcome { font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 14px; }
+.br-outcome.win { color: #7fd08a; }
+.br-outcome.loss { color: #ff9a8f; }
+.br-side { margin-bottom: 8px; }
+.br-side-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 4px; }
+.br-side-head em { color: var(--gold); font-style: normal; }
+.br-type { color: var(--muted); font-size: 12px; text-transform: capitalize; }
+.br-bar { position: relative; height: 22px; background: #2a2018; border-radius: 6px; overflow: hidden; }
+.br-bar-fill { height: 100%; }
+.br-bar.you .br-bar-fill { background: #3f6f9e; }
+.br-bar.foe .br-bar-fill { background: #9e4a3f; }
+.br-bar-label { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 8px; font-size: 12px; color: #fff; text-shadow: 0 1px 2px #000; }
+.br-vs { text-align: center; color: var(--muted); font-size: 12px; margin: 2px 0; }
+.br-note { color: var(--muted); font-size: 12px; margin-top: 8px; text-align: center; }
+.br-events { list-style: none; margin: 12px 0 0; padding: 10px; background: var(--panel-2); border-radius: 10px; }
+.br-events li { font-size: 13px; padding: 3px 0; }
+.br-ev-icon { margin-right: 4px; }
+.br-capture { margin-top: 12px; padding: 8px 10px; background: #3a2f1d; border-radius: 8px; font-size: 13px; color: var(--gold); }
+.modal.battle-report button { margin-top: 16px; width: 100%; background: var(--gold); color: #1a1410; font-weight: 700; border: none; }
+
+/* ---- Season report ---- */
+.season-report { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 6; width: 92%; max-width: 460px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+.sr-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+.sr-head button { padding: 2px 8px; }
+.sr-line { font-size: 13px; padding: 2px 0; }
+.sr-line.lost { color: #ff9a8f; }
+.sr-line.gained { color: #7fd08a; }
+.sr-deltas { display: flex; gap: 14px; margin-top: 6px; font-size: 12px; }
+.sr-deltas .pos { color: #7fd08a; }
+.sr-deltas .neg { color: #ff9a8f; }
+
 .modal { background: var(--panel); border-radius: 16px; padding: 28px; text-align: center; border: 1px solid var(--gold); }
 .modal h1 { color: var(--gold); margin: 0 0 6px; }
 .modal button { margin-top: 16px; background: var(--gold); color: #1a1410; font-weight: 700; border: none; }

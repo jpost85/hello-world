@@ -15,6 +15,7 @@ import { MapView } from "./MapView.tsx";
 import { ControlPanel } from "./ControlPanel.tsx";
 import { OfficerScreen } from "./OfficerScreen.tsx";
 import { DiplomacyScreen } from "./DiplomacyScreen.tsx";
+import { BattleReportModal, SeasonReportCard } from "./Reports.tsx";
 
 type Drawer = "log" | "court" | "diplomacy" | null;
 
@@ -56,6 +57,8 @@ export function App() {
 
       {game.error && <div className="error" onClick={() => undefined}>{game.error}</div>}
 
+      {game.seasonReport && <SeasonReportCard report={game.seasonReport} onClose={game.dismissSeason} />}
+
       <ControlPanel
         state={state}
         humanId={game.humanId}
@@ -69,6 +72,10 @@ export function App() {
         <button className="end-season" onClick={game.endSeason}>
           End Season · {state.commandPointsRemaining} CP
         </button>
+      )}
+
+      {game.battleReport && state.phase !== "gameover" && (
+        <BattleReportModal report={game.battleReport} onClose={game.dismissBattle} />
       )}
 
       {state.phase === "gameover" && (

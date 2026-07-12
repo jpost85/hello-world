@@ -21,16 +21,45 @@ import {
   march,
   playAITurn,
   proposePact,
+  provincesOf,
   recruit,
   recruitOfficer,
   releasePrisoner,
   scheme,
   train,
+  type BattleReport,
   type GameState,
   type PactKind,
   type UnitType,
 } from "../engine/index.ts";
 import { clearGame, loadGame, saveGame } from "./persistence.ts";
+
+/** What changed for the human while the other warlords took their turns. */
+export interface SeasonReport {
+  year: number;
+  season: string;
+  lost: { id: string; name: string }[];
+  gained: { id: string; name: string }[];
+  troopsDelta: number;
+  goldDelta: number;
+}
+
+interface Snapshot {
+  turn: number;
+  provinces: Set<string>;
+  troops: number;
+  gold: number;
+}
+
+function snapshotOf(s: GameState, playerId: string): Snapshot {
+  const ids = provincesOf(s, playerId);
+  return {
+    turn: s.turn,
+    provinces: new Set(ids),
+    troops: ids.reduce((t, id) => t + s.provinces[id].troops, 0),
+    gold: ids.reduce((t, id) => t + s.provinces[id].gold, 0),
+  };
+}
 
 export interface UseGame {
   state: GameState | null;
@@ -55,6 +84,12 @@ export interface UseGame {
   proposePact: (targetPlayerId: string, kind: PactKind) => void;
   breakPact: (targetPlayerId: string) => void;
   endSeason: () => void;
+  /** The player's most recent attack, for the battle-report modal. */
+  battleReport: BattleReport | null;
+  dismissBattle: () => void;
+  /** What happened to the player between their turns. */
+  seasonReport: SeasonReport | null;
+  dismissSeason: () => void;
 }
 
 export function useGame(): UseGame {
@@ -62,6 +97,9 @@ export function useGame(): UseGame {
   const [humanId, setHumanId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aiThinking, setAiThinking] = useState(false);
+  const [dismissedBattle, setDismissedBattle] = useState<BattleReport | null>(null);
+  const [seasonReport, setSeasonReport] = useState<SeasonReport | null>(null);
+  const snapshot = useRef<Snapshot | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const commit = useCallback((next: GameState) => {
@@ -93,8 +131,8 @@ export function useGame(): UseGame {
   const resume = useCallback(() => {
     const saved = loadGame();
     if (!saved) return false;
-    // Re-attach the (large, static) map from the registry.
-    const restored: GameState = { ...saved, map: chinaMap };
+    // Re-attach the (large, static) map; drop any stale battle so no report pops.
+    const restored: GameState = { ...saved, map: chinaMap, lastBattle: null };
     const human = restored.players.find((p) => !p.isAI);
     setHumanId(human?.id ?? null);
     setState(restored);
@@ -125,6 +163,30 @@ export function useGame(): UseGame {
 
   const isHumanTurn = !!state && state.phase === "command" && !!humanId && currentPlayer(state).id === humanId;
 
+  // On the boundary into a fresh human turn, diff against the last snapshot to
+  // report what the other warlords did (provinces won/lost, troop/gold swings).
+  useEffect(() => {
+    if (!state || !humanId || !isHumanTurn) return;
+    const cur = snapshotOf(state, humanId);
+    const prev = snapshot.current;
+    if (prev && prev.turn !== cur.turn) {
+      const nameOf = (id: string) => ({ id, name: state.map.provinces.find((p) => p.id === id)?.name ?? id });
+      const lost = [...prev.provinces].filter((id) => !cur.provinces.has(id)).map(nameOf);
+      const gained = [...cur.provinces].filter((id) => !prev.provinces.has(id)).map(nameOf);
+      if (lost.length || gained.length) {
+        setSeasonReport({ year: 189 + state.year, season: state.season, lost, gained, troopsDelta: cur.troops - prev.troops, goldDelta: cur.gold - prev.gold });
+      }
+    }
+    snapshot.current = cur;
+  }, [state, humanId, isHumanTurn]);
+
+  // Surface a battle report only for the player's own attacks (AI-vs-you shows
+  // up in the season report instead, so it never interrupts the AI's turns).
+  const battleReport =
+    state?.lastBattle && state.lastBattle.attackerId === humanId && state.lastBattle !== dismissedBattle
+      ? state.lastBattle
+      : null;
+
   return {
     state,
     humanId,
@@ -148,5 +210,9 @@ export function useGame(): UseGame {
     proposePact: (target, kind) => run(() => proposePact(state!, target, kind)),
     breakPact: (target) => run(() => breakPact(state!, target)),
     endSeason: () => run(() => endTurn(state!)),
+    battleReport,
+    dismissBattle: () => setDismissedBattle(state?.lastBattle ?? null),
+    seasonReport,
+    dismissSeason: () => setSeasonReport(null),
   };
 }

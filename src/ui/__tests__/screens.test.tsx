@@ -10,6 +10,8 @@ import { chinaMap, createGame, type GameState } from "../../engine/index.ts";
 import { OfficerScreen } from "../OfficerScreen.tsx";
 import { DiplomacyScreen } from "../DiplomacyScreen.tsx";
 import { MapView } from "../MapView.tsx";
+import { BattleReportModal, SeasonReportCard } from "../Reports.tsx";
+import type { BattleReport } from "../../engine/index.ts";
 import type { UseGame } from "../useGame.ts";
 
 // A no-op stand-in for the action hook — rendering never invokes the verbs.
@@ -80,5 +82,54 @@ describe("DiplomacyScreen", () => {
   it("shows the standing ceasefire with a way to break it", () => {
     expect(html).toContain("Ceasefire");
     expect(html).toContain("Break Pact");
+  });
+});
+
+describe("reports", () => {
+  const report: BattleReport = {
+    turn: 5,
+    provinceId: "yuzhou",
+    provinceName: "Yu Province",
+    attackerId: "dong-zhuo",
+    attackerName: "Dong Zhuo",
+    defenderId: "cao-cao",
+    defenderName: "Cao Cao",
+    attackerType: "cavalry",
+    defenderType: "spearmen",
+    attackerOfficer: "Lü Bu",
+    defenderOfficer: "Xiahou Dun",
+    attackerStart: 30000,
+    attackerEnd: 24000,
+    defenderStart: 8000,
+    defenderEnd: 0,
+    events: [
+      { kind: "duel", against: "defender", damage: 900, message: "Lü Bu bests Xiahou Dun in single combat" },
+      { kind: "rout", against: "defender", damage: 0, message: "The province falls!" },
+    ],
+    captured: true,
+    capturedOfficer: "Xiahou Dun",
+    waterCrossing: false,
+  };
+
+  it("battle report modal shows outcome, sides, tactical events and captures", () => {
+    const html = renderToStaticMarkup(<BattleReportModal report={report} onClose={() => undefined} />);
+    expect(html).toContain("Victory at Yu Province");
+    expect(html).toContain("Lü Bu");
+    expect(html).toContain("single combat"); // a tactical event (not the rout line)
+    expect(html).not.toContain("The province falls!"); // rout line is filtered
+    expect(html).toContain("Captured:");
+  });
+
+  it("season report card summarises lost/gained land and deltas", () => {
+    const html = renderToStaticMarkup(
+      <SeasonReportCard
+        report={{ year: 194, season: "autumn", lost: [{ id: "sili", name: "Sili (Capital)" }], gained: [], troopsDelta: -3000, goldDelta: 220 }}
+        onClose={() => undefined}
+      />,
+    );
+    expect(html).toContain("While you were away");
+    expect(html).toContain("Lost: Sili");
+    expect(html).toContain("Troops -3,000");
+    expect(html).toContain("Gold +220");
   });
 });
