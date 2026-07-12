@@ -716,17 +716,24 @@
   .sign-input::placeholder { color:var(--muted); text-transform:none; letter-spacing:0; font-weight:400; }
   .tower-sign {
     position:absolute; z-index:6; pointer-events:none; white-space:nowrap; line-height:1;
+    text-align:center; overflow:hidden;
     font-family:"Arial Narrow","Segoe UI",system-ui,sans-serif; font-weight:800;
     letter-spacing:2px; text-transform:uppercase; color:#ff4d4d;
-    padding:4px 10px; border-radius:3px;
+    padding:4px 8px; border-radius:3px;
     background:linear-gradient(180deg, rgba(26,32,40,.82), rgba(16,20,26,.9));
     border:1px solid rgba(0,0,0,.5);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 2px 4px rgba(0,0,0,.4);
     text-shadow: 0 1px 1px rgba(0,0,0,.6);
   }
-  .tower-sign::after {   /* two support struts down to the roof */
-    content:""; position:absolute; left:14%; right:14%; top:100%; height:9px;
-    background:linear-gradient(90deg, transparent 0 8%, #4a525c 8% 13%, transparent 13% 87%, #4a525c 87% 92%, transparent 92%);
+  /* two support struts, positioned (via --strut) to land inside the base's outer cells */
+  .tower-sign::after {
+    content:""; position:absolute; left:0; right:0; top:100%; height:9px;
+    background:linear-gradient(90deg,
+      transparent 0 calc(var(--strut,30%) - 2px),
+      #4a525c calc(var(--strut,30%) - 2px) calc(var(--strut,30%) + 2px),
+      transparent calc(var(--strut,30%) + 2px) calc(100% - var(--strut,30%) - 2px),
+      #4a525c calc(100% - var(--strut,30%) - 2px) calc(100% - var(--strut,30%) + 2px),
+      transparent calc(100% - var(--strut,30%) + 2px));
   }
   #app.night .tower-sign {
     color:#ff6b6b;
@@ -3210,20 +3217,34 @@ function layoutSign() {
     world.appendChild(signEl);
   }
   if (!txt || !state.units.length) { signEl.style.display = "none"; return; }
-  let minCol = Infinity, maxCol = -Infinity, topRow = -Infinity;
-  for (const u of state.units) {
+  let topRow = -Infinity;
+  for (const u of state.units) {             // highest occupied floor (top of the tallest stack)
     if (u.row < 0) continue;                 // basements don't count toward the roofline
-    if (u.col < minCol) minCol = u.col;
-    if (u.col + u.w > maxCol) maxCol = u.col + u.w;
-    if (u.row > topRow) topRow = u.row;
+    const t = u.row + u.h - 1;
+    if (t > topRow) topRow = t;
   }
   if (topRow === -Infinity) { signEl.style.display = "none"; return; }  // only basements built
+  let minCol = Infinity, maxCol = -Infinity;
+  for (const u of state.units) {             // width of just the top roofline (not the whole footprint)
+    if (u.row < 0 || u.row + u.h - 1 !== topRow) continue;
+    if (u.col < minCol) minCol = u.col;
+    if (u.col + u.w > maxCol) maxCol = u.col + u.w;
+  }
   signEl.style.display = "";
   signEl.textContent = txt;
-  const widthPx = (maxCol - minCol) * CELL_W;
-  signEl.style.fontSize = Math.max(15, Math.min(28, widthPx * 0.16)) + "px";   // scale to building width
+  const baseW = (maxCol - minCol) * CELL_W;             // building (roof) width
+  const signW = baseW + 2 * CELL_W;                     // sign overhangs one cell each side (3-cell base -> 5-cell sign)
+  signEl.style.width = signW + "px";
+  // fit the text to the fixed panel width: start proportional, shrink until it fits
+  let fs = Math.min(30, signW / Math.max(4, txt.length) * 1.25);
+  signEl.style.fontSize = fs + "px";
+  for (let guard = 0; guard < 30 && signEl.scrollWidth > signEl.clientWidth && fs > 8; guard++) {
+    fs -= 1; signEl.style.fontSize = fs + "px";
+  }
+  // struts sit half a cell inside each building edge (i.e. inside the outer cells)
+  signEl.style.setProperty("--strut", (1.5 * CELL_W / signW * 100).toFixed(2) + "%");
   const centerX = (minCol + maxCol) / 2 * CELL_W;
-  signEl.style.left = (centerX - signEl.offsetWidth / 2) + "px";               // centered over the roof
+  signEl.style.left = (centerX - signW / 2) + "px";                            // centered over the roof
   signEl.style.top = (rowTop(topRow) - signEl.offsetHeight - 9) + "px";        // struts rest on the roof
 }
 
