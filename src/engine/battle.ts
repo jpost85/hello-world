@@ -152,8 +152,8 @@ export function resolveBattle(
     const atkPower = basePower({ ...attacker, troops: atk }) * atkMatch;
     const defPower = basePower({ ...defender, troops: def }) * defStanding;
     const total = atkPower + defPower || 1;
-    const atkLuck = 0.7 + draw() * 0.6;
-    const defLuck = 0.7 + draw() * 0.6;
+    const atkLuck = 1 - B.luckSpread + draw() * 2 * B.luckSpread;
+    const defLuck = 1 - B.luckSpread + draw() * 2 * B.luckSpread;
     const atkLoss = Math.round(atk * B.baseCasualtyRate * (defPower / total) ** B.casualtyPowerExponent * atkLuck);
     const defLoss = Math.round(def * B.baseCasualtyRate * (atkPower / total) ** B.casualtyPowerExponent * defLuck);
     atk = Math.max(0, atk - atkLoss);

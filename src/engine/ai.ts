@@ -2,11 +2,13 @@
  * The computer warlord. `playAITurn` plays an entire AI season by calling the
  * same public engine actions a human does — it cannot bypass the rules, so the
  * one function powers both single-player mode and the headless balance harness
- * (`sim.test.ts`). The policy is a simple, competent baseline:
+ * (`sim.test.ts`). The policy is a competent baseline:
  *
  *   1. Press any clearly-winning attack on the border (never on a sworn friend).
- *   2. Rail idle interior reserves to the most-threatened front.
- *   3. Keep the front fed and manned, raise troops, then grow the economy.
+ *   2. Court a strong prisoner or wandering hero into service (free generals).
+ *   3. Sue a stronger aggressor for a ceasefire when losing a front.
+ *   4. Rail reserves / post a general / fortify the most-threatened front.
+ *   5. Keep the front fed and manned, raise troops, then grow the economy.
  */
 import { CONFIG } from "./config.ts";
 import {
@@ -16,10 +18,14 @@ import {
   deployOfficer,
   develop,
   endTurn,
+  fortify,
   leadOfficer,
   march,
+  proposePact,
   provincesOf,
   recruit,
+  recruitableIn,
+  recruitOfficer,
   train,
 } from "./game.ts";
 import { effectiveStats } from "./items.ts";
@@ -44,7 +50,11 @@ interface AttackPlan {
 
 function bestAttack(s: GameState): AttackPlan | null {
   const me = currentPlayer(s).id;
-  let best: AttackPlan | null = null;
+  const totalProv = s.map.provinces.length;
+  // Prefer, among favourable attacks, biting the biggest rival — a natural
+  // "gang up on the leader" pressure that keeps any one warlord from running away.
+  const provCount = (id: string | null) => (id ? provincesOf(s, id).length : 0);
+  let best: (AttackPlan & { score: number }) | null = null;
   for (const from of provincesOf(s, me)) {
     const fp = s.provinces[from];
     if (fp.troops < 4000) continue;
@@ -66,7 +76,9 @@ function bestAttack(s: GameState): AttackPlan | null {
         (1 + CONFIG.battle.wallBonusPerLevel * tp.wallLevel) *
         (1 + CONFIG.battle.orderMultiplier * (tp.order / 100));
       const advantage = atk / Math.max(1, def);
-      if (advantage >= 1.1 && (!best || advantage > best.advantage)) best = { from, to, troops: commit, advantage };
+      if (advantage < 1.1) continue;
+      const score = advantage * (1 + 0.35 * (provCount(tp.ownerId) / totalProv));
+      if (!best || score > best.score) best = { from, to, troops: commit, advantage, score };
     }
   }
   return best;
@@ -109,6 +121,58 @@ function upkeep(troops: number): number {
   return Math.round((troops / 1000) * CONFIG.economy.foodPerThousandTroops);
 }
 
+/** Total soldiers a warlord fields across the realm. */
+function totalTroops(s: GameState, playerId: string): number {
+  return provincesOf(s, playerId).reduce((t, id) => t + s.provinces[id].troops, 0);
+}
+
+/**
+ * A capable prisoner or wandering hero the AI can court (a free general). Prefers
+ * the strongest by war + leadership; only bothers with genuinely useful officers.
+ */
+function officerToCourt(s: GameState): { provinceId: string; officerId: string } | null {
+  const me = currentPlayer(s).id;
+  if (!provincesOf(s, me).some((id) => s.provinces[id].gold >= CONFIG.officers.recruitGoldCost)) return null;
+  let best: { provinceId: string; officerId: string; val: number } | null = null;
+  for (const id of provincesOf(s, me)) {
+    for (const o of recruitableIn(s, id, me)) {
+      const e = effectiveStats(o);
+      const val = e.war + e.leadership;
+      if (val < 140) continue; // not worth a command point
+      if (!best || val > best.val) best = { provinceId: id, officerId: o.id, val };
+    }
+  }
+  return best ? { provinceId: best.provinceId, officerId: best.officerId } : null;
+}
+
+/**
+ * When a stronger, un-pacted neighbour is bearing down on a front and we are the
+ * weaker realm overall, sue them for a ceasefire to buy time to consolidate.
+ */
+function ceasefireTarget(s: GameState): string | null {
+  const me = currentPlayer(s).id;
+  const mine = totalTroops(s, me);
+  let worst: { id: string; pressure: number } | null = null;
+  for (const id of provincesOf(s, me)) {
+    const map = s.map.provinces.find((p) => p.id === id)!;
+    for (const n of map.adjacentTo) {
+      const np = s.provinces[n];
+      if (!np.ownerId || np.ownerId === me || atPeace(s, me, np.ownerId)) continue;
+      if (totalTroops(s, np.ownerId) < mine * 1.35) continue; // only sue for peace when clearly outmatched
+      const pressure = np.troops - s.provinces[id].troops;
+      if (pressure > 6000 && (!worst || pressure > worst.pressure)) worst = { id: np.ownerId, pressure };
+    }
+  }
+  return worst?.id ?? null;
+}
+
+/** A threatened frontier province worth walling up, if we can well afford it. */
+function fortifyTarget(s: GameState, front: string | null): string | null {
+  if (!front) return null;
+  const p = s.provinces[front];
+  return p.wallLevel < 3 && p.gold >= CONFIG.fortify.goldCostPerLevel * 2 ? front : null;
+}
+
 /** A markedly stronger general idling in a safe province, to post to the front. */
 function generalForFront(s: GameState, front: string): string | null {
   const me = currentPlayer(s).id;
@@ -129,12 +193,34 @@ function generalForFront(s: GameState, front: string): string | null {
 export function playAITurn(s: GameState): GameState {
   let state = s;
   let guard = 0;
+  // A recruit attempt or ceasefire offer can fail; don't retry it (and burn the
+  // whole turn's command points) on the same target within this season.
+  const triedCourt = new Set<string>();
+  const triedPact = new Set<string>();
   while (state.phase === "command" && state.commandPointsRemaining > 0 && guard++ < 24) {
     const me = currentPlayer(state).id;
 
     const attack = bestAttack(state);
     if (attack) {
       state = march(state, attack.from, attack.to, attack.troops);
+      continue;
+    }
+
+    // Court a strong prisoner or wandering hero — a free general.
+    const court = officerToCourt(state);
+    if (court && !triedCourt.has(court.officerId)) {
+      triedCourt.add(court.officerId);
+      state = recruitOfficer(state, court.provinceId, court.officerId);
+      continue;
+    }
+
+    // Sue a clearly stronger aggressor for a ceasefire when losing a front —
+    // buys the weak time and turns the aggressor's spears elsewhere, which keeps
+    // any single warlord from running away with the game.
+    const truce = ceasefireTarget(state);
+    if (truce && !triedPact.has(truce)) {
+      triedPact.add(truce);
+      state = proposePact(state, truce, "ceasefire");
       continue;
     }
 
@@ -150,6 +236,12 @@ export function playAITurn(s: GameState): GameState {
       const general = generalForFront(state, front);
       if (general) {
         state = deployOfficer(state, general, front);
+        continue;
+      }
+      // Wall up a hard-pressed front when we can well afford it.
+      const wall = fortifyTarget(state, front);
+      if (wall) {
+        state = fortify(state, wall);
         continue;
       }
     }

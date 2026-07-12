@@ -122,7 +122,7 @@ export const CONFIG = {
 
   /** Diplomacy. */
   diplomacy: {
-    /** A ceasefire lasts this many season-turns. */
+    /** A ceasefire lasts this many season-turns, then the front may reignite. */
     ceasefireTurns: 8,
     /** Minimum relations for an AI to accept an alliance / ceasefire offer. */
     allianceThreshold: 30,
@@ -137,6 +137,9 @@ export const CONFIG = {
     maxRounds: 12,
     /** Fraction of a side's own army lost per round, baseline. */
     baseCasualtyRate: 0.22,
+    /** Per-round random swing on casualties (±). Some spread lets a bold attack
+     * break a stalemate; too little and near-even fronts freeze into deadlock. */
+    luckSpread: 0.3,
     /**
      * Exponent on each side's enemy-power share. >1 makes battles lopsided in
      * favour of the stronger army, so a dominant force keeps most of its men and
@@ -186,7 +189,7 @@ export const CONFIG = {
    * hegemon — a far horizon meant only as a backstop against a deadlocked AI
    * stalemate — the largest realm is declared the winner.
    */
-  victory: { dominationFraction: 0.5, leadMultiple: 1.5, turnLimit: 160 },
+  victory: { dominationFraction: 0.45, leadMultiple: 1.3, turnLimit: 160 },
 
   /** Safety bound for the headless simulation harness. */
   maxTurns: 400,

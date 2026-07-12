@@ -38,6 +38,10 @@ describe("AI vs AI simulation", () => {
     const report = [...wins.entries()].sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k}:${v}`).join("  ");
     console.log(`avg turns ${(totalTurns / N).toFixed(1)} | wins ${report}`);
     expect([...wins.values()].reduce((a, b) => a + b, 0)).toBe(N);
+    // Balance guard: the field is competitive — no faction sweeps, and several
+    // different warlords take titles across the seeds.
+    expect(wins.size, "several factions win").toBeGreaterThanOrEqual(3);
+    expect(Math.max(...wins.values()), "no faction wins nearly everything").toBeLessThan(N * 0.7);
   });
 
   it("a single AI turn never throws and always ends the turn", () => {
