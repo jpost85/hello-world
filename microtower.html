@@ -680,6 +680,9 @@
   }
   .elev-car i { width:2px; height:4px; background:#33414f; border-radius:1px; display:inline-block; }
   .elev-car.express { background: linear-gradient(180deg, #8fe0e8 0 2px, #5cc3cf 2px calc(100% - 3px), #2f8f99 calc(100% - 3px)); border-color:#1f5e66; }
+  /* Dormant express (no Sky Lobby to stop at): dimmed + desaturated so it reads as inactive. */
+  .elev-car.dormant { opacity:.4; filter:grayscale(.7); }
+  .elev-floornum.dormant { opacity:.4; }
   /* Big gray floor numbers painted in the shaft, behind the car (z below .elev-car),
      so the empty shaft reads its elevation like the classic game. L = lobby. */
   .elev-floornum {
@@ -1762,6 +1765,7 @@ function tryBuild(col, row, key_) {
   rebuildFacade();
   state.cash -= t.cost;
   log(`Built ${t.name} on floor ${row} for $${t.cost.toLocaleString()}`, "good");
+  if (key_ === "expresselevator") warnDormantExpress(col);   // express does nothing without a Sky Lobby to stop at
   sfx("build");
   if (t.kind === "landmark" && !state.won) winGame();
   refreshStats();
@@ -3287,6 +3291,20 @@ function eachVerticalRun(predicate, onRun) {
 function isStopFloor(row) {
   return row === 0 || state.units.some(u => u.type === "skylobby" && u.row === row);
 }
+// Nudge the player if the express column they just extended can't carry anyone yet
+// (a car exists but has no valid run — needs the ground + a Sky Lobby, or two lobbies).
+let _expressWarned = false;
+function warnDormantExpress(col) {
+  const s = state.shafts.find(x => x.express && x.col === col);
+  if (!s) return;                     // just a single cell so far — no shaft yet
+  if (s.dormant) {
+    toast("Express only stops at the ground & Sky Lobbies — add a Sky Lobby.");
+    if (!_expressWarned) {            // explain fully once, then just toast on repeats
+      log("⚠ Express Elevators skip normal floors — they stop only at the ground and Sky Lobbies. Build a Sky Lobby on a floor this shaft passes so it can carry riders.", "bad");
+      _expressWarned = true;
+    }
+  }
+}
 
 function rebuildShafts() {
   state.shafts.forEach(s => { s.carEl && s.carEl.remove(); (s.floorEls || []).forEach(e => e.remove()); });
@@ -3304,6 +3322,16 @@ function rebuildShafts() {
     const stops = [];
     for (let f = lo; f <= hi; f++) if (isStopFloor(f)) stops.push(f);
     if (stops.length >= 2) state.expressRuns.push({ col, lo, hi, stops });
+  });
+  // Dim any express car that has no usable run (fewer than 2 stop floors) so the
+  // player can see it's dormant — an express needs the ground + a Sky Lobby (or two
+  // Sky Lobbies) to carry anyone. Local elevators/express with a run stay normal.
+  state.shafts.forEach(s => {
+    if (!s.express) return;
+    const active = state.expressRuns.some(r => r.col === s.col && r.lo === s.lo && r.hi === s.hi);
+    s.dormant = !active;
+    if (s.carEl) s.carEl.classList.toggle("dormant", !active);
+    (s.floorEls || []).forEach(e => e.classList.toggle("dormant", !active));
   });
   // Any sim mid-commute references shafts/columns that may be gone now: reset them.
   state.people.forEach(p => {
