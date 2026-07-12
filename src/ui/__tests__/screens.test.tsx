@@ -87,6 +87,7 @@ describe("DiplomacyScreen", () => {
 
 describe("reports", () => {
   const report: BattleReport = {
+    seq: 1,
     turn: 5,
     provinceId: "yuzhou",
     provinceName: "Yu Province",
@@ -111,13 +112,20 @@ describe("reports", () => {
     waterCrossing: false,
   };
 
-  it("battle report modal shows outcome, sides, tactical events and captures", () => {
-    const html = renderToStaticMarkup(<BattleReportModal report={report} onClose={() => undefined} />);
+  it("shows the attacker's-eye view when you are the attacker", () => {
+    const html = renderToStaticMarkup(<BattleReportModal report={report} humanId="dong-zhuo" onClose={() => undefined} />);
     expect(html).toContain("Victory at Yu Province");
     expect(html).toContain("Lü Bu");
     expect(html).toContain("single combat"); // a tactical event (not the rout line)
     expect(html).not.toContain("The province falls!"); // rout line is filtered
-    expect(html).toContain("Captured:");
+    expect(html).toContain("Captured Xiahou Dun");
+  });
+
+  it("flips to the defender's-eye view when you are attacked", () => {
+    // Same battle, but now we are Cao Cao — the defender who lost the province.
+    const html = renderToStaticMarkup(<BattleReportModal report={report} humanId="cao-cao" onClose={() => undefined} />);
+    expect(html).toContain("Defeat at Yu Province");
+    expect(html).toContain("Xiahou Dun was taken prisoner!");
   });
 
   it("season report card summarises lost/gained land and deltas", () => {

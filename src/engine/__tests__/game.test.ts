@@ -146,8 +146,8 @@ describe("marching", () => {
     let s = newGame();
     s = { ...s, provinces: { ...s.provinces, sili: { ...s.provinces["sili"], troops: 60000 } } };
     const out = march(s, "sili", "yuzhou", 55000);
-    const r = out.lastBattle!;
-    expect(r).not.toBeNull();
+    const r = out.battles[out.battles.length - 1];
+    expect(r).toBeTruthy();
     expect(r.attackerId).toBe("dong-zhuo");
     expect(r.defenderId).toBe("cao-cao");
     expect(r.provinceName).toMatch(/Yu/);

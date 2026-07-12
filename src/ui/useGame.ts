@@ -97,10 +97,14 @@ export function useGame(): UseGame {
   const [humanId, setHumanId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aiThinking, setAiThinking] = useState(false);
-  const [dismissedBattle, setDismissedBattle] = useState<BattleReport | null>(null);
+  const [shownBattleSeq, setShownBattleSeq] = useState(0);
   const [seasonReport, setSeasonReport] = useState<SeasonReport | null>(null);
   const snapshot = useRef<Snapshot | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The next unshown battle involving the human (as attacker OR defender).
+  const battleReport =
+    state?.battles.find((b) => b.seq > shownBattleSeq && (b.attackerId === humanId || b.defenderId === humanId)) ?? null;
 
   const commit = useCallback((next: GameState) => {
     setState(next);
@@ -123,6 +127,7 @@ export function useGame(): UseGame {
     (factionId: string, seed: number) => {
       const g = createGame({ map: chinaMap, humanFactionId: factionId, seed });
       setHumanId(factionId);
+      setShownBattleSeq(0);
       commit(g);
     },
     [commit],
@@ -131,10 +136,12 @@ export function useGame(): UseGame {
   const resume = useCallback(() => {
     const saved = loadGame();
     if (!saved) return false;
-    // Re-attach the (large, static) map; drop any stale battle so no report pops.
-    const restored: GameState = { ...saved, map: chinaMap, lastBattle: null };
+    // Re-attach the (large, static) map; drop stale battles so no report pops.
+    // Coerce the battle fields in case the save predates them.
+    const restored: GameState = { ...saved, map: chinaMap, battles: [], battleSeq: saved.battleSeq ?? 0 };
     const human = restored.players.find((p) => !p.isAI);
     setHumanId(human?.id ?? null);
+    setShownBattleSeq(restored.battleSeq);
     setState(restored);
     return true;
   }, []);
@@ -144,9 +151,11 @@ export function useGame(): UseGame {
     setState(null);
     setHumanId(null);
     setError(null);
+    setShownBattleSeq(0);
   }, []);
 
-  // Drive AI seasons automatically, one per tick, until it's the human's turn.
+  // Drive AI seasons automatically, one per tick — but pause while the player
+  // still has an unacknowledged battle recap, so attacks on them never slip by.
   useEffect(() => {
     if (!state || state.phase === "gameover") return;
     const active = currentPlayer(state);
@@ -154,12 +163,16 @@ export function useGame(): UseGame {
       setAiThinking(false);
       return;
     }
+    if (battleReport) {
+      setAiThinking(false);
+      return; // wait for the player to dismiss the report
+    }
     setAiThinking(true);
     timer.current = setTimeout(() => commit(playAITurn(state)), 450);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [state, commit]);
+  }, [state, commit, battleReport]);
 
   const isHumanTurn = !!state && state.phase === "command" && !!humanId && currentPlayer(state).id === humanId;
 
@@ -179,13 +192,6 @@ export function useGame(): UseGame {
     }
     snapshot.current = cur;
   }, [state, humanId, isHumanTurn]);
-
-  // Surface a battle report only for the player's own attacks (AI-vs-you shows
-  // up in the season report instead, so it never interrupts the AI's turns).
-  const battleReport =
-    state?.lastBattle && state.lastBattle.attackerId === humanId && state.lastBattle !== dismissedBattle
-      ? state.lastBattle
-      : null;
 
   return {
     state,
@@ -211,7 +217,7 @@ export function useGame(): UseGame {
     breakPact: (target) => run(() => breakPact(state!, target)),
     endSeason: () => run(() => endTurn(state!)),
     battleReport,
-    dismissBattle: () => setDismissedBattle(state?.lastBattle ?? null),
+    dismissBattle: () => setShownBattleSeq(battleReport?.seq ?? shownBattleSeq),
     seasonReport,
     dismissSeason: () => setSeasonReport(null),
   };

@@ -96,7 +96,8 @@ export function createGame(opts: NewGameOptions): GameState {
     commandPointsRemaining: 0,
     rngState: seedRng(seed),
     events: [],
-    lastBattle: null,
+    battles: [],
+    battleSeq: 0,
     winnerId: null,
   };
 
@@ -480,7 +481,9 @@ export function march(s: GameState, fromId: string, toId: string, troops: number
     next = log(next, me, `The assault on ${province(next, toId)} is repulsed.`);
   }
 
-  next.lastBattle = {
+  const seq = s.battleSeq + 1;
+  const report = {
+    seq,
     turn: s.turn,
     provinceId: toId,
     provinceName: province(s, toId),
@@ -501,6 +504,8 @@ export function march(s: GameState, fromId: string, toId: string, troops: number
     capturedOfficer: result.capturedOfficerId ? s.officers.find((o) => o.id === result.capturedOfficerId)?.name ?? null : null,
     waterCrossing: water,
   };
+  next.battles = [...next.battles, report].slice(-40);
+  next.battleSeq = seq;
 
   next.commandPointsRemaining--;
   return checkVictory(next);

@@ -218,6 +218,7 @@ button.danger { border-color: #8a2a22; color: #ffd9d4; }
 .br-events li { font-size: 13px; padding: 3px 0; }
 .br-ev-icon { margin-right: 4px; }
 .br-capture { margin-top: 12px; padding: 8px 10px; background: #3a2f1d; border-radius: 8px; font-size: 13px; color: var(--gold); }
+.br-capture.foe { background: #3a201d; color: #ff9a8f; }
 .modal.battle-report button { margin-top: 16px; width: 100%; background: var(--gold); color: #1a1410; font-weight: 700; border: none; }
 
 /* ---- Season report ---- */

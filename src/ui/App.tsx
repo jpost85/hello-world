@@ -75,7 +75,7 @@ export function App() {
       )}
 
       {game.battleReport && state.phase !== "gameover" && (
-        <BattleReportModal report={game.battleReport} onClose={game.dismissBattle} />
+        <BattleReportModal report={game.battleReport} humanId={game.humanId} onClose={game.dismissBattle} />
       )}
 
       {state.phase === "gameover" && (

@@ -234,8 +234,10 @@ export interface GameState {
   /** Deterministic RNG state, advanced on every random draw. */
   rngState: number;
   events: GameEvent[];
-  /** The most recent battle, for the report UI; null before any battle. */
-  lastBattle: BattleReport | null;
+  /** Recent battles (capped), for the report UI. Newest last. */
+  battles: BattleReport[];
+  /** Monotonic counter assigning each battle its `seq`. */
+  battleSeq: number;
   winnerId: string | null;
 }
 
@@ -271,11 +273,13 @@ export interface BattleResult {
 }
 
 /**
- * A player-facing record of the most recent battle, with display names resolved
- * so the UI can render a report without re-deriving them. Stored on `GameState`
- * (`lastBattle`) and replaced on every battle.
+ * A player-facing record of a battle, with display names resolved so the UI can
+ * render a report without re-deriving them. Appended to `GameState.battles`, and
+ * tagged with a monotonic `seq` so the UI can show each one exactly once.
  */
 export interface BattleReport {
+  /** Monotonic id so the UI can track which reports it has already shown. */
+  seq: number;
   turn: number;
   provinceId: string;
   provinceName: string;

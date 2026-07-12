@@ -24,32 +24,49 @@ function Bar({ start, end, kind }: { start: number; end: number; kind: "you" | "
   );
 }
 
-export function BattleReportModal({ report, onClose }: { report: BattleReport; onClose: () => void }) {
+export function BattleReportModal({ report, humanId, onClose }: { report: BattleReport; humanId: string | null; onClose: () => void }) {
   const r = report;
   const tactical = r.events.filter((e) => e.kind !== "rout");
-  const outcome = r.captured ? "Victory" : "Repulsed";
+  const iAmAttacker = r.attackerId === humanId;
+  const iAmDefender = r.defenderId === humanId;
+  const involved = iAmAttacker || iAmDefender;
+
+  // Outcome from the player's point of view (falls back to attacker's for a
+  // spectator's report, which the UI doesn't currently surface).
+  const outcome = iAmDefender
+    ? r.captured ? "Defeat" : "Held the line"
+    : r.captured ? "Victory" : "Repulsed";
+  const win = iAmDefender ? !r.captured : r.captured;
+
+  // Order the panels so the player's own side sits on top.
+  const attackerSide = { name: r.attackerName, type: r.attackerType, officer: r.attackerOfficer, start: r.attackerStart, end: r.attackerEnd, you: iAmAttacker };
+  const defenderSide = { name: r.defenderName, type: r.defenderType, officer: r.defenderOfficer, start: r.defenderStart, end: r.defenderEnd, you: iAmDefender };
+  const sides = iAmDefender ? [defenderSide, attackerSide] : [attackerSide, defenderSide];
+
+  // Prisoner wording depends on which way the capture went.
+  const capture = r.capturedOfficer
+    ? iAmDefender
+      ? { text: `${r.capturedOfficer} was taken prisoner!`, mine: false }
+      : { text: `Captured ${r.capturedOfficer} — judge them in the Court.`, mine: true }
+    : null;
+
   return (
     <div className="modal-scrim" onClick={onClose}>
       <div className="modal battle-report" onClick={(e) => e.stopPropagation()}>
-        <div className={`br-outcome ${r.captured ? "win" : "loss"}`}>{outcome} at {r.provinceName.replace(/ \(Capital\)/, "")}</div>
+        <div className={`br-outcome ${win ? "win" : "loss"}`}>{outcome} at {r.provinceName.replace(/ \(Capital\)/, "")}</div>
 
-        <div className="br-side">
-          <div className="br-side-head">
-            <span>{r.attackerName} <em>(you)</em></span>
-            <span className="br-type">{r.attackerType}{r.attackerOfficer ? ` · ${r.attackerOfficer}` : ""}</span>
+        {sides.map((sd, i) => (
+          <div key={i}>
+            {i === 1 && <div className="br-vs">vs</div>}
+            <div className="br-side">
+              <div className="br-side-head">
+                <span>{sd.name}{involved && sd.you ? <em> (you)</em> : null}</span>
+                <span className="br-type">{sd.type}{sd.officer ? ` · ${sd.officer}` : ""}</span>
+              </div>
+              <Bar start={sd.start} end={sd.end} kind={involved ? (sd.you ? "you" : "foe") : "foe"} />
+            </div>
           </div>
-          <Bar start={r.attackerStart} end={r.attackerEnd} kind="you" />
-        </div>
-
-        <div className="br-vs">vs</div>
-
-        <div className="br-side">
-          <div className="br-side-head">
-            <span>{r.defenderName}</span>
-            <span className="br-type">{r.defenderType}{r.defenderOfficer ? ` · ${r.defenderOfficer}` : ""}</span>
-          </div>
-          <Bar start={r.defenderStart} end={r.defenderEnd} kind="foe" />
-        </div>
+        ))}
 
         {r.waterCrossing && <div className="br-note">A river crossing — navies held the advantage.</div>}
 
@@ -61,7 +78,7 @@ export function BattleReportModal({ report, onClose }: { report: BattleReport; o
           </ul>
         )}
 
-        {r.capturedOfficer && <div className="br-capture">Captured: <strong>{r.capturedOfficer}</strong> — judge them in the Court.</div>}
+        {capture && <div className={`br-capture ${capture.mine ? "" : "foe"}`}>{capture.text}</div>}
 
         <button onClick={onClose}>Continue</button>
       </div>
