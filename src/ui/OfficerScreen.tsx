@@ -49,6 +49,8 @@ export function OfficerScreen({ state, humanId, isHumanTurn, game, onClose }: Pr
 
   const canAct = isHumanTurn;
   const canRecruit = isHumanTurn && state.commandPointsRemaining > 0;
+  const canDeploy = canRecruit && mine.length > 1;
+  const shortName = (id: string) => provName(id).replace(/ Province| \(Capital\)/, "");
 
   function Card({ o, children }: { o: Officer; children?: ReactNode }) {
     const s = effectiveStats(o);
@@ -119,8 +121,25 @@ export function OfficerScreen({ state, humanId, isHumanTurn, game, onClose }: Pr
 
         <section className="court-section">
           <h3>Retainers</h3>
+          {mine.length > 1 && <p className="hint">Post an officer to another of your provinces (1 command point).</p>}
           {court.map((o) => (
-            <Card key={o.id} o={o} />
+            <Card key={o.id} o={o}>
+              {canDeploy && (
+                <div className="court-deploy">
+                  <label>Post to</label>
+                  <select
+                    value={o.provinceId ?? ""}
+                    onChange={(e) => {
+                      if (e.target.value && e.target.value !== o.provinceId) game.deployOfficer(o.id, e.target.value);
+                    }}
+                  >
+                    {mine.map((id) => (
+                      <option key={id} value={id}>{shortName(id)}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </Card>
           ))}
         </section>
 

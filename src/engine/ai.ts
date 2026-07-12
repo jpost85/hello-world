@@ -13,6 +13,7 @@ import {
   atPeace,
   cultivate,
   currentPlayer,
+  deployOfficer,
   develop,
   endTurn,
   leadOfficer,
@@ -108,6 +109,23 @@ function upkeep(troops: number): number {
   return Math.round((troops / 1000) * CONFIG.economy.foodPerThousandTroops);
 }
 
+/** A markedly stronger general idling in a safe province, to post to the front. */
+function generalForFront(s: GameState, front: string): string | null {
+  const me = currentPlayer(s).id;
+  const lead = leadOfficer(s, front, me);
+  const frontWar = lead ? effectiveStats(lead).war : 0;
+  let best: { id: string; war: number } | null = null;
+  for (const o of s.officers) {
+    if (!o.alive || o.ownerId !== me || o.captiveOf || o.provinceId === front || !o.provinceId) continue;
+    const map = s.map.provinces.find((p) => p.id === o.provinceId)!;
+    const exposed = map.adjacentTo.some((n) => s.provinces[n].ownerId && s.provinces[n].ownerId !== me && !atPeace(s, me, s.provinces[n].ownerId!));
+    if (exposed) continue; // don't strip a general from a live front
+    const war = effectiveStats(o).war;
+    if (war > frontWar + 12 && (!best || war > best.war)) best = { id: o.id, war };
+  }
+  return best?.id ?? null;
+}
+
 export function playAITurn(s: GameState): GameState {
   let state = s;
   let guard = 0;
@@ -126,6 +144,12 @@ export function playAITurn(s: GameState): GameState {
       const reserve = safeReserve(state, front);
       if (reserve && state.provinces[reserve].troops - 2000 > 0) {
         state = march(state, reserve, front, state.provinces[reserve].troops - 2000);
+        continue;
+      }
+      // Post a stronger idle general to command that front.
+      const general = generalForFront(state, front);
+      if (general) {
+        state = deployOfficer(state, general, front);
         continue;
       }
     }

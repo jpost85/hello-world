@@ -21,6 +21,7 @@ export {
   recruitOfficer,
   releasePrisoner,
   executePrisoner,
+  deployOfficer,
   proposePact,
   breakPact,
   relationOf,

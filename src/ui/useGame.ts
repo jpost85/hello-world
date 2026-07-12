@@ -13,6 +13,7 @@ import {
   createGame,
   cultivate,
   currentPlayer,
+  deployOfficer,
   develop,
   endTurn,
   executePrisoner,
@@ -50,6 +51,7 @@ export interface UseGame {
   recruitOfficer: (provinceId: string, officerId: string) => void;
   releasePrisoner: (officerId: string) => void;
   executePrisoner: (officerId: string) => void;
+  deployOfficer: (officerId: string, toProvinceId: string) => void;
   proposePact: (targetPlayerId: string, kind: PactKind) => void;
   breakPact: (targetPlayerId: string) => void;
   endSeason: () => void;
@@ -142,6 +144,7 @@ export function useGame(): UseGame {
     recruitOfficer: (p, officerId) => run(() => recruitOfficer(state!, p, officerId)),
     releasePrisoner: (officerId) => run(() => releasePrisoner(state!, officerId)),
     executePrisoner: (officerId) => run(() => executePrisoner(state!, officerId)),
+    deployOfficer: (officerId, toProvinceId) => run(() => deployOfficer(state!, officerId, toProvinceId)),
     proposePact: (target, kind) => run(() => proposePact(state!, target, kind)),
     breakPact: (target) => run(() => breakPact(state!, target)),
     endSeason: () => run(() => endTurn(state!)),

@@ -44,6 +44,11 @@ describe("OfficerScreen", () => {
     expect(html).toContain("Valiant"); // a trait badge
     expect(html).toContain("Red Hare"); // an item badge
   });
+
+  it("offers a redeploy control for retainers when you hold more than one province", () => {
+    expect(html).toContain("Post to");
+    expect(html).toContain("<select");
+  });
 });
 
 describe("MapView", () => {

@@ -6,6 +6,7 @@ import {
   createGame,
   cultivate,
   currentPlayer,
+  deployOfficer,
   develop,
   endTurn,
   executePrisoner,
@@ -108,6 +109,20 @@ describe("commands", () => {
     const before = s.provinces["yuzhou"].order;
     const after = scheme(s, "yuzhou");
     expect(after.provinces["yuzhou"].order).toBeLessThan(before);
+  });
+
+  it("deployOfficer reposts a retainer to another owned province", () => {
+    const s = newGame(); // Dong Zhuo holds sili + liangzhou; Lü Bu starts in sili
+    expect(s.officers.find((o) => o.id === "lu-bu")!.provinceId).toBe("sili");
+    const out = deployOfficer(s, "lu-bu", "liangzhou");
+    expect(out.officers.find((o) => o.id === "lu-bu")!.provinceId).toBe("liangzhou");
+    expect(out.commandPointsRemaining).toBe(s.commandPointsRemaining - 1);
+  });
+
+  it("deployOfficer refuses a province you do not hold and a foreign officer", () => {
+    const s = newGame();
+    expect(() => deployOfficer(s, "lu-bu", "yuzhou")).toThrow(/hold the destination/);
+    expect(() => deployOfficer(s, "cao-cao", "sili")).toThrow(/does not serve you/);
   });
 });
 

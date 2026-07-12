@@ -124,6 +124,12 @@ button.danger { border-color: #8a2a22; color: #ffd9d4; }
 .tag.item { background: #3a2f1d; color: var(--gold); border: 1px solid #5a4a2c; }
 .court-acts { display: flex; gap: 6px; margin-top: 8px; }
 .court-acts button { flex: 1; padding: 6px 8px; font-size: 12px; }
+.court-deploy { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.court-deploy label { font-size: 12px; color: var(--muted); }
+.court-deploy select {
+  flex: 1; padding: 6px 8px; font-size: 12px; border-radius: 8px;
+  background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+}
 .court-faint { display: flex; justify-content: space-between; padding: 5px 2px; color: var(--muted); font-size: 13px; border-bottom: 1px solid var(--line); }
 
 /* ---- Diplomacy screen ---- */

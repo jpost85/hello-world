@@ -560,6 +560,27 @@ export function executePrisoner(s: GameState, officerId: string): GameState {
   return log(next, me, `${playerName(next, me)} executes ${o.name}.`);
 }
 
+/**
+ * Reassign one of your serving officers to another province you hold — the RoTK
+ * staple of posting your best general to the front or your finest administrator
+ * to a rich city. Instant across the realm for one command point.
+ */
+export function deployOfficer(s: GameState, officerId: string, toProvinceId: string): GameState {
+  requireCommand(s);
+  const me = currentPlayer(s).id;
+  const off = s.officers.find((o) => o.id === officerId);
+  if (!off || !off.alive) throw new Error("no such officer");
+  if (off.ownerId !== me || off.captiveOf) throw new Error("that officer does not serve you");
+  const to = s.provinces[toProvinceId];
+  if (!to) throw new Error(`unknown province: ${toProvinceId}`);
+  if (to.ownerId !== me) throw new Error("you must hold the destination province");
+  if (off.provinceId === toProvinceId) throw new Error(`${off.name} is already stationed there`);
+  const next = cloneState(s);
+  next.officers.find((o) => o.id === officerId)!.provinceId = toProvinceId;
+  next.commandPointsRemaining--;
+  return log(next, me, `${off.name} is posted to ${province(next, toProvinceId)}.`);
+}
+
 // ---------------------------------------------------------------------------
 // Diplomacy actions
 // ---------------------------------------------------------------------------
