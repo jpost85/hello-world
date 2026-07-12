@@ -259,7 +259,7 @@
     font-size:9px; font-weight:700; letter-spacing:3px; color:rgba(0,0,0,.5);
     text-shadow:0 1px 0 rgba(255,255,255,.25);
   }
-  .unit-shop .u-tag, .unit-restaurant .u-tag, .unit-cinema .u-tag {
+  .unit-shop .u-tag, .unit-restaurant .u-tag, .unit-cinema .u-tag, .unit-bar .u-tag {
     top:auto; bottom:4px; color: rgba(255,255,255,.85); text-shadow:0 1px 1px rgba(0,0,0,.6);
   }
   .u-vac {
@@ -437,6 +437,17 @@
     background-size:10px 8px;
   }
   .unit-cinema.lit .u-extra { filter: drop-shadow(0 0 2px #ffd34d); }
+  /* Bar — tinted back wall (recolours per style via --wall), a lit bottle shelf,
+     and a wooden counter along the bottom. */
+  .unit-bar .u-face {
+    background:
+      repeating-linear-gradient(90deg, transparent 0 5px, #cfe0b0 5px 7px, transparent 7px 12px, #e6b3b3 12px 14px, transparent 14px 19px, #a9c8e6 19px 21px, transparent 21px 26px, #e6c766 26px 28px, transparent 28px 33px) no-repeat 8px 8px / calc(100% - 16px) 7px,  /* bottles */
+      linear-gradient(#2f2113,#2f2113) no-repeat 6px 16px / calc(100% - 12px) 2px,   /* shelf */
+      linear-gradient(#8a6440,#8a6440) no-repeat 0 calc(100% - 11px) / 100% 2px,     /* counter top edge */
+      linear-gradient(180deg, #6b4a2e 0 3px, #573a23 3px 100%) no-repeat 0 100% / 100% 11px,  /* counter */
+      linear-gradient(180deg, color-mix(in srgb, var(--wall) 78%, #000), var(--wall));         /* back wall */
+  }
+  .unit-bar.lit .u-face { filter: brightness(1.12) saturate(1.06); }
   .unit-laundro { --wall:#dbeef0; }
   .unit-storage { --wall:#cfc6b0; }
   .unit-storage .u-face {
@@ -870,6 +881,11 @@
   .ins-swatches { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
   .ins-swatch { width:22px; height:22px; border-radius:50%; border:2px solid rgba(255,255,255,.25); cursor:pointer; padding:0; }
   .ins-swatch.on { border-color:#ffd24a; box-shadow:0 0 0 2px rgba(255,210,74,.4); }
+  .ins-styles { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .ins-style-btn { display:flex; align-items:center; gap:6px; padding:5px 9px; cursor:pointer;
+    background:var(--panel-2); color:var(--text); border:2px solid #000; border-radius:6px; font-size:12px; font-weight:600; }
+  .ins-style-btn.on { outline:2px solid var(--accent); background:#36495b; }
+  .isb-dot { width:11px; height:11px; border-radius:50%; border:1px solid rgba(0,0,0,.5); flex:0 0 auto; }
   .ins-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
   .saves-card { width:min(94%,360px); }
   .saves-title { font-weight:700; font-size:15px; margin-bottom:10px; }
@@ -1136,6 +1152,7 @@ const TYPES = {
   shop:      { name: "Retail Shop", cost: 25000, w: 2, h: 1, color: "#c3a6e0", income: 0,    cap: 0,  kind: "shop", draw: 1 },
   restaurant:{ name: "Restaurant",  cost: 35000, w: 3, h: 1, color: "#f08c8c", income: 0,    cap: 0,  kind: "shop", draw: 1.3 },
   cinema:    { name: "Cinema",      cost: 70000, w: 4, h: 1, color: "#b08be0", income: 0,    cap: 0,  kind: "shop", draw: 2.5 },
+  bar:       { name: "Bar",         cost: 32000, w: 3, h: 1, color: "#8a5a2b", income: 0,    cap: 0,  kind: "amenity", bar: true },  // indoor drinking venue; style set in Inspect (draw/appeal/noise vary)
   terrace:   { name: "Terrace",     cost: 20000, w: 3, h: 1, color: "#cbb083", income: 0,    cap: 0,  kind: "outdoor", appeal: 12 },
   garden:    { name: "Sky Garden",  cost: 45000, w: 4, h: 1, color: "#6cae54", income: 0,    cap: 0,  kind: "outdoor", appeal: 20 },
   pool:      { name: "Pool",        cost: 55000, w: 3, h: 1, color: "#4cb6e0", income: 0,    cap: 0,  kind: "outdoor", appeal: 22 },
@@ -1160,10 +1177,32 @@ const TYPES = {
   floor:     { name: "Hallway",     cost: 5000,  w: 1, h: 1, color: "#cbb9a0", kind: "structure" },
 };
 
+// A Bar is one build type re-styled in the Inspect panel. Each style changes the
+// name/art/colour AND its stats: draw (foot-traffic earnings), appeal (lift to
+// nearby tenants, weighted by `favors`), and noise (penalty to nearby homes).
+const BAR_STYLES = {
+  pub:       { name: "Pub",             tag: "PUB",  color: "#8a5a2b", draw: 1.6, appeal: 8,  noise: 2, favors: "work",
+               desc: "Casual and loud — big after-work crowds. A strong earner, but a noisy neighbour." },
+  sportsbar: { name: "Sports Bar",      tag: "🏈",   color: "#3f6f4a", draw: 1.8, appeal: 6,  noise: 3, favors: "work",
+               desc: "Game-day crowds — the highest earner, but the loudest. Keep it away from homes." },
+  lounge:    { name: "Cocktail Lounge", tag: "🍸",   color: "#3a4f66", draw: 1.4, appeal: 12, noise: 1, favors: "hotel",
+               desc: "Upscale nightlife. Earns well and pleases nearby hotel guests." },
+  winebar:   { name: "Wine Bar",        tag: "WINE", color: "#7a3450", draw: 1.0, appeal: 16, noise: 0, favors: "home",
+               desc: "Quiet and refined. Modest earnings, but lifts nearby homes — safe beside apartments." },
+};
+const DEFAULT_BAR_STYLE = "pub";
+// Effective-stat accessors: a bar reads its current style; everything else reads its TYPE.
+function barCfg(u)     { return (u.type === "bar" && BAR_STYLES[u.barStyle]) ? BAR_STYLES[u.barStyle] : null; }
+function unitDraw(u)   { const b = barCfg(u); return b ? b.draw   : (TYPES[u.type].draw   || 0); }
+function unitAppeal(u) { const b = barCfg(u); return b ? b.appeal : (TYPES[u.type].appeal || 0); }
+function unitFavors(u) { const b = barCfg(u); return b ? b.favors : TYPES[u.type].favors; }
+function unitNoise(u)  { const b = barCfg(u); return b ? b.noise  : (NOISE_EMIT[u.type] || 0); }
+function unitName(u)   { const b = barCfg(u); return b ? b.name   : TYPES[u.type].name; }
+
 // Star tier at which each build type unlocks (anything unlisted is available from the start).
 const UNLOCK_STAR = {
   elevator: 1, escalator: 1, restaurant: 1, terrace: 1, parking: 1, laundro: 1,
-  condo: 2, hotel: 2, gym: 2,
+  condo: 2, hotel: 2, gym: 2, bar: 2,
   security: 2, housekeeping: 2, maintenance: 2,
   cinema: 3, garden: 3, conference: 3, playground: 3, metro: 3, skylobby: 3,
   pool: 4, spa: 4, skybar: 4, expresselevator: 4,
@@ -1172,7 +1211,7 @@ const UNLOCK_STAR = {
 
 // Build menu, organized into collapsible sections (the Pointer is shown above them).
 const TOOL_GROUPS = [
-  { title: "Rooms",       keys: ["office","apartment","condo","hotel","shop","restaurant","cinema"] },
+  { title: "Rooms",       keys: ["office","apartment","condo","hotel","shop","restaurant","cinema","bar"] },
   { title: "Amenities",   keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference","laundro"] },
   { title: "Services",    keys: ["security","housekeeping","maintenance","storage"] },
   { title: "Transit",     keys: ["floor","stair","escalator","elevator","expresselevator","skylobby"] },
@@ -1200,6 +1239,7 @@ const TYPE_DESC = {
   hotel:     "Guests check in each evening and pay a nightly rate per room.",
   shop:      "Earns from foot traffic — the busier your tower, the bigger the sales.",
   restaurant:"Like a shop, but draws larger crowds and earns more.",
+  bar:       "Indoor drinking venue. Open the Inspect panel to set its style — Pub, Sports Bar, Cocktail Lounge or Wine Bar — each with its own earnings, appeal and noise.",
   cinema:    "Highest-draw venue. A big earner once your tower is busy.",
   terrace:   "Open-air deck. Lifts satisfaction of nearby tenants. Needs open sky above.",
   garden:    "Lush rooftop park. A strong satisfaction boost for nearby tenants. Needs open sky above.",
@@ -1727,6 +1767,25 @@ function recolorRoom(unit, color) {
   saveGame(true);
 }
 
+// Apply a bar's current style to its DOM (wall colour, art variant, corner tag).
+function applyBarStyle(unit) {
+  if (!BAR_STYLES[unit.barStyle]) unit.barStyle = DEFAULT_BAR_STYLE;
+  const s = BAR_STYLES[unit.barStyle];
+  unit.color = s.color;
+  if (unit.el) {
+    unit.el.style.setProperty("--wall", s.color);
+    unit.el.dataset.barstyle = unit.barStyle;   // CSS art keys off this
+    const tag = unit.el.querySelector(".u-tag");
+    if (tag) tag.textContent = s.tag;
+  }
+}
+function setBarStyle(unit, key) {
+  if (!BAR_STYLES[key]) return;
+  unit.barStyle = key;
+  applyBarStyle(unit);
+  saveGame(true);
+}
+
 // Hide street furniture wherever a building covers the street-level cell (row 0),
 // so lamps/trees only show in the open cells "outside" the tower. Pass a column
 // range to update just the cells a unit touches, or omit to refresh all.
@@ -1766,6 +1825,7 @@ function placeUnit(unit) {
   el.addEventListener("click", (e) => { e.stopPropagation(); onUnitClick(unit); });
   world.appendChild(el);
   unit.el = el;
+  if (unit.type === "bar") applyBarStyle(unit);   // default/saved style sets colour, art, tag
   state.units.push(unit);
   updateUnitVisual(unit);
   if (unit.row <= 0 && unit.row + unit.h - 1 >= 0)
@@ -1790,7 +1850,7 @@ function unitInnerHTML(type) {
 
 function shortLabel(type) {
   return ({office:"OFF", apartment:"APT", condo:"CONDO", hotel:"🛏", shop:"SHOP", restaurant:"REST",
-           cinema:"🎬", terrace:"⛱", garden:"🌳", pool:"POOL", playground:"PLAY", skybar:"BAR",
+           cinema:"🎬", bar:"PUB", terrace:"⛱", garden:"🌳", pool:"POOL", playground:"PLAY", skybar:"BAR",
            gym:"GYM", spa:"SPA", conference:"CONF", laundro:"🧺", security:"🛡", housekeeping:"🧹", maintenance:"🔧", storage:"📦", spire:"♛", parking:"🅿", metro:"Ⓜ",
            skylobby:"SKY", expresselevator:"▲", stair:"⇅", escalator:"⇗", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
 }
@@ -1800,7 +1860,7 @@ function onUnitClick(unit) { if (state.tool === "pointer") showInspect(unit); }
 function showInspect(unit) {
   _inspectUnit = unit;
   const t = TYPES[unit.type];
-  document.getElementById("inspectTitle").textContent = `${t.name} · floor ${unit.row}`;
+  document.getElementById("inspectTitle").textContent = `${unitName(unit)} · floor ${unit.row}`;
   const statsEl = document.getElementById("inspectStats");
   if (t.cap > 0) {
     const n = unitNeeds(unit);
@@ -1824,7 +1884,7 @@ function showInspect(unit) {
         const id = state.grid[key(c, unit.row)];
         if (!id) continue;
         const nb = state.units.find(x => x.id === id);
-        if (nb && NOISE_EMIT[nb.type]) noiseNames.push(TYPES[nb.type].name);
+        if (nb && unitNoise(nb) > 0) noiseNames.push(unitName(nb));
       }
       for (const dr of [-1, 1]) {
         const seen = new Set();
@@ -1833,7 +1893,7 @@ function showInspect(unit) {
           if (!id || seen.has(id)) continue;
           seen.add(id);
           const nb = state.units.find(x => x.id === id);
-          if (nb && NOISE_EMIT[nb.type]) noiseNames.push(TYPES[nb.type].name);
+          if (nb && unitNoise(nb) > 0) noiseNames.push(unitName(nb));
         }
       }
       const unique = [...new Set(noiseNames)];
@@ -1849,6 +1909,15 @@ function showInspect(unit) {
       if (tip) html += `<div class="need-tip">Tip: ${tip}</div>`;
     }
     statsEl.innerHTML = html;
+  } else if (unit.type === "bar") {
+    const b = BAR_STYLES[unit.barStyle] || BAR_STYLES[DEFAULT_BAR_STYLE];
+    const noiseWord = b.noise >= 3 ? "very loud" : b.noise === 2 ? "loud" : b.noise === 1 ? "quiet" : "silent";
+    statsEl.innerHTML = `<div style="white-space:normal;margin-bottom:5px">${b.desc}</div>`
+      + `<div class="needs-grid">`
+      + `<span class="need-label">Earnings</span><span class="need-val">${b.draw.toFixed(1)}× draw</span>`
+      + `<span class="need-label">Appeal to ${b.favors}</span><span class="need-val">${b.appeal}</span>`
+      + `<span class="need-label">Noise</span><span class="need-val ${b.noise >= 2 ? "bad" : b.noise === 1 ? "ok" : "good"}">${noiseWord}</span>`
+      + `</div>`;
   } else {
     let stats = "";
     if (t.appeal) stats += "Comfort: lifts nearby tenants";
@@ -1858,6 +1927,19 @@ function showInspect(unit) {
   }
   const cwrap = document.getElementById("inspectColors");
   cwrap.innerHTML = "";
+  if (unit.type === "bar") {
+    const label = document.createElement("div"); label.className = "ins-clabel"; label.textContent = "Bar style"; cwrap.appendChild(label);
+    const row = document.createElement("div"); row.className = "ins-styles";
+    Object.keys(BAR_STYLES).forEach(key => {
+      const s = BAR_STYLES[key];
+      const btn = document.createElement("button");
+      btn.className = "ins-style-btn" + (unit.barStyle === key ? " on" : "");
+      btn.innerHTML = `<span class="isb-dot" style="background:${s.color}"></span>${s.name}`;
+      btn.addEventListener("click", () => { setBarStyle(unit, key); showInspect(unit); });
+      row.appendChild(btn);
+    });
+    cwrap.appendChild(row);
+  }
   if (RECOLORABLE.has(unit.type)) {
     const cur = (unit.color || (unit.el && getComputedStyle(unit.el).getPropertyValue("--wall").trim()) || "").toLowerCase();
     const label = document.createElement("div"); label.className = "ins-clabel"; label.textContent = "Room colour"; cwrap.appendChild(label);
@@ -2183,8 +2265,9 @@ function amenityBonus(u) {
     const dx = Math.max(a.col - (u.col + u.w), u.col - (a.col + a.w), 0);
     const dy = Math.abs(a.row - u.row);
     if (dx <= 8 && dy <= 3) {
-      let appeal = at.appeal || 10;
-      if (at.favors) appeal *= (at.favors === uKind) ? 1.3 : 0.4;
+      let appeal = unitAppeal(a) || 10;              // bars read their style's appeal
+      const fav = unitFavors(a);
+      if (fav) appeal *= (fav === uKind) ? 1.3 : 0.4;
       const val = appeal * (1 - dy / 4);
       if (val > best) best = val;
     }
@@ -2248,7 +2331,7 @@ function unitNoiseHit(u) {
     const id = state.grid[key(c, u.row)];
     if (!id) continue;
     const n = state.units.find(x => x.id === id);
-    if (n) noise += (NOISE_EMIT[n.type] || 0);
+    if (n) noise += unitNoise(n);
   }
   // floors directly above and below count at half weight
   for (const dr of [-1, 1]) {
@@ -2258,7 +2341,7 @@ function unitNoiseHit(u) {
       if (!id || seen.has(id)) continue;
       seen.add(id);
       const n = state.units.find(x => x.id === id);
-      if (n) noise += (NOISE_EMIT[n.type] || 0) * 0.5;
+      if (n) noise += unitNoise(n) * 0.5;
     }
   }
   return Math.min(20, noise * 5); // penalty: 0–20 pts
@@ -2338,8 +2421,8 @@ function collectRent() {
   // shops and admission venues (rooftop bar) earn from foot traffic, scaled by draw
   // AND by how many sims actually visited this period — a well-placed, busy venue
   // earns a premium, an ignored one (poor placement, no transit nearby) earns less.
-  state.units.filter(u => TYPES[u.type].draw).forEach(u => {
-    const draw = TYPES[u.type].draw || 1;
+  state.units.filter(u => unitDraw(u) > 0).forEach(u => {
+    const draw = unitDraw(u);
     const visits = u.footfall || 0;
     const factor = 0.55 + Math.min(1, visits / 8) * 0.85;   // ~0.55 (dead) .. 1.4 (bustling)
     const nearbyPop = state.pop; // tower-wide demand
@@ -2997,7 +3080,7 @@ function movepeople() {
           if (p.purpose === "errand" || p.purpose === "visit") {
             p.dwell = 50 + Math.random() * 170;      // linger at the venue (~15-55s)
             const du = p.destUnit && state.units.find(x => x.id === p.destUnit);
-            if (du && TYPES[du.type].draw) du.footfall = (du.footfall || 0) + 1;  // a paying visit
+            if (du && unitDraw(du) > 0) du.footfall = (du.footfall || 0) + 1;  // a paying visit
           }
           p.mode = "walk"; p.goCol = null; p.destCol = null; p.destUnit = null;
         }
@@ -3556,7 +3639,7 @@ function saveGame(silent) {
     cleanliness: state.cleanliness, upkeep: state.upkeep, signText: state.signText, savedAt: Date.now(),
     units: state.units.map(u => ({
       id: u.id, type: u.type, col: u.col, row: u.row,
-      occupants: u.occupants, satisfaction: u.satisfaction, color: u.color,
+      occupants: u.occupants, satisfaction: u.satisfaction, color: u.color, barStyle: u.barStyle,
     })),
   };
   try {
@@ -3586,6 +3669,7 @@ function loadGame(silent) {
     if (!t) return;
     placeUnit({
       id: su.id, type: su.type, col: su.col, row: su.row, w: t.w, h: t.h, color: su.color,
+      barStyle: su.barStyle,
       occupants: su.occupants || 0,
       satisfaction: su.satisfaction == null ? 100 : su.satisfaction,
     });
