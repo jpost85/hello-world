@@ -716,7 +716,7 @@
   .sign-input::placeholder { color:var(--muted); text-transform:none; letter-spacing:0; font-weight:400; }
   .tower-sign {
     position:absolute; z-index:6; pointer-events:none; white-space:nowrap; line-height:1;
-    text-align:center; overflow:hidden;
+    text-align:center;   /* no overflow:hidden — it would clip the support legs (::after/::before) */
     font-family:"Arial Narrow","Segoe UI",system-ui,sans-serif; font-weight:800;
     letter-spacing:2px; text-transform:uppercase; color:#ff4d4d;
     padding:4px 8px; border-radius:3px;
@@ -725,15 +725,25 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 2px 4px rgba(0,0,0,.4);
     text-shadow: 0 1px 1px rgba(0,0,0,.6);
   }
-  /* two support struts, positioned (via --strut) to land inside the base's outer cells */
+  /* two support legs descending to the roof, positioned (via --strut) to land inside
+     the base's outer cells; --leg is their height (set to reach the roofline). */
   .tower-sign::after {
-    content:""; position:absolute; left:0; right:0; top:100%; height:9px;
+    content:""; position:absolute; left:0; right:0; top:100%; height:var(--leg,20px);
     background:linear-gradient(90deg,
       transparent 0 calc(var(--strut,30%) - 2px),
-      #4a525c calc(var(--strut,30%) - 2px) calc(var(--strut,30%) + 2px),
+      #5b6470 calc(var(--strut,30%) - 2px) calc(var(--strut,30%) - 0.5px),
+      #79838f calc(var(--strut,30%) - 0.5px) calc(var(--strut,30%) + 0.5px),
+      #4a525c calc(var(--strut,30%) + 0.5px) calc(var(--strut,30%) + 2px),
       transparent calc(var(--strut,30%) + 2px) calc(100% - var(--strut,30%) - 2px),
-      #4a525c calc(100% - var(--strut,30%) - 2px) calc(100% - var(--strut,30%) + 2px),
+      #5b6470 calc(100% - var(--strut,30%) - 2px) calc(100% - var(--strut,30%) - 0.5px),
+      #79838f calc(100% - var(--strut,30%) - 0.5px) calc(100% - var(--strut,30%) + 0.5px),
+      #4a525c calc(100% - var(--strut,30%) + 0.5px) calc(100% - var(--strut,30%) + 2px),
       transparent calc(100% - var(--strut,30%) + 2px));
+  }
+  /* a base beam where the legs meet the roof, spanning between them */
+  .tower-sign::before {
+    content:""; position:absolute; top:100%; left:var(--strut,30%); right:var(--strut,30%);
+    margin-top:calc(var(--leg,20px) - 3px); height:3px; background:#4a525c; border-radius:1px;
   }
   #app.night .tower-sign {
     color:#ff6b6b;
@@ -3243,9 +3253,11 @@ function layoutSign() {
   }
   // struts sit half a cell inside each building edge (i.e. inside the outer cells)
   signEl.style.setProperty("--strut", (1.5 * CELL_W / signW * 100).toFixed(2) + "%");
+  const LEG = 20;                                                              // leg height (sign floats this far above the roof)
+  signEl.style.setProperty("--leg", LEG + "px");
   const centerX = (minCol + maxCol) / 2 * CELL_W;
   signEl.style.left = (centerX - signW / 2) + "px";                            // centered over the roof
-  signEl.style.top = (rowTop(topRow) - signEl.offsetHeight - 9) + "px";        // struts rest on the roof
+  signEl.style.top = (rowTop(topRow) - signEl.offsetHeight - LEG) + "px";      // legs reach down to the roof
 }
 
 // The lobby is many 1-wide cells; show a single label centered over the whole run.
