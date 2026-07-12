@@ -259,7 +259,7 @@
     font-size:9px; font-weight:700; letter-spacing:3px; color:rgba(0,0,0,.5);
     text-shadow:0 1px 0 rgba(255,255,255,.25);
   }
-  .unit-shop .u-tag, .unit-restaurant .u-tag, .unit-cinema .u-tag, .unit-bar .u-tag {
+  .unit-shop .u-tag, .unit-restaurant .u-tag, .unit-cinema .u-tag, .unit-bar .u-tag, .unit-concert .u-tag {
     top:auto; bottom:4px; color: rgba(255,255,255,.85); text-shadow:0 1px 1px rgba(0,0,0,.6);
   }
   .u-vac {
@@ -448,6 +448,31 @@
       linear-gradient(180deg, color-mix(in srgb, var(--wall) 78%, #000), var(--wall));         /* back wall */
   }
   .unit-bar.lit .u-face { filter: brightness(1.12) saturate(1.06); }
+  /* Concert Hall — a dark stage with a red curtain valance; lights up while a band plays. */
+  .unit-concert { --wall:#2a2040; }
+  .unit-concert .u-face {
+    background:
+      linear-gradient(180deg, #7d2233 0 5px, #5a1522 5px 8px, transparent 8px) no-repeat 0 0 / 100% 100%,  /* curtain valance */
+      linear-gradient(180deg, #40301f 0 3px, #24190f 3px 100%) no-repeat 0 100% / 100% 9px,                /* stage floor */
+      linear-gradient(180deg, #2a2040, #352a54);                                                            /* back wall */
+  }
+  .unit-concert.playing .u-face {
+    background:
+      radial-gradient(circle at 22% 34%, rgba(255,90,120,.5) 0 10%, transparent 26%),
+      radial-gradient(circle at 50% 24%, rgba(120,160,255,.5) 0 10%, transparent 26%),
+      radial-gradient(circle at 78% 34%, rgba(110,255,180,.45) 0 10%, transparent 26%),
+      linear-gradient(180deg, #7d2233 0 5px, #5a1522 5px 8px, transparent 8px) no-repeat 0 0 / 100% 100%,
+      linear-gradient(180deg, #40301f 0 3px, #24190f 3px 100%) no-repeat 0 100% / 100% 9px,
+      linear-gradient(180deg, #2a2040, #352a54);
+    filter: brightness(1.12);
+  }
+  .unit-concert .marquee {
+    position:absolute; left:6px; right:6px; top:12px; height:12px; z-index:4;
+    display:none; align-items:center; justify-content:center;
+    font-size:8px; font-weight:800; letter-spacing:.2px; color:#ffe9a8;
+    text-shadow:0 0 5px rgba(255,180,80,.95); white-space:nowrap; overflow:hidden;
+  }
+  .unit-concert.playing .marquee { display:flex; }
   .unit-laundro { --wall:#dbeef0; }
   .unit-storage { --wall:#cfc6b0; }
   .unit-storage .u-face {
@@ -886,6 +911,14 @@
     background:var(--panel-2); color:var(--text); border:2px solid #000; border-radius:6px; font-size:12px; font-weight:600; }
   .ins-style-btn.on { outline:2px solid var(--accent); background:#36495b; }
   .isb-dot { width:11px; height:11px; border-radius:50%; border:1px solid rgba(0,0,0,.5); flex:0 0 auto; }
+  .ins-bands { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+  .ins-band-btn { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 10px; cursor:pointer;
+    background:var(--panel-2); color:var(--text); border:2px solid #000; border-radius:6px; font-size:12px; font-weight:600; text-align:left; }
+  .ins-band-btn .bb-name { display:flex; flex-direction:column; line-height:1.25; }
+  .ins-band-btn .bb-genre { font-size:10px; font-weight:400; color:var(--muted); }
+  .ins-band-btn .bb-cost { font-size:11px; color:var(--accent); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .ins-band-btn.disabled { opacity:.45; }
+  .ins-band-now { margin-top:6px; font-size:13px; }
   .ins-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
   .saves-card { width:min(94%,360px); }
   .saves-title { font-weight:700; font-size:15px; margin-bottom:10px; }
@@ -1153,6 +1186,7 @@ const TYPES = {
   restaurant:{ name: "Restaurant",  cost: 35000, w: 3, h: 1, color: "#f08c8c", income: 0,    cap: 0,  kind: "shop", draw: 1.3 },
   cinema:    { name: "Cinema",      cost: 70000, w: 4, h: 1, color: "#b08be0", income: 0,    cap: 0,  kind: "shop", draw: 2.5 },
   bar:       { name: "Bar",         cost: 32000, w: 3, h: 1, color: "#8a5a2b", income: 0,    cap: 0,  kind: "amenity", bar: true },  // indoor drinking venue; style set in Inspect (draw/appeal/noise vary)
+  concert:   { name: "Concert Hall",cost: 85000, w: 5, h: 1, color: "#2a2040", income: 0,    cap: 0,  kind: "shop", concert: true },  // book live acts in Inspect; big gate revenue for a few nights
   terrace:   { name: "Terrace",     cost: 20000, w: 3, h: 1, color: "#cbb083", income: 0,    cap: 0,  kind: "outdoor", appeal: 12 },
   garden:    { name: "Sky Garden",  cost: 45000, w: 4, h: 1, color: "#6cae54", income: 0,    cap: 0,  kind: "outdoor", appeal: 20 },
   pool:      { name: "Pool",        cost: 55000, w: 3, h: 1, color: "#4cb6e0", income: 0,    cap: 0,  kind: "outdoor", appeal: 22 },
@@ -1191,12 +1225,24 @@ const BAR_STYLES = {
                desc: "Quiet and refined. Modest earnings, but lifts nearby homes — safe beside apartments." },
 };
 const DEFAULT_BAR_STYLE = "pub";
+
+// Live acts the player can book into a Concert Hall. Booking costs `cost` up front;
+// the band plays `days` nights, each paying a gate that scales with tower population
+// and the band's `pull`, plus a `rep` reputation bump. Bigger acts = bigger risk/reward.
+const BANDS = {
+  locals:    { name: "The Locals",        emoji: "🎸", genre: "garage rock", cost: 8000,  days: 2, pull: 0.7, rep: 0.05 },
+  indie:     { name: "Paper Lanterns",    emoji: "🎶", genre: "indie",       cost: 18000, days: 2, pull: 1.1, rep: 0.10 },
+  jazz:      { name: "The Blue Notes",    emoji: "🎷", genre: "jazz",         cost: 26000, days: 3, pull: 1.3, rep: 0.14 },
+  dj:        { name: "DJ Volt",           emoji: "🎧", genre: "electronic",   cost: 34000, days: 2, pull: 1.7, rep: 0.12 },
+  headliner: { name: "Nova & the Comets", emoji: "🌟", genre: "stadium pop",  cost: 60000, days: 3, pull: 2.4, rep: 0.25 },
+};
+function concertGate(band) { return Math.round((4000 + state.pop * 100) * band.pull); }
 // Effective-stat accessors: a bar reads its current style; everything else reads its TYPE.
 function barCfg(u)     { return (u.type === "bar" && BAR_STYLES[u.barStyle]) ? BAR_STYLES[u.barStyle] : null; }
 function unitDraw(u)   { const b = barCfg(u); return b ? b.draw   : (TYPES[u.type].draw   || 0); }
 function unitAppeal(u) { const b = barCfg(u); return b ? b.appeal : (TYPES[u.type].appeal || 0); }
 function unitFavors(u) { const b = barCfg(u); return b ? b.favors : TYPES[u.type].favors; }
-function unitNoise(u)  { const b = barCfg(u); return b ? b.noise  : (NOISE_EMIT[u.type] || 0); }
+function unitNoise(u)  { const b = barCfg(u); if (b) return b.noise; if (u.type === "concert") return u.show ? 3 : 1; return NOISE_EMIT[u.type] || 0; }
 function unitName(u)   { const b = barCfg(u); return b ? b.name   : TYPES[u.type].name; }
 
 // Star tier at which each build type unlocks (anything unlisted is available from the start).
@@ -1204,14 +1250,14 @@ const UNLOCK_STAR = {
   elevator: 1, escalator: 1, restaurant: 1, terrace: 1, parking: 1, laundro: 1,
   condo: 2, hotel: 2, gym: 2, bar: 2,
   security: 2, housekeeping: 2, maintenance: 2,
-  cinema: 3, garden: 3, conference: 3, playground: 3, metro: 3, skylobby: 3,
+  cinema: 3, garden: 3, conference: 3, playground: 3, metro: 3, skylobby: 3, concert: 3,
   pool: 4, spa: 4, skybar: 4, expresselevator: 4,
   spire: 5,
 };
 
 // Build menu, organized into collapsible sections (the Pointer is shown above them).
 const TOOL_GROUPS = [
-  { title: "Rooms",       keys: ["office","apartment","condo","hotel","shop","restaurant","cinema","bar"] },
+  { title: "Rooms",       keys: ["office","apartment","condo","hotel","shop","restaurant","cinema","bar","concert"] },
   { title: "Amenities",   keys: ["terrace","garden","pool","playground","skybar","gym","spa","conference","laundro"] },
   { title: "Services",    keys: ["security","housekeeping","maintenance","storage"] },
   { title: "Transit",     keys: ["floor","stair","escalator","elevator","expresselevator","skylobby"] },
@@ -1240,6 +1286,7 @@ const TYPE_DESC = {
   shop:      "Earns from foot traffic — the busier your tower, the bigger the sales.",
   restaurant:"Like a shop, but draws larger crowds and earns more.",
   bar:       "Indoor drinking venue. Open the Inspect panel to set its style — Pub, Sports Bar, Cocktail Lounge or Wine Bar — each with its own earnings, appeal and noise.",
+  concert:   "Live-music venue. Open the Inspect panel to book a band — they play a few nights for a big gate and a reputation boost. Loud during shows, so keep it clear of homes.",
   cinema:    "Highest-draw venue. A big earner once your tower is busy.",
   terrace:   "Open-air deck. Lifts satisfaction of nearby tenants. Needs open sky above.",
   garden:    "Lush rooftop park. A strong satisfaction boost for nearby tenants. Needs open sky above.",
@@ -1786,6 +1833,43 @@ function setBarStyle(unit, key) {
   saveGame(true);
 }
 
+// Concert hall: show the current act on its marquee and light it up while playing.
+function updateConcertVisual(unit) {
+  if (!unit.el) return;
+  const playing = !!unit.show;
+  unit.el.classList.toggle("playing", playing);
+  const mq = unit.el.querySelector(".marquee");
+  if (mq) mq.textContent = playing ? `${BANDS[unit.show.band].emoji} ${BANDS[unit.show.band].name}` : "";
+}
+function bookBand(unit, key) {
+  const band = BANDS[key];
+  if (!band || unit.show) return;
+  if (state.cash < band.cost) { toast("Not enough cash to book that act."); sfx("error"); return; }
+  state.cash -= band.cost;
+  unit.show = { band: key, daysLeft: band.days };
+  updateConcertVisual(unit);
+  sfx("bonus");
+  log(`🎫 Booked ${band.emoji} ${band.name} at floor ${unit.row} for ${band.days} night${band.days > 1 ? "s" : ""} (&minus;$${band.cost.toLocaleString()}).`, "good");
+  refreshStats(); saveGame(true);
+}
+// Nightly: each hall with a booked act pays its gate + a reputation bump, counting down.
+function runConcerts() {
+  state.units.forEach(u => {
+    if (u.type !== "concert" || !u.show) return;
+    const band = BANDS[u.show.band];
+    if (!band) { u.show = null; updateConcertVisual(u); return; }
+    const gate = concertGate(band);
+    state.cash += gate;
+    state.reputation = Math.min(0.5, state.reputation + band.rep);
+    log(`🎤 ${band.emoji} ${band.name} played the Concert Hall on floor ${u.row}: gate +$${gate.toLocaleString()}`, "good");
+    if (--u.show.daysLeft <= 0) {
+      u.show = null;
+      log(`🎶 The run at floor ${u.row} wrapped — book another act.`, "");
+    }
+    updateConcertVisual(u);
+  });
+}
+
 // Hide street furniture wherever a building covers the street-level cell (row 0),
 // so lamps/trees only show in the open cells "outside" the tower. Pass a column
 // range to update just the cells a unit touches, or omit to refresh all.
@@ -1826,6 +1910,7 @@ function placeUnit(unit) {
   world.appendChild(el);
   unit.el = el;
   if (unit.type === "bar") applyBarStyle(unit);   // default/saved style sets colour, art, tag
+  if (unit.type === "concert") updateConcertVisual(unit);   // reflect any booked act (e.g. from a save)
   state.units.push(unit);
   updateUnitVisual(unit);
   if (unit.row <= 0 && unit.row + unit.h - 1 >= 0)
@@ -1845,12 +1930,13 @@ function unitInnerHTML(type) {
     : `<div class="fe-left"></div><div class="fe-right"></div><div class="fe-base"></div><div class="fe-top"></div>`;
   // serviceable rooms carry a small state badge (roaches / disrepair) set by applyRoomState
   const stateBadge = (t.kind === "work" || t.kind === "home" || t.kind === "hotel" || t.kind === "shop") ? `<div class="u-state"></div>` : "";
-  return `<div class="u-face"></div><div class="u-extra"></div>${tag}${vac}<div class="occ"></div>${facade}${stateBadge}`;
+  const marquee = (type === "concert") ? `<div class="marquee"></div>` : "";
+  return `<div class="u-face"></div><div class="u-extra"></div>${tag}${vac}<div class="occ"></div>${facade}${stateBadge}${marquee}`;
 }
 
 function shortLabel(type) {
   return ({office:"OFF", apartment:"APT", condo:"CONDO", hotel:"🛏", shop:"SHOP", restaurant:"REST",
-           cinema:"🎬", bar:"PUB", terrace:"⛱", garden:"🌳", pool:"POOL", playground:"PLAY", skybar:"BAR",
+           cinema:"🎬", bar:"PUB", concert:"🎤", terrace:"⛱", garden:"🌳", pool:"POOL", playground:"PLAY", skybar:"BAR",
            gym:"GYM", spa:"SPA", conference:"CONF", laundro:"🧺", security:"🛡", housekeeping:"🧹", maintenance:"🔧", storage:"📦", spire:"♛", parking:"🅿", metro:"Ⓜ",
            skylobby:"SKY", expresselevator:"▲", stair:"⇅", escalator:"⇗", elevator:"▮", floor:"", lobby:"LOBBY"})[type] || type;
 }
@@ -1918,6 +2004,15 @@ function showInspect(unit) {
       + `<span class="need-label">Appeal to ${b.favors}</span><span class="need-val">${b.appeal}</span>`
       + `<span class="need-label">Noise</span><span class="need-val ${b.noise >= 2 ? "bad" : b.noise === 1 ? "ok" : "good"}">${noiseWord}</span>`
       + `</div>`;
+  } else if (unit.type === "concert") {
+    if (unit.show) {
+      const band = BANDS[unit.show.band];
+      statsEl.innerHTML = `<div style="white-space:normal">🎤 <b>Now playing</b></div>`
+        + `<div style="white-space:normal;margin-top:3px"><b>${band.emoji} ${band.name}</b> · ${band.genre}</div>`
+        + `<div class="need-tip">${unit.show.daysLeft} night${unit.show.daysLeft > 1 ? "s" : ""} left · gate ~$${concertGate(band).toLocaleString()}/night</div>`;
+    } else {
+      statsEl.innerHTML = `<div style="white-space:normal">Book a live act below — they draw crowds for a few nights for a big gate and a reputation boost. Loud while playing, so keep it away from homes.</div>`;
+    }
   } else {
     let stats = "";
     if (t.appeal) stats += "Comfort: lifts nearby tenants";
@@ -1939,6 +2034,29 @@ function showInspect(unit) {
       row.appendChild(btn);
     });
     cwrap.appendChild(row);
+  }
+  if (unit.type === "concert") {
+    const label = document.createElement("div"); label.className = "ins-clabel";
+    label.textContent = unit.show ? "Now playing" : "Book a live act"; cwrap.appendChild(label);
+    if (unit.show) {
+      const b = BANDS[unit.show.band];
+      const note = document.createElement("div"); note.className = "ins-band-now";
+      note.innerHTML = `${b.emoji} <b>${b.name}</b> — ${unit.show.daysLeft} night${unit.show.daysLeft > 1 ? "s" : ""} left`;
+      cwrap.appendChild(note);
+    } else {
+      const list = document.createElement("div"); list.className = "ins-bands";
+      Object.keys(BANDS).forEach(key => {
+        const band = BANDS[key];
+        const afford = state.cash >= band.cost;
+        const btn = document.createElement("button");
+        btn.className = "ins-band-btn" + (afford ? "" : " disabled");
+        btn.innerHTML = `<span class="bb-name">${band.emoji} ${band.name}<span class="bb-genre">${band.genre}</span></span>`
+          + `<span class="bb-cost">$${(band.cost / 1000)}k · ${band.days}n</span>`;
+        btn.addEventListener("click", () => { bookBand(unit, key); showInspect(unit); });
+        list.appendChild(btn);
+      });
+      cwrap.appendChild(list);
+    }
   }
   if (RECOLORABLE.has(unit.type)) {
     const cur = (unit.color || (unit.el && getComputedStyle(unit.el).getPropertyValue("--wall").trim()) || "").toLowerCase();
@@ -3389,6 +3507,7 @@ function advanceMinute() {
     state.minutes = 0;
     state.day++;
     collectRent();
+    runConcerts();      // pay out any booked shows and count them down
     recomputeStars();
     if (state.frustration > 8) log("⏳ Long elevator waits are frustrating tenants — add transit capacity!", "bad");
     if (state.cleanliness < 55) log("🧹 The tower is getting dirty — build Housekeeping.", "bad");
@@ -3639,7 +3758,7 @@ function saveGame(silent) {
     cleanliness: state.cleanliness, upkeep: state.upkeep, signText: state.signText, savedAt: Date.now(),
     units: state.units.map(u => ({
       id: u.id, type: u.type, col: u.col, row: u.row,
-      occupants: u.occupants, satisfaction: u.satisfaction, color: u.color, barStyle: u.barStyle,
+      occupants: u.occupants, satisfaction: u.satisfaction, color: u.color, barStyle: u.barStyle, show: u.show,
     })),
   };
   try {
@@ -3669,7 +3788,7 @@ function loadGame(silent) {
     if (!t) return;
     placeUnit({
       id: su.id, type: su.type, col: su.col, row: su.row, w: t.w, h: t.h, color: su.color,
-      barStyle: su.barStyle,
+      barStyle: su.barStyle, show: su.show,
       occupants: su.occupants || 0,
       satisfaction: su.satisfaction == null ? 100 : su.satisfaction,
     });
