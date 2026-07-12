@@ -707,6 +707,33 @@
   }
   .facade-deco .fe-base { height:6px; background: linear-gradient(180deg, #4a4a52 0 2px, #303036 2px); }
 
+  /* Rooftop billboard — custom text on the tower's roof (lives in world space). */
+  .sign-input {
+    flex:1; width:100%; min-width:0; background:var(--panel-2); color:var(--text);
+    border:2px solid #000; border-radius:6px; padding:6px 8px; font-size:13px;
+    font-weight:700; letter-spacing:1px; text-transform:uppercase; font-family:inherit;
+  }
+  .sign-input::placeholder { color:var(--muted); text-transform:none; letter-spacing:0; font-weight:400; }
+  .tower-sign {
+    position:absolute; z-index:6; pointer-events:none; white-space:nowrap; line-height:1;
+    font-family:"Arial Narrow","Segoe UI",system-ui,sans-serif; font-weight:800;
+    letter-spacing:2px; text-transform:uppercase; color:#ff4d4d;
+    padding:4px 10px; border-radius:3px;
+    background:linear-gradient(180deg, rgba(26,32,40,.82), rgba(16,20,26,.9));
+    border:1px solid rgba(0,0,0,.5);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 2px 4px rgba(0,0,0,.4);
+    text-shadow: 0 1px 1px rgba(0,0,0,.6);
+  }
+  .tower-sign::after {   /* two support struts down to the roof */
+    content:""; position:absolute; left:14%; right:14%; top:100%; height:9px;
+    background:linear-gradient(90deg, transparent 0 8%, #4a525c 8% 13%, transparent 13% 87%, #4a525c 87% 92%, transparent 92%);
+  }
+  #app.night .tower-sign {
+    color:#ff6b6b;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 2px 4px rgba(0,0,0,.5), 0 0 10px rgba(255,60,60,.35);
+    text-shadow: 0 0 6px rgba(255,70,70,.9), 0 0 12px rgba(255,50,50,.55), 0 1px 1px rgba(0,0,0,.5);
+  }
+
   /* ---------- Sky backdrop ---------- */
   /* City backdrop image (stretched to the canvas) + a day/night tint over it */
   #cityBg {
@@ -956,6 +983,11 @@
       <button class="btn" data-facade="deco">Deco</button>
     </div>
 
+    <div class="section-title">Rooftop Sign</div>
+    <div class="controls">
+      <input id="signInput" class="sign-input" type="text" maxlength="16" placeholder="e.g. EMPIRE" autocomplete="off" spellcheck="false">
+    </div>
+
     <div class="section-title">Game</div>
     <div class="controls">
       <button class="btn" id="btnSave">Save</button>
@@ -1200,6 +1232,7 @@ const state = {
   reputation: 0,    // temporary appeal modifier from VIP inspections / events (decays)
   cleanliness: 100, // tower-wide; falls as population outgrows housekeeping
   upkeep: 100,      // tower-wide; falls as the building outgrows maintenance
+  signText: "",     // custom rooftop billboard text (empty = no sign)
 };
 
 const ROLE_COLOR = { work: "#5b8def", home: "#56c271", hotel: "#d9b36b", visitor: "#b4bfca" };
@@ -3163,6 +3196,35 @@ function rebuildFacade() {
     u.el.classList.toggle("edge-right", right);
     u.el.classList.toggle("edge-base", u.row === 0);
   }
+  layoutSign();   // the roofline may have changed — reposition the billboard
+}
+
+// The rooftop billboard. Lives in world space (scales/scrolls with the tower), and
+// sits centered above the tallest above-ground units. Reflowed by rebuildFacade().
+let signEl = null;
+function layoutSign() {
+  const txt = (state.signText || "").trim();
+  if (!signEl) {
+    signEl = document.createElement("div");
+    signEl.id = "towerSign"; signEl.className = "tower-sign";
+    world.appendChild(signEl);
+  }
+  if (!txt || !state.units.length) { signEl.style.display = "none"; return; }
+  let minCol = Infinity, maxCol = -Infinity, topRow = -Infinity;
+  for (const u of state.units) {
+    if (u.row < 0) continue;                 // basements don't count toward the roofline
+    if (u.col < minCol) minCol = u.col;
+    if (u.col + u.w > maxCol) maxCol = u.col + u.w;
+    if (u.row > topRow) topRow = u.row;
+  }
+  if (topRow === -Infinity) { signEl.style.display = "none"; return; }  // only basements built
+  signEl.style.display = "";
+  signEl.textContent = txt;
+  const widthPx = (maxCol - minCol) * CELL_W;
+  signEl.style.fontSize = Math.max(15, Math.min(28, widthPx * 0.16)) + "px";   // scale to building width
+  const centerX = (minCol + maxCol) / 2 * CELL_W;
+  signEl.style.left = (centerX - signEl.offsetWidth / 2) + "px";               // centered over the roof
+  signEl.style.top = (rowTop(topRow) - signEl.offsetHeight - 9) + "px";        // struts rest on the roof
 }
 
 // The lobby is many 1-wide cells; show a single label centered over the whole run.
@@ -3458,7 +3520,7 @@ function saveGame(silent) {
   const data = {
     cash: state.cash, pop: state.pop, day: state.day, minutes: state.minutes,
     stars: state.stars, nextId: state.nextId, won: state.won, keepBuilding: state.keepBuilding,
-    cleanliness: state.cleanliness, upkeep: state.upkeep, savedAt: Date.now(),
+    cleanliness: state.cleanliness, upkeep: state.upkeep, signText: state.signText, savedAt: Date.now(),
     units: state.units.map(u => ({
       id: u.id, type: u.type, col: u.col, row: u.row,
       occupants: u.occupants, satisfaction: u.satisfaction, color: u.color,
@@ -3484,6 +3546,8 @@ function loadGame(silent) {
   state.keepBuilding = !!d.keepBuilding;
   state.cleanliness = d.cleanliness == null ? 100 : d.cleanliness;
   state.upkeep = d.upkeep == null ? 100 : d.upkeep;
+  state.signText = d.signText || "";
+  { const si = document.getElementById("signInput"); if (si) si.value = state.signText; }
   (d.units || []).forEach(su => {
     const t = TYPES[su.type];
     if (!t) return;
@@ -3565,6 +3629,17 @@ function closeSaves() { document.getElementById("saves").classList.remove("show"
 
 document.getElementById("btnSave").addEventListener("click", openSaves);
 document.getElementById("btnLoad").addEventListener("click", openSaves);
+{
+  const signInput = document.getElementById("signInput");
+  if (signInput) {
+    signInput.value = state.signText || "";
+    signInput.addEventListener("input", () => {
+      state.signText = signInput.value.slice(0, 16);
+      layoutSign();
+      saveGame(true);
+    });
+  }
+}
 document.getElementById("savesClose").addEventListener("click", closeSaves);
 document.getElementById("saves").addEventListener("click", (e) => { if (e.target.id === "saves") closeSaves(); });
 document.getElementById("btnNew").addEventListener("click", newGame);
