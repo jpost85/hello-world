@@ -1,0 +1,21 @@
+{
+  "name": "sheets-modification-notifier",
+  "version": "1.0.0",
+  "description": "Web tool that watches Google Sheets and sends a text (or email) notification whenever one is modified.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "googleapis": "^144.0.0",
+    "nodemailer": "^6.9.14",
+    "twilio": "^5.3.0"
+  }
+}

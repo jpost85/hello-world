@@ -1,0 +1,7 @@
+node_modules/
+.env
+data/store.json
+*.log
+# Google service-account credentials should never be committed
+credentials*.json
+service-account*.json

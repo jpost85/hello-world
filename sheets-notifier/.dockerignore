@@ -1,0 +1,8 @@
+node_modules
+npm-debug.log
+.env
+data/store.json
+*.log
+service-account*.json
+credentials*.json
+.git
