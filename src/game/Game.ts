@@ -1,5 +1,5 @@
 import type { Difficulty, GameState, Vec2 } from "../types";
-import { GRAVITY, MAX_WIND, TIMESTEP, launchVelocity } from "./Physics";
+import { GRAVITY, MAX_WIND, TIMESTEP, launchVelocity, maxSpeedFor } from "./Physics";
 import { Terrain, makeRng } from "./Terrain";
 import { Tank, TANK_BODY_H, TANK_HIT_RADIUS } from "./Tank";
 import { Projectile } from "./Projectile";
@@ -49,6 +49,8 @@ export class Game {
   shake = 0;
 
   wind = 0;
+  /** Launch speed at full power, derived from field width (aspect-aware). */
+  maxSpeed: number;
   round = 0;
   config: MatchConfig = { opponents: 1, difficulty: "normal", rounds: 5 };
 
@@ -76,7 +78,61 @@ export class Game {
   constructor(width: number, height: number) {
     this.width = width;
     this.height = height;
+    this.maxSpeed = maxSpeedFor(width);
     this.terrain = new Terrain(width, height);
+  }
+
+  /**
+   * Adapt to a new viewport (resize / rotation). Resamples the terrain to the
+   * new width and rescales every entity so the match continues seamlessly at
+   * the new aspect ratio — no letterboxing, no restart.
+   */
+  resize(width: number, height: number): void {
+    if (width === this.width && height === this.height) return;
+    const sx = width / this.width;
+    const sy = height / this.height;
+
+    // Resample the height-map to the new column count.
+    const old = this.terrain;
+    const next = new Terrain(width, height);
+    for (let x = 0; x < width; x++) {
+      const srcX = Math.min(old.width - 1, Math.round(x / sx));
+      next.surface[x] = old.surface[srcX] * sy;
+    }
+    this.terrain = next;
+
+    this.width = width;
+    this.height = height;
+    this.maxSpeed = maxSpeedFor(width);
+
+    for (const t of this.tanks) {
+      t.x *= sx;
+      t.y *= sy;
+      t.settle(this.terrain);
+    }
+    for (const p of this.projectiles) {
+      p.pos.x *= sx;
+      p.pos.y *= sy;
+      p.vel.x *= sx;
+      p.vel.y *= sy;
+      for (const pt of p.trail) {
+        pt.x *= sx;
+        pt.y *= sy;
+      }
+    }
+    for (const pt of this.particles.items) {
+      pt.x *= sx;
+      pt.y *= sy;
+      pt.vx *= sx;
+      pt.vy *= sy;
+    }
+    for (const e of this.explosions) {
+      e.x *= sx;
+      e.y *= sy;
+      e.r *= sx;
+      e.maxR *= sx;
+    }
+    this.recomputeAim();
   }
 
   // ---------------------------------------------------------------- lifecycle
@@ -171,7 +227,7 @@ export class Game {
     this.recomputeAim();
 
     if (t.isAI) {
-      this.pendingShot = planShot(t, this.enemiesOf(t), this.terrain, this.wind, this.rng);
+      this.pendingShot = planShot(t, this.enemiesOf(t), this.terrain, this.wind, this.rng, this.maxSpeed);
       this.aiTimer = 0.85;
     } else {
       this.pendingShot = null;
@@ -216,7 +272,7 @@ export class Game {
     t.consumeSelected();
 
     const muzzle = t.muzzle();
-    const vel = launchVelocity(t.angle, t.power);
+    const vel = launchVelocity(t.angle, t.power, this.maxSpeed);
     this.projectiles.push(new Projectile(muzzle, vel, weapon, t.id));
     this.aimLine = [];
     this.onSound?.("fire");
@@ -502,7 +558,7 @@ export class Game {
 
   private simulatePath(t: Tank): Vec2[] {
     const start = t.muzzle();
-    const v = launchVelocity(t.angle, t.power);
+    const v = launchVelocity(t.angle, t.power, this.maxSpeed);
     let x = start.x;
     let y = start.y;
     let vx = v.x;

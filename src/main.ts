@@ -1,6 +1,7 @@
 import "./styles.css";
 import { Game, type MatchConfig } from "./game/Game";
 import { makeRng } from "./game/Terrain";
+import { WORLD_HEIGHT } from "./game/Physics";
 import { Renderer } from "./render/Renderer";
 import { TouchControls } from "./input/TouchControls";
 import { Hud } from "./ui/Hud";
@@ -10,25 +11,42 @@ import { Sound } from "./audio/Sound";
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const uiRoot = document.getElementById("ui") as HTMLElement;
 
-// Fixed drawing buffer chosen at load; the element is scaled to fit the
-// viewport (preserving aspect) on resize/rotate.
-const dpr = Math.min(window.devicePixelRatio || 1, 2);
-const cssW = window.innerWidth;
-const cssH = window.innerHeight;
-canvas.width = Math.round(cssW * dpr);
-canvas.height = Math.round(cssH * dpr);
-
-function fitToViewport(): void {
-  const scale = Math.min(window.innerWidth / cssW, window.innerHeight / cssH);
-  canvas.style.width = `${cssW * scale}px`;
-  canvas.style.height = `${cssH * scale}px`;
+/** Virtual world width for the current viewport: fixed height, aspect-matched. */
+function worldWidthFor(vw: number, vh: number): number {
+  return Math.max(240, Math.round(WORLD_HEIGHT * (vw / vh)));
 }
-fitToViewport();
-window.addEventListener("resize", fitToViewport);
-window.addEventListener("orientationchange", fitToViewport);
 
-const game = new Game(canvas.width, canvas.height);
+/**
+ * Size the canvas buffer to the viewport (capped DPI for perf) and return the
+ * matching virtual world dimensions. The buffer fills the screen exactly, so
+ * there is never any letterboxing — the world just gets wider or narrower.
+ */
+function sizeCanvas(): { w: number; h: number } {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  canvas.width = Math.max(1, Math.round(vw * dpr));
+  canvas.height = Math.max(1, Math.round(vh * dpr));
+  canvas.style.width = `${vw}px`;
+  canvas.style.height = `${vh}px`;
+  return { w: worldWidthFor(vw, vh), h: WORLD_HEIGHT };
+}
+
+const initial = sizeCanvas();
+const game = new Game(initial.w, initial.h);
 game.terrain.generate(makeRng(Date.now() >>> 0)); // backdrop behind the menu
+
+// Re-fit on resize / rotation: rescale the buffer and reflow the live match.
+let resizeTimer = 0;
+function onViewportChange(): void {
+  window.clearTimeout(resizeTimer);
+  resizeTimer = window.setTimeout(() => {
+    const { w, h } = sizeCanvas();
+    game.resize(w, h);
+  }, 80);
+}
+window.addEventListener("resize", onViewportChange);
+window.addEventListener("orientationchange", onViewportChange);
 
 const sound = new Sound();
 // Browsers require a user gesture before audio can start.

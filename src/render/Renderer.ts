@@ -9,25 +9,30 @@ import {
 /** Draws the battlefield to the canvas. All UI chrome lives in the DOM. */
 export class Renderer {
   ctx: CanvasRenderingContext2D;
+  private canvas: HTMLCanvasElement;
 
   constructor(canvas: HTMLCanvasElement) {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("2D canvas context unavailable");
     this.ctx = ctx;
+    this.canvas = canvas;
   }
 
   render(game: Game): void {
     const { ctx } = this;
     const { width, height } = game;
 
-    ctx.save();
-    // Screen shake: jitter the whole battlefield while shake decays.
+    // Map the virtual world (game.width × game.height units) onto the full
+    // device-pixel buffer, so everything is authored in consistent units and
+    // fills the screen crisply at any DPI or aspect ratio.
+    const sx = this.canvas.width / width;
+    const sy = this.canvas.height / height;
+    ctx.setTransform(sx, 0, 0, sy, 0, 0);
+
+    // Screen shake: jitter the whole battlefield (in world units) while it decays.
     if (game.shake > 0) {
       const s = game.shake;
-      ctx.translate(
-        (Math.random() * 2 - 1) * s,
-        (Math.random() * 2 - 1) * s,
-      );
+      ctx.translate((Math.random() * 2 - 1) * s, (Math.random() * 2 - 1) * s);
     }
 
     this.drawSky(width, height);
@@ -39,8 +44,6 @@ export class Renderer {
     for (const p of game.projectiles) this.drawProjectile(p);
     this.drawParticles(game);
     for (const e of game.explosions) this.drawExplosion(e);
-
-    ctx.restore();
   }
 
   private drawParticles(game: Game): void {

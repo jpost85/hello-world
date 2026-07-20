@@ -99,5 +99,11 @@ damage). The AI buys defences between rounds too.
 Shipping: installable **PWA** (fullscreen, offline app-shell precache) and an
 automated **GitHub Pages** deploy on push to the default branch.
 
+Responsive: a virtual coordinate system (fixed-height world, aspect-matched
+width) renders scaled-to-fill on any screen — **no letterboxing**, consistent
+element sizes at any DPI. Live resize/rotation reflows the match, physics scales
+with field width so portrait and landscape both play well, and controls use
+44px touch targets, safe-area insets, and a compact layout on short screens.
+
 Planned next: smarter AI weapon selection, optional local hotseat play, and a
 deeper arsenal (rollers, tracers, napalm) with wall behaviours.

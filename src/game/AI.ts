@@ -32,6 +32,7 @@ export function planShot(
   terrain: Terrain,
   wind: number,
   rng: () => number,
+  maxSpeed: number,
 ): Shot | null {
   const targets = enemies.filter((t) => t.alive);
   if (targets.length === 0) return null;
@@ -57,7 +58,7 @@ export function planShot(
     const hi = facingRight ? 85 : 175;
     const angle = lo + (hi - lo) * (i / (N - 1));
     for (let p = 30; p <= 100; p += 7) {
-      const miss = simulateMiss(muzzle, angle, p, terrain, wind, aimPoint);
+      const miss = simulateMiss(muzzle, angle, p, terrain, wind, aimPoint, maxSpeed);
       if (miss < bestMiss) {
         bestMiss = miss;
         best = { angle, power: p, weaponId };
@@ -105,8 +106,9 @@ function simulateMiss(
   terrain: Terrain,
   wind: number,
   aim: Vec2,
+  maxSpeed: number,
 ): number {
-  const v = launchVelocity(angle, power);
+  const v = launchVelocity(angle, power, maxSpeed);
   let x = start.x;
   let y = start.y;
   let vx = v.x;
