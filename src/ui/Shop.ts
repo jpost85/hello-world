@@ -34,7 +34,7 @@ export class Overlays {
     const cfg: MatchConfig = { opponents: 1, difficulty: "normal", rounds: 5 };
 
     const h1 = el("h1");
-    h1.innerHTML = `Scorched <span class="flame">Earth</span>`;
+    h1.innerHTML = `Sal<span class="flame">vo</span>`;
     const sub = el("p", "sub");
     sub.textContent = "Drag from your tank to aim — direction sets the angle, length sets the power. Release to fire.";
 

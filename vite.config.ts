@@ -14,9 +14,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
-        name: "Scorched Earth — Mobile",
-        short_name: "Scorched",
-        description: "A touch-first browser port of the classic artillery game.",
+        name: "Salvo — Artillery Duel",
+        short_name: "Salvo",
+        description: "A touch-first artillery duel: lob shells across destructible terrain.",
         theme_color: "#0b0d1a",
         background_color: "#05060c",
         display: "fullscreen",

@@ -1,6 +1,6 @@
-# Scorched Earth — Mobile Web Port
+# Salvo — Mobile Artillery Duel
 
-A touch-first browser port of the classic 1990s artillery game *Scorched Earth*.
+A touch-first browser artillery game in the classic hill-lobbing tradition.
 Take turns adjusting angle, power, and weapon, then lob shells across
 destructible terrain under the pull of gravity and wind. Last tank standing wins
 the round; spend your winnings in the armoury between rounds.
@@ -26,7 +26,7 @@ npm run icons    # regenerate the PWA icon set (scripts/gen-icons.mjs)
 ### Single-file build (local play / self-hosting)
 
 ```bash
-npm run standalone   # -> dist-standalone/scorched-earth.html
+npm run standalone   # -> dist-standalone/salvo.html
 ```
 
 Produces one self-contained HTML file with all JS and CSS inlined. Open it

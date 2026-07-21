@@ -83,7 +83,7 @@ function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
-/** Draw the Scorched-Earth icon at the given size, with optional safe-zone inset. */
+/** Draw the Salvo icon at the given size, with optional safe-zone inset. */
 function drawIcon(size, inset = 0) {
   const c = new Canvas(size);
   const S = size;

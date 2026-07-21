@@ -1,9 +1,9 @@
 {
-  "name": "scorched-earth-mobile",
+  "name": "salvo",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "A mobile-web port of the classic artillery game Scorched Earth.",
+  "description": "Salvo — a touch-first artillery duel across destructible terrain.",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

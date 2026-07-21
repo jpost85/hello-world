@@ -1,6 +1,6 @@
 // Builds a single self-contained HTML file (JS + CSS inlined) for one-click
 // local play — no server, no build step needed to run the output.
-// Usage: npm run standalone  ->  dist-standalone/scorched-earth.html
+// Usage: npm run standalone  ->  dist-standalone/salvo.html
 import { build } from "esbuild";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 
@@ -27,7 +27,7 @@ const html = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#0b0d1a" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<title>Scorched Earth — Mobile</title>
+<title>Salvo — Artillery Duel</title>
 <style>
 ${css}
 </style>
@@ -41,7 +41,7 @@ ${js}
 </html>
 `;
 
-const outFile = new URL("scorched-earth.html", outDir);
+const outFile = new URL("salvo.html", outDir);
 writeFileSync(outFile, html);
 const kb = (html.length / 1024).toFixed(1);
-console.log(`wrote dist-standalone/scorched-earth.html (${kb} KB) — open it in any browser.`);
+console.log(`wrote dist-standalone/salvo.html (${kb} KB) — open it in any browser.`);
