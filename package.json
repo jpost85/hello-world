@@ -1,9 +1,9 @@
 {
-  "name": "salvo",
+  "name": "overshot",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Salvo — a touch-first artillery duel across destructible terrain.",
+  "description": "Overshot — a touch-first artillery duel across destructible terrain.",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

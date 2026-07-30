@@ -1,4 +1,4 @@
-# Salvo — Mobile Artillery Duel
+# Overshot — Mobile Artillery Duel
 
 A touch-first browser artillery game in the classic hill-lobbing tradition.
 Take turns adjusting angle, power, and weapon, then lob shells across
@@ -26,7 +26,7 @@ npm run icons    # regenerate the PWA icon set (scripts/gen-icons.mjs)
 ### Single-file build (local play / self-hosting)
 
 ```bash
-npm run standalone   # -> dist-standalone/salvo.html
+npm run standalone   # -> dist-standalone/overshot.html
 ```
 
 Produces one self-contained HTML file with all JS and CSS inlined. Open it
