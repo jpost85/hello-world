@@ -45,7 +45,11 @@ export function planShot(
   const facingRight = target.x >= shooter.x;
 
   const cfg = DIFFICULTY[shooter.difficulty];
-  const weaponId = pickWeapon(shooter, Math.abs(target.x - shooter.x));
+  const weaponId = pickWeapon(
+    shooter,
+    Math.abs(target.x - shooter.x),
+    target.y > shooter.y + 30, // target sits in a hollow below us
+  );
   const muzzle = shooter.muzzle();
 
   let best: Shot | null = null;
@@ -75,12 +79,19 @@ export function planShot(
 }
 
 /** Lowest-cost owned weapon that fits the situation. */
-function pickWeapon(shooter: Tank, range: number): string {
+function pickWeapon(shooter: Tank, range: number, targetBelow: boolean): string {
   const owned = shooter
     .usableWeapons()
     .map(getWeapon)
     .filter((w) => w.kind !== "dirt"); // dirt is defensive; don't lob it at foes
   if (owned.length === 0) return "baby";
+
+  // A target sitting lower than us is prime roller/napalm bait — fire flows
+  // downhill, so gravity does the aiming.
+  if (targetBelow) {
+    const flowing = owned.find((w) => w.kind === "napalm" || w.kind === "roller");
+    if (flowing) return flowing.id;
+  }
 
   // Close-range or low on health: bring out the biggest blast we own.
   const desperate = shooter.health < 35 || range < 220;
@@ -149,8 +160,17 @@ export function aiBuy(tank: Tank, rng: () => number): void {
     tank.parachutes += 1;
   }
 
-  // Then stock mid-tier ordnance; splurge on a nuke occasionally.
-  const wishlist = rng() < 0.3 ? ["nuke", "missile", "dirt"] : ["missile", "funky", "dirt"];
+  // Then stock ordnance. Each personality-ish roll favours a different mix so
+  // opponents don't all fight the same way.
+  const roll = rng();
+  const wishlist =
+    roll < 0.25
+      ? ["nuke", "missile", "roller", "dirt"]
+      : roll < 0.5
+        ? ["napalm", "roller", "missile", "dirt"]
+        : roll < 0.75
+          ? ["airburst", "tunneler", "missile", "dirt"]
+          : ["missile", "funky", "roller", "dirt"];
   let guard = 0;
   while (guard++ < 30) {
     let bought = false;

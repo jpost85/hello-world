@@ -28,6 +28,8 @@ export class Tank {
 
   shield = 0; // remaining shield points; absorbs damage before health
   parachutes = 0; // auto-deploy to cancel fall damage
+  /** 0..1 white flash on taking damage; decays each frame. */
+  hitFlash = 0;
 
   inventory: Record<string, number> = {};
   selectedWeapon = "baby";

@@ -72,6 +72,7 @@ src/
     Physics.ts       gravity/wind constants, ballistics helpers
     Weapons.ts       data-driven arsenal catalogue
     Items.ts         defensive items (shields, parachutes)
+    Fire.ts          burning ground left by napalm
     Particles.ts     spark + debris particle field
     AI.ts            trajectory-sampling opponent + shop logic
     Economy.ts       payouts and starting cash
@@ -105,5 +106,13 @@ element sizes at any DPI. Live resize/rotation reflows the match, physics scales
 with field width so portrait and landscape both play well, and controls use
 44px touch targets, safe-area insets, and a compact layout on short screens.
 
-Planned next: smarter AI weapon selection, optional local hotseat play, and a
-deeper arsenal (rollers, tracers, napalm) with wall behaviours.
+Chaos & spectacle: a 10-weapon arsenal including **Rollers** (land and flow
+downhill into hiding foes), **Tunnelers** (burrow through terrain to reach
+dug-in tanks), **Napalm** (spills burning ground that pours down slopes and
+keeps burning between turns), and **Airbursts** (fan into bomblets just above
+the ground). Battlefield edges are configurable — **open, wrap-around, bouncy,
+or solid** — and kills land with a slow-motion beat, heavier screen shake, and
+a hit flash.
+
+Planned next: a campaign ladder with unlocks, AI personalities, local hotseat
+play, and terrain hazards (water, lava, wind zones).

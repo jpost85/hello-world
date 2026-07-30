@@ -1,17 +1,24 @@
 import type { Vec2, Weapon } from "../types";
 
-/** A single munition in flight. MIRV warheads spawn child Projectiles. */
+/** How a munition is currently moving. */
+export type ProjectileMode = "flight" | "rolling" | "digging";
+
+/** A single munition in flight. MIRV/airburst warheads spawn child Projectiles. */
 export class Projectile {
   pos: Vec2;
   vel: Vec2;
   weapon: Weapon;
   ownerId: number;
   alive = true;
-  /** True once a MIRV has split, so it only splits once. */
+  /** True once a MIRV/airburst has split, so it only splits once. */
   split = false;
   prevVy = 0;
   /** Recent positions, for drawing a motion trail. */
   trail: Vec2[] = [];
+
+  mode: ProjectileMode = "flight";
+  /** Distance covered while rolling or digging, against the weapon's budget. */
+  travelled = 0;
 
   constructor(pos: Vec2, vel: Vec2, weapon: Weapon, ownerId: number) {
     this.pos = { ...pos };
@@ -37,5 +44,16 @@ export class Projectile {
       this.prevVy < 0 &&
       this.vel.y >= 0
     );
+  }
+
+  /**
+   * Airbursts split once they are descending and come within the shell's fuse
+   * height of the ground below them.
+   */
+  shouldAirburst(groundY: number): boolean {
+    if (this.weapon.kind !== "airburst" || this.split) return false;
+    if (this.vel.y <= 0) return false; // still climbing
+    const fuse = this.weapon.fuseHeight ?? 120;
+    return groundY - this.pos.y <= fuse;
   }
 }

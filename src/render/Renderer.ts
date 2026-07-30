@@ -42,8 +42,54 @@ export class Renderer {
 
     for (const t of game.tanks) this.drawTank(ctx, t, t === game.current);
     for (const p of game.projectiles) this.drawProjectile(p);
+    this.drawFires(game);
     this.drawParticles(game);
     for (const e of game.explosions) this.drawExplosion(e);
+    this.drawWalls(game);
+  }
+
+  /** Burning napalm blobs clinging to the ground. */
+  private drawFires(game: Game): void {
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (const f of game.fires) {
+      const fade = Math.max(0, Math.min(1, f.life / (f.maxLife * 0.5)));
+      const flicker = 0.75 + Math.sin(performance.now() / 60 + f.x) * 0.25;
+      const r = f.r * flicker;
+      const g = ctx.createRadialGradient(f.x, f.y - r * 0.3, 0, f.x, f.y, r);
+      g.addColorStop(0, `rgba(255, 240, 190, ${0.85 * fade})`);
+      g.addColorStop(0.45, `rgba(255, 140, 40, ${0.6 * fade})`);
+      g.addColorStop(1, "rgba(180, 40, 0, 0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(f.x, f.y - r * 0.25, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Visual hint for non-open wall modes. */
+  private drawWalls(game: Game): void {
+    if (game.wallMode === "open") return;
+    const { ctx } = this;
+    const color =
+      game.wallMode === "bounce"
+        ? "rgba(120, 200, 255, 0.5)"
+        : game.wallMode === "concrete"
+          ? "rgba(200, 200, 200, 0.45)"
+          : "rgba(180, 130, 255, 0.4)";
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    if (game.wallMode === "wrap") ctx.setLineDash([10, 12]);
+    ctx.beginPath();
+    ctx.moveTo(2, 0);
+    ctx.lineTo(2, game.height);
+    ctx.moveTo(game.width - 2, 0);
+    ctx.lineTo(game.width - 2, game.height);
+    ctx.stroke();
+    ctx.restore();
   }
 
   private drawParticles(game: Game): void {
@@ -150,8 +196,8 @@ export class Renderer {
     ctx.lineTo(m.x, m.y);
     ctx.stroke();
 
-    // Body + turret.
-    ctx.fillStyle = t.color;
+    // Body + turret. Flashes white briefly when hit.
+    ctx.fillStyle = t.hitFlash > 0 ? mixWhite(t.color, t.hitFlash) : t.color;
     roundRect(ctx, t.x - TANK_BODY_W / 2, t.y - TANK_BODY_H, TANK_BODY_W, TANK_BODY_H, 3);
     ctx.fill();
     ctx.beginPath();
@@ -222,6 +268,17 @@ export class Renderer {
     ctx.fill();
     ctx.restore();
   }
+}
+
+/** Blend a #rrggbb colour toward white by `amount` (0..1). */
+function mixWhite(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const k = Math.max(0, Math.min(1, amount));
+  const mix = (c: number) => Math.round(c + (255 - c) * k);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
 }
 
 function roundRect(

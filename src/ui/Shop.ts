@@ -1,5 +1,5 @@
 import type { Game, MatchConfig } from "../game/Game";
-import type { Difficulty } from "../types";
+import type { Difficulty, WallMode } from "../types";
 import { PURCHASABLE } from "../game/Weapons";
 import { ITEMS } from "../game/Items";
 
@@ -56,6 +56,13 @@ export class Overlays {
       1,
       (i) => (cfg.rounds = [3, 5, 7][i]),
     );
+    const walls = segmented(
+      "Walls",
+      ["Open", "Wrap", "Bounce", "Solid"],
+      0,
+      (i) =>
+        (cfg.wallMode = (["open", "wrap", "bounce", "concrete"] as WallMode[])[i]),
+    );
 
     const start = el("button", "primary") as HTMLButtonElement;
     start.textContent = "▶ Start Battle";
@@ -64,7 +71,7 @@ export class Overlays {
       onStart(cfg);
     });
 
-    this.card.append(h1, sub, opponents, difficulty, rounds, start);
+    this.card.append(h1, sub, opponents, difficulty, rounds, walls, start);
     this.show();
   }
 
