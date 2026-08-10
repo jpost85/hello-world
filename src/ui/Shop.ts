@@ -29,17 +29,36 @@ export class Overlays {
 
   // ------------------------------------------------------------------- menu
 
-  showMenu(onStart: (config: MatchConfig) => void): void {
+  showMenu(handlers: {
+    onSolo: (config: MatchConfig, name: string) => void;
+    onHost: (name: string, cfg: { rounds: number; wallMode: WallMode }) => void;
+    onJoin: (name: string, code: string) => void;
+  }): void {
     this.card.innerHTML = "";
-    const cfg: MatchConfig = { opponents: 1, difficulty: "normal", rounds: 5 };
+    const cfg: MatchConfig = { opponents: 1, difficulty: "normal", rounds: 5, wallMode: "open" };
 
     const h1 = el("h1");
     h1.innerHTML = `Over<span class="flame">shot</span>`;
     const sub = el("p", "sub");
     sub.textContent = "Drag from your tank to aim — direction sets the angle, length sets the power. Release to fire.";
 
+    // Commander name, remembered across visits.
+    const nameField = el("div", "field");
+    const nameLab = el("span");
+    nameLab.textContent = "Your name";
+    const nameInput = el("input", "text-input") as HTMLInputElement;
+    nameInput.type = "text";
+    nameInput.maxLength = 12;
+    nameInput.placeholder = "Commander";
+    nameInput.value = localStorage.getItem("overshot-name") ?? "";
+    nameInput.addEventListener("input", () => {
+      localStorage.setItem("overshot-name", nameInput.value);
+    });
+    nameField.append(nameLab, nameInput);
+    const myName = () => (nameInput.value.trim() || "Commander").slice(0, 12);
+
     const opponents = segmented(
-      "Opponents",
+      "Opponents (solo)",
       ["1", "2", "3"],
       0,
       (i) => (cfg.opponents = i + 1),
@@ -65,19 +84,96 @@ export class Overlays {
     );
 
     const start = el("button", "primary") as HTMLButtonElement;
-    start.textContent = "▶ Start Battle";
+    start.textContent = "▶ Start Solo Battle";
     start.addEventListener("click", () => {
       this.hide();
-      onStart(cfg);
+      handlers.onSolo(cfg, myName());
     });
 
-    this.card.append(h1, sub, opponents, difficulty, rounds, walls, start);
+    // ---- Online 1v1 ----
+    const divider = el("div", "divider");
+    divider.textContent = "Online 1v1 — play a friend";
+
+    const hostBtn = el("button", "netbtn") as HTMLButtonElement;
+    hostBtn.textContent = "🌐 Host a Room";
+    hostBtn.addEventListener("click", () => {
+      handlers.onHost(myName(), {
+        rounds: cfg.rounds,
+        wallMode: cfg.wallMode ?? "open",
+      });
+    });
+
+    const joinRow = el("div", "join-row");
+    const codeInput = el("input", "text-input code") as HTMLInputElement;
+    codeInput.type = "text";
+    codeInput.maxLength = 4;
+    codeInput.placeholder = "CODE";
+    codeInput.autocapitalize = "characters";
+    codeInput.addEventListener("input", () => {
+      codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z]/g, "");
+    });
+    const joinBtn = el("button", "netbtn") as HTMLButtonElement;
+    joinBtn.textContent = "Join";
+    joinBtn.addEventListener("click", () => {
+      if (codeInput.value.length === 4) handlers.onJoin(myName(), codeInput.value);
+    });
+    joinRow.append(codeInput, joinBtn);
+
+    const netHint = el("p", "hint");
+    netHint.textContent = "Rounds & Walls above apply to rooms you host.";
+
+    this.card.append(
+      h1, sub, nameField, opponents, difficulty, rounds, walls, start,
+      divider, hostBtn, joinRow, netHint,
+    );
+    this.show();
+  }
+
+  // ---------------------------------------------------------------- net lobby
+
+  private netStatusEl: HTMLElement | null = null;
+
+  /** Waiting/connecting screen with a live status line. */
+  showNetWait(title: string, status: string, onCancel: () => void): void {
+    this.card.innerHTML = "";
+    const h1 = el("h1");
+    h1.innerHTML = title;
+    const stat = el("p", "net-status");
+    stat.textContent = status;
+    this.netStatusEl = stat;
+    const cancel = el("button", "primary cancel") as HTMLButtonElement;
+    cancel.textContent = "Cancel";
+    cancel.addEventListener("click", onCancel);
+    this.card.append(h1, stat, cancel);
+    this.show();
+  }
+
+  updateNetStatus(status: string): void {
+    if (this.netStatusEl) this.netStatusEl.textContent = status;
+  }
+
+  /** Waiting screen variant that shows the shareable room code big. */
+  showRoomCode(code: string, status: string, onCancel: () => void): void {
+    this.card.innerHTML = "";
+    const h1 = el("h1");
+    h1.textContent = "Room open";
+    const codeEl = el("div", "room-code");
+    codeEl.textContent = code;
+    const stat = el("p", "net-status");
+    stat.textContent = status;
+    this.netStatusEl = stat;
+    const hint = el("p", "hint");
+    hint.textContent = "Share this code — your friend taps Join and types it in.";
+    const cancel = el("button", "primary cancel") as HTMLButtonElement;
+    cancel.textContent = "Cancel";
+    cancel.addEventListener("click", onCancel);
+    this.card.append(h1, codeEl, hint, stat, cancel);
     this.show();
   }
 
   // ------------------------------------------------------------------- shop
 
-  showShop(game: Game, onContinue: () => void): void {
+  showShop(game: Game, onContinue: () => void, online = false): void {
     this.card.innerHTML = "";
     const human = game.humanTank();
 
@@ -167,10 +263,18 @@ export class Overlays {
     }
 
     const cont = el("button", "primary") as HTMLButtonElement;
-    cont.textContent = "Continue ▶";
+    cont.textContent = online ? "Ready ▶" : "Continue ▶";
     cont.addEventListener("click", () => {
-      this.hide();
-      onContinue();
+      if (online) {
+        // Stay visible until the host starts the next round; disable buying
+        // further so both players' inventories stay settled.
+        cont.disabled = true;
+        cont.textContent = "Waiting for opponent…";
+        onContinue();
+      } else {
+        this.hide();
+        onContinue();
+      }
     });
 
     this.card.append(head, sub, this.scoreboard(game), list, cont);
@@ -180,25 +284,47 @@ export class Overlays {
 
   // ---------------------------------------------------------------- gameover
 
-  showGameOver(game: Game, onRestart: () => void): void {
+  showGameOver(
+    game: Game,
+    onRestart: () => void,
+    net?: { isHost: boolean; onLeave: () => void },
+  ): void {
     this.card.innerHTML = "";
     const ranked = [...game.tanks].sort((a, b) => b.score - a.score);
     const winner = ranked[0];
+    const localWon = winner && winner.id === game.localId && !winner.isAI;
 
     const h1 = el("h1");
-    h1.innerHTML = winner && !winner.isAI ? "🏆 Victory!" : "Game Over";
+    h1.innerHTML = localWon ? "🏆 Victory!" : "Game Over";
     const sub = el("p", "sub");
     sub.textContent = winner ? `${winner.name} takes the match with ${winner.score} round win(s).` : "";
 
     this.card.append(h1, sub, this.scoreboard(game));
 
-    const again = el("button", "primary") as HTMLButtonElement;
-    again.textContent = "↻ Play Again";
-    again.addEventListener("click", () => {
-      this.hide();
-      onRestart();
-    });
-    this.card.append(again);
+    if (net) {
+      if (net.isHost) {
+        const again = el("button", "primary") as HTMLButtonElement;
+        again.textContent = "↻ Rematch";
+        again.addEventListener("click", onRestart);
+        this.card.append(again);
+      } else {
+        const hint = el("p", "hint");
+        hint.textContent = "The host can start a rematch — hang tight, or leave.";
+        this.card.append(hint);
+      }
+      const leave = el("button", "primary cancel") as HTMLButtonElement;
+      leave.textContent = "Leave Match";
+      leave.addEventListener("click", net.onLeave);
+      this.card.append(leave);
+    } else {
+      const again = el("button", "primary") as HTMLButtonElement;
+      again.textContent = "↻ Play Again";
+      again.addEventListener("click", () => {
+        this.hide();
+        onRestart();
+      });
+      this.card.append(again);
+    }
     this.show();
   }
 

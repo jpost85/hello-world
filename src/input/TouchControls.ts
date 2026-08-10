@@ -15,6 +15,7 @@ export class TouchControls {
   constructor(
     private canvas: HTMLCanvasElement,
     private game: Game,
+    private getView: () => { sx: number; sy: number; ox: number; oy: number },
   ) {}
 
   attach(): void {
@@ -26,10 +27,11 @@ export class TouchControls {
 
   private screenToWorld(clientX: number, clientY: number): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect();
-    return {
-      x: ((clientX - rect.left) / rect.width) * this.game.width,
-      y: ((clientY - rect.top) / rect.height) * this.game.height,
-    };
+    const view = this.getView();
+    // CSS px → canvas buffer px → world units (undoing any letterbox offset).
+    const px = ((clientX - rect.left) / rect.width) * this.canvas.width;
+    const py = ((clientY - rect.top) / rect.height) * this.canvas.height;
+    return { x: (px - view.ox) / view.sx, y: (py - view.oy) / view.sy };
   }
 
   private aimFromPointer(clientX: number, clientY: number): void {

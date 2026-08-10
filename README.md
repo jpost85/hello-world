@@ -49,6 +49,21 @@ project-site subpath without changes.
 > play, so it intentionally has no service worker. PWA install/offline applies
 > to the hosted (`dist/`) build.
 
+## Online 1v1 (room codes)
+
+Jackbox-style rooms: enter your name, tap **Host a Room**, and share the
+4-letter code — your friend taps **Join** and types it in. The host's Rounds
+and Walls settings apply.
+
+How it works: the game stays a static page. A free public signaling broker
+(PeerJS cloud) introduces the two browsers, then all gameplay flows directly
+**peer-to-peer over WebRTC** — no game server. Both clients run the same
+seeded, deterministic simulation and exchange only inputs (aim, fire, shop
+buys); the host re-syncs the guest with an authoritative snapshot at every
+turn boundary, so the sims can't drift. Online matches play on a fixed
+1280×720 battlefield (letterboxed as needed) so both players see the
+identical terrain.
+
 ## How to play
 
 - **Aim:** drag from your tank toward where you want to fire. Drag *direction*
@@ -76,8 +91,12 @@ src/
     Particles.ts     spark + debris particle field
     AI.ts            trajectory-sampling opponent + shop logic
     Economy.ts       payouts and starting cash
-  input/TouchControls.ts   drag-to-aim pointer handling
-  render/Renderer.ts       canvas drawing
+  net/
+    protocol.ts    wire messages + authoritative snapshot format
+    PeerLink.ts    WebRTC transport via PeerJS cloud (room codes)
+    NetMatch.ts    online 1v1 orchestration (lockstep + host snapshots)
+  input/TouchControls.ts   drag-to-aim pointer handling (view-aware)
+  render/Renderer.ts       canvas drawing + fill/letterbox views
   audio/Sound.ts           WebAudio-synthesized SFX (no asset files)
   ui/Hud.ts                top status bar + bottom control panel
   ui/Shop.ts               menu / shop / game-over overlays
@@ -113,6 +132,11 @@ keeps burning between turns), and **Airbursts** (fan into bomblets just above
 the ground). Battlefield edges are configurable — **open, wrap-around, bouncy,
 or solid** — and kills land with a slow-motion beat, heavier screen shake, and
 a hit flash.
+
+Multiplayer: Jackbox-style **online 1v1 with room codes** — static hosting
+friendly (peer-to-peer WebRTC; only signaling uses the free PeerJS cloud),
+with live opponent aim, synced shops, rematch support, and disconnect
+handling.
 
 Planned next: a campaign ladder with unlocks, AI personalities, local hotseat
 play, and terrain hazards (water, lava, wind zones).

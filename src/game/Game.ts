@@ -1,4 +1,5 @@
 import type { Difficulty, GameState, Vec2, WallMode } from "../types";
+import type { Snapshot } from "../net/protocol";
 import {
   type Fire,
   FIRE_DPS,
@@ -39,6 +40,13 @@ export interface MatchConfig {
   wallMode?: WallMode;
 }
 
+export interface NewMatchOpts {
+  /** Fixed seed so both online peers generate identical rounds. */
+  seed?: number;
+  /** Online 1v1 setup; names are [host, guest]. */
+  net?: { role: "host" | "guest"; names: [string, string] };
+}
+
 const TANK_COLORS = ["#4db8ff", "#ff6b6b", "#7be06b", "#ffd24d", "#c08bff"];
 const AI_NAMES = ["Rascal", "Vlad", "Ace", "Tank Sinatra"];
 
@@ -67,6 +75,15 @@ export class Game {
   round = 0;
   config: MatchConfig = { opponents: 1, difficulty: "normal", rounds: 5 };
 
+  /** Online role, or null for solo. Host simulates authoritatively. */
+  netRole: "host" | "guest" | null = null;
+  /** Which tank this device controls (0 solo/host, 1 guest). */
+  localId = 0;
+  /** Seed all round generation derives from; shared by both peers online. */
+  matchSeed = (Date.now() >>> 0);
+  /** Winner of the last completed round, for net relay + banners. */
+  lastRoundWinner: number | null = null;
+
   turnIndex = 0;
   startingPlayer = 0;
   current: Tank | null = null;
@@ -75,7 +92,13 @@ export class Game {
   aimLine: Vec2[] = [];
 
   private rng = makeRng(Date.now() >>> 0);
-  particles = new ParticleField(() => this.rng());
+  /**
+   * Separate stream for cosmetic randomness (particle scatter, flame
+   * flicker-chance). Keeping it out of the gameplay stream means visual
+   * effects can't desync the deterministic sim two online peers share.
+   */
+  private fxRng = makeRng((Date.now() ^ 0x5f3759df) >>> 0);
+  particles = new ParticleField(() => this.fxRng());
   private acc = 0;
   private aiTimer = 0;
   private pendingShot: Shot | null = null;
@@ -86,6 +109,14 @@ export class Game {
   onStateChange: ((next: GameState, prev: GameState) => void) | null = null;
   onBanner: ((text: string) => void) | null = null;
   onSound: ((type: SoundType, intensity?: number) => void) | null = null;
+
+  // Net hooks (wired by NetMatch; null in solo play).
+  onTurnStart: ((turnIndex: number) => void) | null = null;
+  onRoundOver: ((winnerId: number | null) => void) | null = null;
+  onMatchEnd: ((winnerId: number | null) => void) | null = null;
+  onShot: ((tankId: number, angle: number, power: number, weaponId: string) => void) | null = null;
+  onAim: ((angle: number, power: number) => void) | null = null;
+  onBuy: ((id: string, item: boolean) => void) | null = null;
 
   constructor(width: number, height: number) {
     this.width = width;
@@ -155,26 +186,37 @@ export class Game {
 
   // ---------------------------------------------------------------- lifecycle
 
-  newMatch(config: MatchConfig): void {
+  newMatch(config: MatchConfig, opts?: NewMatchOpts): void {
     this.config = config;
     this.wallMode = config.wallMode ?? "open";
-    this.rng = makeRng(Date.now() >>> 0);
+    this.matchSeed = (opts?.seed ?? Date.now()) >>> 0;
     this.round = 0;
     this.startingPlayer = 0;
     this.tanks = [];
 
-    // Human player first, then AI opponents.
-    this.tanks.push(new Tank(0, "You", TANK_COLORS[0], false, "normal"));
-    for (let i = 0; i < config.opponents; i++) {
-      this.tanks.push(
-        new Tank(
-          i + 1,
-          AI_NAMES[i % AI_NAMES.length],
-          TANK_COLORS[(i + 1) % TANK_COLORS.length],
-          true,
-          config.difficulty,
-        ),
-      );
+    if (opts?.net) {
+      // Online 1v1: host is always tank 0, guest tank 1, on both machines.
+      this.netRole = opts.net.role;
+      this.localId = opts.net.role === "host" ? 0 : 1;
+      const [hostName, guestName] = opts.net.names;
+      this.tanks.push(new Tank(0, hostName, TANK_COLORS[0], false, "normal"));
+      this.tanks.push(new Tank(1, guestName, TANK_COLORS[1], false, "normal"));
+    } else {
+      this.netRole = null;
+      this.localId = 0;
+      // Human player first, then AI opponents.
+      this.tanks.push(new Tank(0, "You", TANK_COLORS[0], false, "normal"));
+      for (let i = 0; i < config.opponents; i++) {
+        this.tanks.push(
+          new Tank(
+            i + 1,
+            AI_NAMES[i % AI_NAMES.length],
+            TANK_COLORS[(i + 1) % TANK_COLORS.length],
+            true,
+            config.difficulty,
+          ),
+        );
+      }
     }
 
     // Seed inventories and wallets.
@@ -200,6 +242,10 @@ export class Game {
 
   startRound(): void {
     this.round += 1;
+    // Reseed per round from the match seed so both online peers generate an
+    // identical battlefield regardless of how much randomness the previous
+    // round consumed. (Solo benefits too: rounds are reproducible.)
+    this.rng = makeRng(mixSeed(this.matchSeed, this.round));
     this.terrain = new Terrain(this.width, this.height);
     this.terrain.generate(this.rng);
     this.projectiles = [];
@@ -256,12 +302,19 @@ export class Game {
       this.pendingShot = null;
     }
     this.setState("aiming");
+    this.onTurnStart?.(this.turnIndex);
   }
 
   // ------------------------------------------------------------------ input
 
+  /** True while THIS device's player is aiming (solo human, or your net turn). */
   get isHumanTurn(): boolean {
-    return this.state === "aiming" && !!this.current && !this.current.isAI;
+    return (
+      this.state === "aiming" &&
+      !!this.current &&
+      !this.current.isAI &&
+      (this.netRole === null || this.current.id === this.localId)
+    );
   }
 
   setAim(angle: number, power: number): void {
@@ -269,6 +322,7 @@ export class Game {
     this.current.angle = clamp(angle, 1, 179);
     this.current.power = clamp(power, 0, 100);
     this.recomputeAim();
+    this.onAim?.(this.current.angle, this.current.power);
   }
 
   nudgeAngle(d: number): void {
@@ -279,7 +333,9 @@ export class Game {
   }
 
   cycleWeapon(dir: number): void {
+    // Online, only the local player's tank cycles its own kit.
     if (!this.current) return;
+    if (this.netRole !== null && this.current.id !== this.localId) return;
     const list = this.current.usableWeapons();
     if (list.length === 0) return;
     let i = list.indexOf(this.current.selectedWeapon);
@@ -292,6 +348,7 @@ export class Game {
     const t = this.current;
     const weapon = getWeapon(t.selectedWeapon);
     if (t.ammoOf(weapon.id) <= 0) return;
+    const shotWeapon = t.selectedWeapon;
     t.consumeSelected();
 
     const muzzle = t.muzzle();
@@ -300,6 +357,7 @@ export class Game {
     this.aimLine = [];
     this.onSound?.("fire");
     this.setState("firing");
+    this.onShot?.(t.id, t.angle, t.power, shotWeapon);
   }
 
   // --------------------------------------------------------------- main loop
@@ -504,7 +562,7 @@ export class Game {
 
     p.trail.push({ x: p.pos.x, y: p.pos.y });
     if (p.trail.length > 10) p.trail.shift();
-    if (this.rng() < 0.25) {
+    if (this.fxRng() < 0.25) {
       this.particles.spawnDebris({ x: p.pos.x, y: p.pos.y }, 1, "#6b4a2a", 60);
     }
 
@@ -541,7 +599,7 @@ export class Game {
 
     // Carve a narrow shaft so the path stays visible.
     this.terrain.carve(p.pos.x, p.pos.y, 7);
-    if (this.rng() < 0.6) {
+    if (this.fxRng() < 0.6) {
       this.particles.spawnDebris({ x: p.pos.x, y: p.pos.y }, 1, "#8a6a3a", 70);
     }
 
@@ -639,11 +697,11 @@ export class Game {
       f.y = this.terrain.surfaceAt(f.x);
       f.life -= dt;
 
-      if (this.rng() < 0.5) {
+      if (this.fxRng() < 0.5) {
         this.particles.spawnSparks(
           { x: f.x, y: f.y - 4 },
           1,
-          this.rng() < 0.5 ? "#ff9a3c" : "#ffd76a",
+          this.fxRng() < 0.5 ? "#ff9a3c" : "#ffd76a",
           40,
         );
       }
@@ -728,6 +786,8 @@ export class Game {
    * in and end the round or skip the turn if the burning tank was up next.
    */
   private reapFireCasualties(): void {
+    // Online guests wait for the host's authoritative word on deaths.
+    if (this.netRole === "guest") return;
     const dyingCurrent = this.current?.alive === true && this.current.health <= 0;
     const anyDying = this.tanks.some((t) => t.alive && t.health <= 0);
     if (!anyDying) return;
@@ -769,6 +829,9 @@ export class Game {
   }
 
   private advanceTurn(): void {
+    // Guests never advance on their own: the host's turnStart/roundOver
+    // messages drive every transition, keeping both sims in lockstep.
+    if (this.netRole === "guest") return;
     const alive = this.tanks.filter((t) => t.alive);
     if (alive.length <= 1) {
       this.endRound(alive[0]);
@@ -779,51 +842,206 @@ export class Game {
   }
 
   private endRound(survivor: Tank | undefined): void {
+    this.lastRoundWinner = survivor?.id ?? null;
     if (survivor) {
       awardSurvival(survivor);
       this.banner(`${survivor.name} wins round ${this.round}!`);
     } else {
       this.banner(`Round ${this.round}: mutual destruction!`);
     }
-    // AI tanks restock for next round.
-    for (const t of this.tanks) if (t.isAI) aiBuy(t, this.rng);
+    // AI tanks restock for next round (solo only; online has no AI).
+    if (this.netRole === null) {
+      for (const t of this.tanks) if (t.isAI) aiBuy(t, this.rng);
+    }
 
     this.startingPlayer = (this.startingPlayer + 1) % this.tanks.length;
     if (this.round >= this.config.rounds) {
       this.setState("gameover");
+      this.onMatchEnd?.(this.matchWinnerId());
     } else {
       this.setState("roundover");
+      this.onRoundOver?.(this.lastRoundWinner);
     }
+  }
+
+  /** Tank with the most round wins, or null on a tie. */
+  matchWinnerId(): number | null {
+    const ranked = [...this.tanks].sort((a, b) => b.score - a.score);
+    if (ranked.length > 1 && ranked[0].score === ranked[1].score) return null;
+    return ranked[0]?.id ?? null;
   }
 
   // ----------------------------------------------------------------- shop API
 
   buyWeapon(id: string): boolean {
-    const human = this.humanTank();
-    const w = getWeapon(id);
-    if (!human || human.cash < w.price) return false;
-    human.cash -= w.price;
-    human.inventory[id] = (human.inventory[id] ?? 0) + 1;
-    return true;
+    const ok = this.buyWeaponFor(this.humanTank(), id);
+    if (ok) this.onBuy?.(id, false);
+    return ok;
   }
 
   buyItem(id: string): boolean {
-    const human = this.humanTank();
+    const ok = this.buyItemFor(this.humanTank(), id);
+    if (ok) this.onBuy?.(id, true);
+    return ok;
+  }
+
+  private buyWeaponFor(tank: Tank | undefined, id: string): boolean {
+    const w = getWeapon(id);
+    if (!tank || tank.cash < w.price) return false;
+    tank.cash -= w.price;
+    tank.inventory[id] = (tank.inventory[id] ?? 0) + 1;
+    return true;
+  }
+
+  private buyItemFor(tank: Tank | undefined, id: string): boolean {
     const item = getItem(id);
-    if (!human || human.cash < item.price) return false;
-    const current = item.kind === "shield" ? human.shield : human.parachutes;
+    if (!tank || tank.cash < item.price) return false;
+    const current = item.kind === "shield" ? tank.shield : tank.parachutes;
     if (current >= item.cap) return false; // already maxed out
-    human.cash -= item.price;
+    tank.cash -= item.price;
     if (item.kind === "shield") {
-      human.shield = Math.min(item.cap, human.shield + item.amount);
+      tank.shield = Math.min(item.cap, tank.shield + item.amount);
     } else {
-      human.parachutes = Math.min(item.cap, human.parachutes + item.amount);
+      tank.parachutes = Math.min(item.cap, tank.parachutes + item.amount);
     }
     return true;
   }
 
   continueFromShop(): void {
     if (this.state === "roundover") this.startRound();
+  }
+
+  // ------------------------------------------------------------- net API
+  // Called by NetMatch to apply the remote player's inputs and, on the
+  // guest, the host's authoritative state.
+
+  /** Remote player's live aim, for the barrel animation. */
+  aimRemote(angle: number, power: number): void {
+    const t = this.current;
+    if (this.state !== "aiming" || !t || t.id === this.localId) return;
+    t.angle = clamp(angle, 1, 179);
+    t.power = clamp(power, 0, 100);
+  }
+
+  /** Remote player fired. */
+  fireRemote(angle: number, power: number, weaponId: string): void {
+    const t = this.current;
+    if (this.state !== "aiming" || !t || t.id === this.localId) return;
+    t.angle = clamp(angle, 1, 179);
+    t.power = clamp(power, 0, 100);
+    if (t.ammoOf(weaponId) <= 0) t.inventory[weaponId] = 1; // trust the sender
+    t.selectedWeapon = weaponId;
+    this.fire();
+  }
+
+  /** Remote player bought something between rounds. */
+  buyRemote(id: string, item: boolean): void {
+    const other = this.tanks.find((t) => t.id !== this.localId);
+    if (item) this.buyItemFor(other, id);
+    else this.buyWeaponFor(other, id);
+  }
+
+  /** Serialize authoritative state (host, at turn boundaries). */
+  makeSnapshot(): Snapshot {
+    return {
+      round: this.round,
+      wind: this.wind,
+      startingPlayer: this.startingPlayer,
+      tanks: this.tanks.map((t) => ({
+        id: t.id,
+        x: Math.round(t.x * 10) / 10,
+        y: Math.round(t.y * 10) / 10,
+        health: t.health,
+        shield: t.shield,
+        parachutes: t.parachutes,
+        cash: t.cash,
+        score: t.score,
+        alive: t.alive,
+        angle: t.angle,
+        power: t.power,
+        inv: encodeInventory(t.inventory),
+      })),
+      terrain: Array.from(this.terrain.surface, (v) => Math.round(v * 10) / 10),
+      fires: this.fires.map((f) => ({
+        x: f.x,
+        y: f.y,
+        vx: f.vx,
+        life: f.life,
+        maxLife: f.maxLife,
+        r: f.r,
+        ownerId: f.ownerId,
+      })),
+    };
+  }
+
+  /** Overwrite local state with the host's snapshot (guest). */
+  applySnapshot(s: Snapshot): void {
+    this.round = s.round;
+    this.wind = s.wind;
+    this.startingPlayer = s.startingPlayer;
+    if (s.terrain.length === this.terrain.surface.length) {
+      this.terrain.surface.set(s.terrain);
+    }
+    for (const st of s.tanks) {
+      const t = this.tanks.find((o) => o.id === st.id);
+      if (!t) continue;
+      t.x = st.x;
+      t.y = st.y;
+      t.health = st.health;
+      t.shield = st.shield;
+      t.parachutes = st.parachutes;
+      t.cash = st.cash;
+      t.score = st.score;
+      t.alive = st.alive;
+      t.angle = st.angle;
+      t.power = st.power;
+      t.inventory = decodeInventory(st.inv);
+      if (t.alive) t.settle(this.terrain);
+    }
+    this.fires = s.fires.map((f) => ({ ...f }));
+    this.projectiles = [];
+  }
+
+  /** Guest: the host says a new turn begins — force full sync and comply. */
+  netForceTurn(turnIndex: number, snap: Snapshot): void {
+    if (this.netRole !== "guest") return;
+    // If we were still in the shop, spin the round up first (same seed ⇒ same
+    // terrain), then let the snapshot overrule anything that drifted.
+    if (this.state === "roundover" || this.state === "gameover") {
+      this.startRound();
+    }
+    this.applySnapshot(snap);
+    this.explosions = [];
+    this.turnIndex = turnIndex;
+    this.beginTurn();
+  }
+
+  /** Guest: the host declared the round over. */
+  netApplyRoundOver(winnerId: number | null, snap: Snapshot): void {
+    if (this.netRole !== "guest") return;
+    this.applySnapshot(snap);
+    const winner = winnerId !== null ? this.tanks.find((t) => t.id === winnerId) : undefined;
+    this.banner(
+      winner ? `${winner.name} wins round ${this.round}!` : `Round ${this.round}: mutual destruction!`,
+    );
+    this.setState("roundover");
+  }
+
+  /** Guest: the host declared the match over. */
+  netApplyMatchEnd(snap: Snapshot): void {
+    if (this.netRole !== "guest") return;
+    this.applySnapshot(snap);
+    this.setState("gameover");
+  }
+
+  /** Drop back to offline defaults (opponent left, or match dismantled). */
+  netReset(): void {
+    this.netRole = null;
+    this.localId = 0;
+    this.state = "menu";
+    this.projectiles = [];
+    this.fires = [];
+    this.current = null;
   }
 
   // ----------------------------------------------------------------- helpers
@@ -888,8 +1106,12 @@ export class Game {
     return this.tanks.filter((o) => o.id !== t.id);
   }
 
+  /** The tank this device controls (solo human, or your online tank). */
   humanTank(): Tank | undefined {
-    return this.tanks.find((t) => !t.isAI);
+    return (
+      this.tanks.find((t) => t.id === this.localId && !t.isAI) ??
+      this.tanks.find((t) => !t.isAI)
+    );
   }
 
   private setState(next: GameState): void {
@@ -919,4 +1141,22 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+/** Derive a per-round seed from the match seed (same on both peers). */
+function mixSeed(seed: number, round: number): number {
+  return (seed ^ Math.imul(round + 1, 0x9e3779b9)) >>> 0;
+}
+
+/** Inventory counts with Infinity encoded as -1 so JSON survives the trip. */
+function encodeInventory(inv: Record<string, number>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(inv)) out[k] = v === Infinity ? -1 : v;
+  return out;
+}
+
+function decodeInventory(inv: Record<string, number>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(inv)) out[k] = v === -1 ? Infinity : v;
+  return out;
 }

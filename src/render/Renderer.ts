@@ -6,6 +6,14 @@ import {
   type Tank,
 } from "../game/Tank";
 
+/** World→canvas mapping. Solo fills the screen; online letterboxes. */
+export interface View {
+  sx: number;
+  sy: number;
+  ox: number;
+  oy: number;
+}
+
 /** Draws the battlefield to the canvas. All UI chrome lives in the DOM. */
 export class Renderer {
   ctx: CanvasRenderingContext2D;
@@ -18,16 +26,37 @@ export class Renderer {
     this.canvas = canvas;
   }
 
-  render(game: Game): void {
+  /** Fill-the-screen view (solo default). */
+  fillView(game: Game): View {
+    return {
+      sx: this.canvas.width / game.width,
+      sy: this.canvas.height / game.height,
+      ox: 0,
+      oy: 0,
+    };
+  }
+
+  /** Uniform-scale centered view (online fixed world). */
+  fitView(game: Game): View {
+    const s = Math.min(this.canvas.width / game.width, this.canvas.height / game.height);
+    return {
+      sx: s,
+      sy: s,
+      ox: (this.canvas.width - game.width * s) / 2,
+      oy: (this.canvas.height - game.height * s) / 2,
+    };
+  }
+
+  render(game: Game, view?: View): void {
     const { ctx } = this;
     const { width, height } = game;
+    const v = view ?? this.fillView(game);
 
-    // Map the virtual world (game.width × game.height units) onto the full
-    // device-pixel buffer, so everything is authored in consistent units and
-    // fills the screen crisply at any DPI or aspect ratio.
-    const sx = this.canvas.width / width;
-    const sy = this.canvas.height / height;
-    ctx.setTransform(sx, 0, 0, sy, 0, 0);
+    // Clear the full buffer first (letterbox bars when the view is inset).
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#05060c";
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.setTransform(v.sx, 0, 0, v.sy, v.ox, v.oy);
 
     // Screen shake: jitter the whole battlefield (in world units) while it decays.
     if (game.shake > 0) {
