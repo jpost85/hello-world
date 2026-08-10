@@ -40,7 +40,7 @@ export class Overlays {
     const h1 = el("h1");
     h1.innerHTML = `Over<span class="flame">shot</span>`;
     const sub = el("p", "sub");
-    sub.textContent = "Drag from your tank to aim — direction sets the angle, length sets the power. Release to fire.";
+    sub.textContent = "Drag from your tank to aim — direction sets the angle, length sets the power. Then hit FIRE.";
 
     // Commander name, remembered across visits.
     const nameField = el("div", "field");

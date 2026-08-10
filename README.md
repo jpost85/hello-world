@@ -67,7 +67,8 @@ identical terrain.
 ## How to play
 
 - **Aim:** drag from your tank toward where you want to fire. Drag *direction*
-  sets the angle, drag *length* sets the power. Release to fire.
+  sets the angle, drag *length* sets the power. Releasing only locks your aim.
+- **Fire:** hit the big **FIRE** button when you're happy with the shot.
 - **Fine-tune:** use the on-screen Angle/Power steppers (tap-and-hold to repeat).
 - **Weapons:** tap the weapon button to cycle through what you own.
 - **Wind** (shown top-left) pushes shells sideways — compensate for it.

@@ -3,14 +3,12 @@ import type { Game } from "../game/Game";
 /**
  * Pointer-driven aiming. Drag from anywhere on the battlefield toward where you
  * want to lob the shell: the drag *direction* sets the angle and the drag
- * *length* sets the power. Releasing a deliberate drag fires. Works with mouse
- * and touch via Pointer Events.
+ * *length* sets the power. Releasing only locks the aim in — firing is always
+ * an explicit press of the FIRE button, so a slipped thumb never wastes a
+ * turn. Works with mouse and touch via Pointer Events.
  */
 export class TouchControls {
   private dragging = false;
-  private movedEnough = false;
-  private startX = 0;
-  private startY = 0;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -50,26 +48,16 @@ export class TouchControls {
   private onDown = (e: PointerEvent): void => {
     if (!this.game.isHumanTurn) return;
     this.dragging = true;
-    this.movedEnough = false;
-    this.startX = e.clientX;
-    this.startY = e.clientY;
     this.aimFromPointer(e.clientX, e.clientY);
   };
 
   private onMove = (e: PointerEvent): void => {
     if (!this.dragging) return;
-    if (Math.hypot(e.clientX - this.startX, e.clientY - this.startY) > 10) {
-      this.movedEnough = true;
-    }
     this.aimFromPointer(e.clientX, e.clientY);
   };
 
   private onUp = (): void => {
-    if (!this.dragging) return;
+    // Releasing just locks the aim; the FIRE button does the firing.
     this.dragging = false;
-    // Only fire on a deliberate drag, so accidental taps don't waste a turn.
-    if (this.movedEnough && this.game.isHumanTurn) {
-      this.game.fire();
-    }
   };
 }
