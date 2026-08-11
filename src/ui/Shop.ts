@@ -109,8 +109,11 @@ export class Overlays {
     codeInput.maxLength = 4;
     codeInput.placeholder = "CODE";
     codeInput.autocapitalize = "characters";
+    // Prefill the last attempt so a retry after a hiccup is one tap.
+    codeInput.value = sessionStorage.getItem("overshot-last-code") ?? "";
     codeInput.addEventListener("input", () => {
       codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z]/g, "");
+      sessionStorage.setItem("overshot-last-code", codeInput.value);
     });
     const joinBtn = el("button", "netbtn") as HTMLButtonElement;
     joinBtn.textContent = "Join";

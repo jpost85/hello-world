@@ -136,6 +136,10 @@ function hostRoom(name: string, cfg: { rounds: number; wallMode: WallMode }): vo
         overlays.updateNetStatus("Friend connected — starting…");
         // Match starts when the guest's hello arrives (handled in NetMatch).
       },
+      onIssue: (why) => {
+        // A join attempt died mid-handshake; the room is still open.
+        overlays.updateNetStatus(`${why} (Room ${code} is still open.)`);
+      },
       onError: (why) => {
         if (why === "unavailable-id" && attempt < 5) {
           link.close();
@@ -156,8 +160,13 @@ function joinRoom(name: string, rawCode: string): void {
   const code = normalizeCode(rawCode);
   const link = new PeerLink();
   pendingLink = link;
-  overlays.showNetWait(`Joining <span class="flame">${code}</span>…`, "Connecting…", cancelPending);
+  overlays.showNetWait(
+    `Joining <span class="flame">${code}</span>…`,
+    "Contacting matchmaking server…",
+    cancelPending,
+  );
   link.join(code, {
+    onStatus: (text) => overlays.updateNetStatus(text),
     onOpen: () => {
       pendingLink = null;
       netMatch = new NetMatch(
