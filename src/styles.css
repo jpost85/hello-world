@@ -132,19 +132,19 @@ body {
 }
 
 .dial .label {
-  width: 46px;
-  font-size: 11px;
+  width: 40px;
+  font-size: 10px;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .dial .value {
-  width: 48px;
+  width: 42px;
   text-align: center;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .dial .bar {
@@ -180,17 +180,18 @@ button:active {
 }
 
 .step {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
-  font-size: 19px;
+  font-size: 16px;
+  border-radius: 8px;
 }
 
 .weaponbtn {
   flex: 1;
   min-width: 0;
-  height: 38px;
-  font-size: 13px;
+  height: 32px;
+  font-size: 12px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -199,13 +200,13 @@ button:active {
 }
 
 .fire {
-  width: 74px;
+  width: 60px;
   align-self: stretch;
   background: linear-gradient(#c0392b, #8e2b20);
   border-color: #e05c4d;
-  font-size: 16px;
-  letter-spacing: 0.05em;
-  border-radius: 12px;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  border-radius: 10px;
 }
 
 .fire:disabled {
@@ -392,16 +393,16 @@ button:active {
     padding: 2px 5px;
   }
   .step {
-    width: 34px;
-    height: 34px;
-    font-size: 17px;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
   }
   .weaponbtn {
-    height: 34px;
+    height: 28px;
   }
   .fire {
-    width: 66px;
-    font-size: 15px;
+    width: 54px;
+    font-size: 13px;
   }
 }
 
