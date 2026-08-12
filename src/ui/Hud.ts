@@ -85,7 +85,11 @@ export class Hud {
 
     this.controls.append(dials, this.fireBtn);
 
-    root.append(bar, this.banner, this.controls);
+    // Status bar and controls stack at the TOP of the screen so the lower
+    // battlefield — where cratered tanks end up — is never covered.
+    const top = el("div", "topstack");
+    top.append(bar, this.controls);
+    root.append(top, this.banner);
   }
 
   showBanner(text: string): void {

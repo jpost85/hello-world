@@ -96,14 +96,18 @@ body {
   flex: 1;
 }
 
-/* ---------- Bottom control panel ---------- */
+/* ---------- Control panel (stacked at the top, under the status bar) ---------- */
+.topstack {
+  pointer-events: none;
+}
+
 .controls {
+  pointer-events: auto;
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 10px;
-  padding: 10px calc(12px + var(--safe-right)) calc(10px + var(--safe-bottom))
-    calc(12px + var(--safe-left));
-  background: linear-gradient(transparent, var(--panel) 22%);
+  gap: 8px;
+  padding: 2px calc(12px + var(--safe-right)) 10px calc(12px + var(--safe-left));
+  background: linear-gradient(var(--panel) 72%, transparent);
 }
 
 .controls.hidden {
@@ -113,34 +117,34 @@ body {
 .dials {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
 .dial {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: var(--panel);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 6px 8px;
+  border-radius: 10px;
+  padding: 3px 6px;
 }
 
 .dial .label {
-  width: 52px;
-  font-size: 12px;
+  width: 46px;
+  font-size: 11px;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .dial .value {
-  width: 56px;
+  width: 48px;
   text-align: center;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .dial .bar {
@@ -176,16 +180,16 @@ button:active {
 }
 
 .step {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   flex: 0 0 auto;
-  font-size: 22px;
+  font-size: 19px;
 }
 
 .weaponbtn {
   flex: 1;
   min-width: 0;
-  height: 44px;
+  height: 38px;
   font-size: 13px;
   font-weight: 600;
   overflow: hidden;
@@ -195,13 +199,13 @@ button:active {
 }
 
 .fire {
-  width: 92px;
+  width: 74px;
   align-self: stretch;
   background: linear-gradient(#c0392b, #8e2b20);
   border-color: #e05c4d;
-  font-size: 20px;
+  font-size: 16px;
   letter-spacing: 0.05em;
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .fire:disabled {
@@ -378,32 +382,26 @@ button:active {
   .statusbar {
     font-size: 12px;
     padding-top: calc(4px + var(--safe-top));
-    padding-bottom: 4px;
+    padding-bottom: 2px;
   }
   .controls {
     gap: 6px;
-    padding-top: 6px;
-  }
-  .dials {
-    gap: 6px;
+    padding-bottom: 6px;
   }
   .dial {
-    padding: 3px 6px;
-  }
-  .dial .value {
-    font-size: 14px;
+    padding: 2px 5px;
   }
   .step {
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
+    width: 34px;
+    height: 34px;
+    font-size: 17px;
   }
   .weaponbtn {
-    height: 38px;
+    height: 34px;
   }
   .fire {
-    width: 84px;
-    font-size: 18px;
+    width: 66px;
+    font-size: 15px;
   }
 }
 
