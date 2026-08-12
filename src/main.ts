@@ -136,10 +136,7 @@ function hostRoom(name: string, cfg: { rounds: number; wallMode: WallMode }): vo
         overlays.updateNetStatus("Friend connected — starting…");
         // Match starts when the guest's hello arrives (handled in NetMatch).
       },
-      onIssue: (why) => {
-        // A join attempt died mid-handshake; the room is still open.
-        overlays.updateNetStatus(`${why} (Room ${code} is still open.)`);
-      },
+      onIssue: (why) => overlays.updateNetStatus(why),
       onError: (why) => {
         if (why === "unavailable-id" && attempt < 5) {
           link.close();

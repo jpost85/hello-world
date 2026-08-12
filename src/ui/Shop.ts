@@ -165,12 +165,35 @@ export class Overlays {
     const stat = el("p", "net-status");
     stat.textContent = status;
     this.netStatusEl = stat;
+
+    // Share without leaving the game — minimizing the browser suspends the
+    // room's server link (it auto-recovers, but staying here is smoother).
+    const share = el("button", "netbtn") as HTMLButtonElement;
+    share.textContent = "📤 Share code";
+    share.addEventListener("click", () => {
+      const url = location.protocol.startsWith("http")
+        ? ` Play here: ${location.origin}${location.pathname}`
+        : "";
+      const text = `Join my Overshot battle! Room code: ${code}.${url}`;
+      if (navigator.share) {
+        navigator.share({ text }).catch(() => {
+          /* user dismissed the share sheet */
+        });
+      } else if (navigator.clipboard) {
+        void navigator.clipboard.writeText(text).then(
+          () => this.updateNetStatus("Invite copied to clipboard!"),
+          () => this.updateNetStatus(`Copy the code manually: ${code}`),
+        );
+      }
+    });
+
     const hint = el("p", "hint");
-    hint.textContent = "Share this code — your friend taps Join and types it in.";
+    hint.textContent =
+      "Your friend taps Join and types this code. If you switch apps to share it, the room reconnects when you come back.";
     const cancel = el("button", "primary cancel") as HTMLButtonElement;
     cancel.textContent = "Cancel";
     cancel.addEventListener("click", onCancel);
-    this.card.append(h1, codeEl, hint, stat, cancel);
+    this.card.append(h1, codeEl, share, hint, stat, cancel);
     this.show();
   }
 

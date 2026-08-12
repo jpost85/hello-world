@@ -62,23 +62,40 @@ export class PeerLink implements Link {
   private pending: DataConnection | null = null;
   private closed = false;
 
+  // Host-room resilience: minimizing a mobile browser suspends the tab and
+  // kills the broker socket. We remember how to rebuild the room (same code)
+  // and recover automatically when the tab becomes visible again.
+  private hostSetup: { code: string; cb: HostCallbacks } | null = null;
+  private hadOpened = false;
+  private rebuildTries = 0;
+  private retryTimer = 0;
+  private visHandler: (() => void) | null = null;
+
   /**
    * Open a room. `onOpen` fires once the code is registered with the broker,
-   * `onPeer` when a guest's channel is fully open. `onIssue` reports a failed
-   * join attempt — the room stays open so the guest can simply retry.
+   * `onPeer` when a guest's channel is fully open. `onIssue` reports
+   * recoverable trouble (failed join attempt, broker reconnects) — the room
+   * stays open through all of it.
    */
-  host(
-    code: string,
-    cb: {
-      onOpen: () => void;
-      onPeer: () => void;
-      onError: (why: string) => void;
-      onIssue?: (why: string) => void;
-    },
-  ): void {
+  host(code: string, cb: HostCallbacks): void {
+    this.hostSetup = { code, cb };
+    this.spawnHostPeer();
+    this.visHandler = () => {
+      if (document.visibilityState === "visible") this.ensureHostAlive();
+    };
+    document.addEventListener("visibilitychange", this.visHandler);
+  }
+
+  private spawnHostPeer(): void {
+    if (!this.hostSetup) return;
+    const { code, cb } = this.hostSetup;
     const peer = new Peer(ID_PREFIX + code, PEER_OPTS);
     this.peer = peer;
-    peer.on("open", () => cb.onOpen());
+    peer.on("open", () => {
+      this.hadOpened = true;
+      this.rebuildTries = 0;
+      cb.onOpen(); // (re)shows the room screen with the same code
+    });
     peer.on("connection", (conn) => {
       if (this.conn) {
         // Room already has an active opponent — turn away extra joiners.
@@ -102,19 +119,63 @@ export class PeerLink implements Link {
       this.watch(
         conn,
         () => cb.onPeer(),
-        (why) => cb.onIssue?.(why),
+        (why) => cb.onIssue?.(`${why} The room is still open — ask them to retry.`),
       );
     });
     peer.on("error", (err) => {
       const why = describePeerError(err);
-      // peer-unavailable and similar per-connection errors shouldn't kill
-      // an open room; only surface fatal broker problems.
-      if (why === "unavailable-id" || isFatalPeerError(err)) cb.onError(why);
+      if (why === "unavailable-id") {
+        if (this.hadOpened && this.rebuildTries < 6) {
+          // Rebuilding after a suspend: our previous registration may linger
+          // on the broker briefly. Keep trying to reclaim the same code so
+          // the number the host already shared stays valid.
+          this.rebuildTries++;
+          cb.onIssue?.("Reconnecting to the server…");
+          this.scheduleHostRecovery(2000);
+        } else {
+          cb.onError(why);
+        }
+        return;
+      }
+      if (isFatalPeerError(err)) {
+        if (this.conn) return; // match already runs peer-to-peer; ignore
+        // Broker trouble (often a suspended tab) — recover, don't kill the room.
+        cb.onIssue?.("Connection to the server hiccuped — reconnecting…");
+        this.scheduleHostRecovery();
+      }
     });
     peer.on("disconnected", () => {
-      // Broker connection dropped (not the peer connection); try to recover.
-      if (!this.closed && !this.conn) peer.reconnect();
+      if (!this.closed && !this.conn) {
+        this.hostSetup?.cb.onIssue?.("Reconnecting to the server…");
+        this.scheduleHostRecovery();
+      }
     });
+  }
+
+  private scheduleHostRecovery(delay = 1200): void {
+    if (this.closed || this.conn || !this.hostSetup) return;
+    window.clearTimeout(this.retryTimer);
+    this.retryTimer = window.setTimeout(() => this.ensureHostAlive(), delay);
+  }
+
+  /** Bring the room back after a tab suspend / broker drop. */
+  private ensureHostAlive(): void {
+    if (this.closed || this.conn || !this.hostSetup) return;
+    const p = this.peer;
+    if (!p || p.destroyed) {
+      try {
+        p?.destroy();
+      } catch {
+        /* ignore */
+      }
+      this.spawnHostPeer(); // fresh peer, same code → same room
+    } else if (p.disconnected) {
+      try {
+        p.reconnect();
+      } catch {
+        this.scheduleHostRecovery(2500);
+      }
+    }
   }
 
   /** Join an existing room by code. `onOpen` fires when messages can flow. */
@@ -211,6 +272,12 @@ export class PeerLink implements Link {
 
   close(): void {
     this.closed = true;
+    window.clearTimeout(this.retryTimer);
+    if (this.visHandler) {
+      document.removeEventListener("visibilitychange", this.visHandler);
+      this.visHandler = null;
+    }
+    this.hostSetup = null;
     for (const c of [this.conn, this.pending]) {
       try {
         c?.close();
@@ -227,6 +294,13 @@ export class PeerLink implements Link {
     this.pending = null;
     this.peer = null;
   }
+}
+
+interface HostCallbacks {
+  onOpen: () => void;
+  onPeer: () => void;
+  onError: (why: string) => void;
+  onIssue?: (why: string) => void;
 }
 
 function describePeerError(err: unknown): string {
