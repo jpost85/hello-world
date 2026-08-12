@@ -72,18 +72,18 @@ export class Hud {
     this.powerVal = power.value;
     this.powerBar = power.bar;
 
-    const weaponRow = el("div", "dial");
+    dials.append(angle.row, power.row);
+
+    // Weapon selector stacked above FIRE in one compact right-hand column.
+    const rightCol = el("div", "rightcol");
     this.weaponBtn = el("button", "weaponbtn") as HTMLButtonElement;
     this.weaponBtn.addEventListener("click", () => this.game.cycleWeapon(1));
-    weaponRow.append(this.weaponBtn);
-
-    dials.append(angle.row, power.row, weaponRow);
-
     this.fireBtn = el("button", "fire") as HTMLButtonElement;
     this.fireBtn.textContent = "FIRE";
     this.fireBtn.addEventListener("click", () => this.game.fire());
+    rightCol.append(this.weaponBtn, this.fireBtn);
 
-    this.controls.append(dials, this.fireBtn);
+    this.controls.append(dials, rightCol);
 
     // Status bar and controls stack at the TOP of the screen so the lower
     // battlefield — where cratered tanks end up — is never covered.
@@ -138,7 +138,7 @@ export class Hud {
       const wpn = getWeapon(cur.selectedWeapon);
       const ammo = cur.ammoOf(wpn.id);
       const ammoStr = ammo === Infinity ? "∞" : `${ammo}`;
-      this.weaponBtn.textContent = `◀ ${wpn.name} ×${ammoStr} ▶`;
+      this.weaponBtn.textContent = `${wpn.name} ×${ammoStr}`;
       this.fireBtn.disabled = false;
     } else {
       this.fireBtn.disabled = true;
