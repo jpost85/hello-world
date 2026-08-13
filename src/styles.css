@@ -63,28 +63,38 @@ body {
 .statusbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: calc(8px + var(--safe-top)) calc(12px + var(--safe-right)) 8px
-    calc(12px + var(--safe-left));
+  gap: 4px;
+  padding: calc(6px + var(--safe-top)) calc(10px + var(--safe-right)) 4px
+    calc(10px + var(--safe-left));
   background: linear-gradient(var(--panel), transparent);
-  font-size: 13px;
+  font-size: 11px;
   pointer-events: none;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .statusbar .chip {
   background: var(--panel);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 3px 7px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .statusbar .turn {
   font-weight: 700;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.statusbar .turn span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 26vw;
 }
 
 .statusbar .wind .arrow {
@@ -387,8 +397,8 @@ button:active {
 /* ---------- Compact layout for short viewports (landscape phones) ---------- */
 @media (max-height: 480px) {
   .statusbar {
-    font-size: 12px;
-    padding-top: calc(4px + var(--safe-top));
+    font-size: 10px;
+    padding-top: calc(3px + var(--safe-top));
     padding-bottom: 2px;
   }
   .controls {

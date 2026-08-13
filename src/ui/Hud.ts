@@ -31,7 +31,7 @@ export class Hud {
     const turn = el("div", "chip turn");
     this.turnDot = el("span", "dot");
     this.turnDot.style.cssText =
-      "width:10px;height:10px;border-radius:50%;display:inline-block";
+      "width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 auto";
     this.turnName = el("span");
     turn.append(this.turnDot, this.turnName);
 
@@ -115,14 +115,14 @@ export class Hud {
 
     const w = Math.round(g.wind);
     const arrow = w === 0 ? "•" : w > 0 ? "→" : "←";
-    this.windEl.innerHTML = `Wind <span class="arrow">${arrow}</span> ${Math.abs(w)}`;
-    this.roundEl.textContent = `Round ${g.round}/${g.config.rounds}`;
+    this.windEl.innerHTML = `<span class="arrow">${arrow}</span>${Math.abs(w)}`;
+    this.roundEl.textContent = `${g.round}/${g.config.rounds}`;
 
     const human = g.humanTank();
     if (human) {
-      const shield = human.shield > 0 ? ` <span style="color:#78c8ff">⛨${Math.ceil(human.shield)}</span>` : "";
-      const para = human.parachutes > 0 ? ` <span style="color:#cfd6ee">🪂${human.parachutes}</span>` : "";
-      this.hpEl.innerHTML = `❤ ${Math.ceil(human.health)}${shield}${para}`;
+      const shield = human.shield > 0 ? `<span style="color:#78c8ff">⛨${Math.ceil(human.shield)}</span>` : "";
+      const para = human.parachutes > 0 ? `<span style="color:#cfd6ee">🪂${human.parachutes}</span>` : "";
+      this.hpEl.innerHTML = `❤${Math.ceil(human.health)}${shield}${para}`;
       this.cashEl.textContent = `$${human.cash}`;
     }
 
