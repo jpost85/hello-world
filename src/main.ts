@@ -120,12 +120,24 @@ function netHooks() {
   };
 }
 
+function attachDiag(link: PeerLink): void {
+  link.onDiag = (line) => {
+    overlays.updateNetDiag(line);
+    // The final verdict is worth surfacing in-game too (the overlay is
+    // usually hidden by the time the match starts).
+    if (line.startsWith("Connected —") || line.startsWith("Failed —")) {
+      hud.showBanner(line);
+    }
+  };
+}
+
 function hostRoom(name: string, cfg: { rounds: number; wallMode: WallMode }): void {
   cancelPending();
   const tryHost = (attempt: number): void => {
     const code = makeCode();
     const link = new PeerLink();
     pendingLink = link;
+    attachDiag(link);
     overlays.showNetWait("Opening room…", "Contacting matchmaking server…", cancelPending);
     link.host(code, {
       onOpen: () =>
@@ -157,6 +169,7 @@ function joinRoom(name: string, rawCode: string): void {
   const code = normalizeCode(rawCode);
   const link = new PeerLink();
   pendingLink = link;
+  attachDiag(link);
   overlays.showNetWait(
     `Joining <span class="flame">${code}</span>…`,
     "Contacting matchmaking server…",

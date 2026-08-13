@@ -516,3 +516,12 @@ button:active {
   background: #3a2230;
   border-color: #7a4a5a;
 }
+
+.net-diag {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  min-height: 16px;
+  margin: 2px 0 8px;
+  font-variant-numeric: tabular-nums;
+}

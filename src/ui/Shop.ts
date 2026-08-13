@@ -135,6 +135,7 @@ export class Overlays {
   // ---------------------------------------------------------------- net lobby
 
   private netStatusEl: HTMLElement | null = null;
+  private netDiagEl: HTMLElement | null = null;
 
   /** Waiting/connecting screen with a live status line. */
   showNetWait(title: string, status: string, onCancel: () => void): void {
@@ -144,15 +145,22 @@ export class Overlays {
     const stat = el("p", "net-status");
     stat.textContent = status;
     this.netStatusEl = stat;
+    const diag = el("p", "net-diag");
+    this.netDiagEl = diag;
     const cancel = el("button", "primary cancel") as HTMLButtonElement;
     cancel.textContent = "Cancel";
     cancel.addEventListener("click", onCancel);
-    this.card.append(h1, stat, cancel);
+    this.card.append(h1, stat, diag, cancel);
     this.show();
   }
 
   updateNetStatus(status: string): void {
     if (this.netStatusEl) this.netStatusEl.textContent = status;
+  }
+
+  /** Low-level connection detail line (candidate paths, chosen route). */
+  updateNetDiag(text: string): void {
+    if (this.netDiagEl) this.netDiagEl.textContent = text;
   }
 
   /** Waiting screen variant that shows the shareable room code big. */
@@ -187,13 +195,15 @@ export class Overlays {
       }
     });
 
+    const diag = el("p", "net-diag");
+    this.netDiagEl = diag;
     const hint = el("p", "hint");
     hint.textContent =
       "Your friend taps Join and types this code. If you switch apps to share it, the room reconnects when you come back.";
     const cancel = el("button", "primary cancel") as HTMLButtonElement;
     cancel.textContent = "Cancel";
     cancel.addEventListener("click", onCancel);
-    this.card.append(h1, codeEl, share, hint, stat, cancel);
+    this.card.append(h1, codeEl, share, hint, stat, diag, cancel);
     this.show();
   }
 

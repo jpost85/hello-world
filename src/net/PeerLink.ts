@@ -1,5 +1,6 @@
 import Peer, { type DataConnection } from "peerjs";
 import type { Link, Msg } from "./protocol";
+import { watchPeerConnection } from "./Diag";
 
 /**
  * WebRTC transport via the free public PeerJS cloud broker. The broker only
@@ -54,6 +55,8 @@ export function normalizeCode(raw: string): string {
 export class PeerLink implements Link {
   onMessage: ((m: Msg) => void) | null = null;
   onClosed: (() => void) | null = null;
+  /** Live connection-diagnostic lines ("paths: local ✓ · stun ✓ · relay ✗"). */
+  onDiag: ((line: string) => void) | null = null;
 
   private peer: Peer | null = null;
   /** The established, open connection carrying the match. */
@@ -233,6 +236,7 @@ export class PeerLink implements Link {
     onReady: () => void,
     onFail: (why: string) => void,
   ): void {
+    this.attachDiag(conn);
     let opened = false;
     conn.on("open", () => {
       opened = true;
@@ -264,6 +268,23 @@ export class PeerLink implements Link {
     };
     conn.on("close", dead);
     conn.on("error", dead);
+  }
+
+  /**
+   * PeerJS creates the underlying RTCPeerConnection a beat after the
+   * DataConnection appears; poll briefly, then attach the ICE narrator.
+   */
+  private attachDiag(conn: DataConnection): void {
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      const pc = (conn as unknown as { peerConnection?: RTCPeerConnection }).peerConnection;
+      if (pc) {
+        window.clearInterval(timer);
+        watchPeerConnection(pc, (line) => this.onDiag?.(line));
+      } else if (++tries > 25) {
+        window.clearInterval(timer);
+      }
+    }, 200);
   }
 
   send(m: Msg): void {
